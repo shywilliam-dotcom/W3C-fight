@@ -305,8 +305,8 @@ function doAttack(att, tgt, def) {
     if (att.summonGolem>0 && Math.random()<att.summonGolem) {
       game.units.push({
         x:att.x, y:att.y, lane:att.lane, side:att.side, type:'golem',
-        dir:att.dir, level:1, atkType:'normal', armorType:'unarmored',
-        hp:300, maxHp:300, atk:8, atkSpeed:1.0, range:40, speed:55, atkTimer:0,
+        dir:att.dir, level:1, atkType:'normal', armorType:'heavy',
+        hp:450, maxHp:450, atk:12, atkSpeed:1.0, range:40, speed:55, atkTimer:0,
         dmgReduce:0.5, st:{}
       });
     }
