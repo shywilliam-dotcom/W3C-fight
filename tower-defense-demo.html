@@ -125,12 +125,12 @@ function getUnitName(type) {
 
 // 敌方兵营（镜像）
 const EN_BARRACK_POS = [
-  {x:1080, lane:0, dy:-15}, {x:1040, lane:0, dy:-15},
-  {x:1080, lane:0, dy:15},  {x:1040, lane:0, dy:15},
-  {x:1080, lane:1, dy:-15}, {x:1040, lane:1, dy:-15},
-  {x:1080, lane:1, dy:15},  {x:1040, lane:1, dy:15},
-  {x:1080, lane:2, dy:-15}, {x:1040, lane:2, dy:-15},
-  {x:1080, lane:2, dy:15},  {x:1040, lane:2, dy:15}
+  {x:1080, lane:0, dy:-20}, {x:1040, lane:0, dy:-20},
+  {x:1080, lane:0, dy:20},  {x:1040, lane:0, dy:20},
+  {x:1080, lane:1, dy:-20}, {x:1040, lane:1, dy:-20},
+  {x:1080, lane:1, dy:20},  {x:1040, lane:1, dy:20},
+  {x:1080, lane:2, dy:-20}, {x:1040, lane:2, dy:-20},
+  {x:1080, lane:2, dy:20},  {x:1040, lane:2, dy:20}
 ];
 
 // ============ 兵种（魔兽攻防相克） ============
@@ -251,6 +251,22 @@ function initGame() {
     });
     // 初始无兵营，全靠玩家/AI自己建
   }
+
+  // AI自动建兵营（双方各建6个，每路2个）
+  const types = ['melee','archer','mage','cannon'];
+  BARRACK_SLOTS.forEach((slot,i) => {
+    if (i % 2 === 0) {
+      const t = types[Math.floor(Math.random()*4)];
+      game.barracks.push({x:slot.x, lane:slot.lane, dy:slot.dy, side:'my', unitType:t, level:1, hp:2000, maxHp:2000, spawnTimer:Math.random()*3, alive:true, armorType:'fort'});
+    }
+  });
+  EN_BARRACK_POS.forEach((slot,i) => {
+    if (i % 2 === 0) {
+      const t = types[Math.floor(Math.random()*4)];
+      game.barracks.push({x:slot.x, lane:slot.lane, dy:slot.dy, side:'enemy', unitType:t, level:1, hp:2000, maxHp:2000, spawnTimer:Math.random()*3, alive:true, armorType:'fort'});
+    }
+  });
+
   document.getElementById('game-over').style.display = 'none';
 }
 
@@ -533,7 +549,16 @@ function update(dt) {
   game.goldAcc += income()*dt;
   if (game.goldAcc>=1) { let g=Math.floor(game.goldAcc); game.gold+=g; game.goldAcc-=g; }
 
-  // 双方AI补兵+升级（由外部脚本控制，这里不内置）
+  // AI升级：每5秒随机升级一个兵营
+  game.aiTimer = (game.aiTimer||5) - dt;
+  if (game.aiTimer <= 0) {
+    game.aiTimer = 5;
+    game.barracks.forEach(b => {
+      if (b.alive && Math.random()<0.3) {
+        b.level = Math.min(10, (b.level||1)+1);
+      }
+    });
+  }
 
   // 出兵（攻城车类20秒，其他15秒）
   game.barracks.forEach(b => {
