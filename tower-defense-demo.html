@@ -287,7 +287,7 @@ function spawnUnit(b) {
   const rangeMul = 1 + (lv-1)*0.05;
   // 后期rush：300秒后新出兵攻击每60秒+15%
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
-  const yOff = (Math.random()-0.5)*40; // 每路3单位并行，y偏移±20
+  const yOff = (Math.random()-0.5)*70; // 每路6单位并行，y偏移±35
   const u = {
     x:b.x, y:LANE_Y[b.lane]+(b.dy||0)+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
     name:getUnitName(b.unitType),
@@ -772,12 +772,12 @@ function update(dt) {
     } else {
       u.x += u.speed*u.dir*dt;
       u.animState = 'walk';
-      // 碰撞体积：同阵营同路单位保持最小距离
+      // 碰撞体积：同阵营同路单位保持最小距离（减小，允许多排并行）
       game.units.forEach(o => {
         if (o===u || o.side!==u.side || o.lane!==u.lane || o.hp<=0) return;
         const d = u.x - o.x;
-        const minD = 15;
-        if (Math.abs(d) < minD && Math.abs(o.y-u.y) < 10) {
+        const minD = 10;
+        if (Math.abs(d) < minD && Math.abs(o.y-u.y) < 20) {
           if (d > 0) u.x = o.x + minD;
           else u.x = o.x - minD;
         }
@@ -858,7 +858,7 @@ function render() {
   ctx.clearRect(0,0,1200,720);
 
   // 路：三路在基地处汇合（橄榄球形状）
-  ctx.lineWidth = 80;
+  ctx.lineWidth = 100;
   ctx.lineCap = 'round';
   LANE_Y.forEach((y,i) => {
     // 我方路：从基地(50,300)弯到三路位置
