@@ -127,9 +127,9 @@ const UNIT_TYPES = {
   // 近战升级（大招=旋风斩）
   barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:320, atk:18, atkSpeed:0.9, range:45, speed:60, cost:90, color:'#8B4513', atkType:'normal', armorType:'heavy', ult:'whirlwind',
     skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, desc:'群伤2目标+斩杀5%血（早期强）' },
-  paladin:  { name:'圣骑士', shape:'circle', size:11, hp:220, atk:12, atkSpeed:1.0, range:40, speed:60, cost:90, color:'#FFD700', atkType:'normal', armorType:'heavy', ult:'whirlwind',
+  paladin:  { name:'圣骑士', shape:'circle', size:11, hp:220, atk:12, atkSpeed:1.0, range:40, speed:60, cost:90, color:'#FFD700', atkType:'normal', armorType:'heavy', ult:'holyUlt',
     skill1:{k:'holyHeal',v:1}, skill2:{k:'dmgReduce',v:0.30}, desc:'低血回血+30%减伤（中期强）' },
-  fighter:  { name:'格斗家', shape:'circle', size:10, hp:150, atk:15, atkSpeed:1.3, range:35, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'whirlwind',
+  fighter:  { name:'格斗家', shape:'circle', size:10, hp:150, atk:15, atkSpeed:1.3, range:35, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'dodgeUlt',
     skill1:{k:'dodge',v:0.15}, skill2:{k:'dodgeCounter',v:1}, desc:'15%闪避+闪避反击（后期强）' },
 
   // 弓手升级（大招=穿透箭）
@@ -362,6 +362,23 @@ function doAttack(att, tgt, def) {
             Math.abs(o.x-att.x)<80) applyDmg(att,o,dmg,def);
       });
     }
+    // 圣骑士大招：回血100%（60秒CD）
+    if (att.ultimate==='holyUlt') {
+      if (!att.holyUltCD || att.holyUltCD<=0) {
+        att.hp = att.maxHp;
+        att.holyUltCD = 60;
+      }
+    }
+    // 格斗家大招：躲闪时50%概率无敌1秒+周围120范围100%伤害
+    if (att.ultimate==='dodgeUlt') {
+      if (Math.random()<0.5) {
+        att.st.iceBlock = 1; // 用iceBlock字段做无敌
+        game.units.forEach(o => {
+          if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
+              Math.abs(o.x-att.x)<120) applyDmg(att,o,dmg,def);
+        });
+      }
+    }
     if (att.ultimate==='piercing') {
       // 穿透箭：直线穿透整条路所有敌人
       game.units.forEach(o => {
@@ -490,6 +507,8 @@ function update(dt) {
     }
     // 换目标计时
     if (u.targetSwitchTimer>0) u.targetSwitchTimer-=dt;
+    // 圣骑士大招CD
+    if (u.holyUltCD>0) u.holyUltCD-=dt;
     // 奥法召唤傀儡：CD15秒，生命585
     if (u.type==='arcane') {
       if (u.golemCD>0) u.golemCD-=dt;
