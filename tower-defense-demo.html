@@ -145,8 +145,8 @@ const UNIT_TYPES = {
     skill1:{k:'polymorph',v:0.10}, skill2:{k:'summonGolem',v:0.05}, desc:'10%变羊+5%召唤傀儡（初期强）' },
   ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
     skill1:{k:'iceBlock',v:1}, skill2:{k:'vulnerable',v:0.33}, desc:'冰箱+33%易伤debuff（中期强）' },
-  fire:     { name:'火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#FF4500', atkType:'magic', armorType:'unarmored', ult:'blizzard',
-    skill1:{k:'burn',v:1}, skill2:{k:'crit',v:0.20}, desc:'灼烧+20%暴击（后期强）' },
+  fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'blizzard',
+    skill1:{k:'summonSkeleton',v:2}, skill2:{k:'burnStack',v:1}, desc:'每2秒召唤骷髅+dot叠加（后期强）' },
 
   // 攻城车升级（大招=弹幕）
   rocket:   { name:'火箭炮', shape:'square', size:11, hp:180, atk:20, atkSpeed:0.3, range:220, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
@@ -233,8 +233,10 @@ function spawnUnit(b) {
     iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
     armorPierce:false, summonGolem:0, chainLightning:0, longRange:0,
     stun:0, vulnerable:0, dodgeCounter:false, execute:0, electricField:0,
+    summonSkeleton:0, skeletonTimer:0, burnStack:0,
+    currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
     ultimate: lv>=6 ? def.ult : null,
-    st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0 }
+    st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0 }
   };
   // 自动应用skill1和skill2（按等级缩放）
   [def.skill1, def.skill2].forEach(s => {
@@ -263,6 +265,8 @@ function spawnUnit(b) {
     else if (s.k==='dodgeCounter') u.dodgeCounter = !!s.v;
     else if (s.k==='execute') u.execute = s.v;
     else if (s.k==='electricField') u.electricField = s.v;
+    else if (s.k==='summonSkeleton') u.summonSkeleton = s.v;
+    else if (s.k==='burnStack') u.burnStack = 1;
   });
   // 格斗家专属：闪避随等级大幅成长（后期型）
   if (b.unitType==='fighter') u.dodge += (lv-1)*0.05;
@@ -464,6 +468,21 @@ function update(dt) {
       if (u.holyHealCD>0) u.holyHealCD-=dt;
       else if (u.hp < u.maxHp*0.5) { u.hp = Math.min(u.maxHp, u.hp + u.maxHp*0.25); u.holyHealCD=15; }
     }
+    // 暗火法：每2秒召唤1个100血小骷髅
+    if (u.summonSkeleton>0) {
+      u.skeletonTimer -= dt;
+      if (u.skeletonTimer<=0) {
+        u.skeletonTimer = u.summonSkeleton;
+        game.units.push({
+          x:u.x, y:u.y, lane:u.lane, side:u.side, type:'skeleton',
+          dir:u.dir, level:1, atkType:'normal', armorType:'unarmored',
+          hp:100, maxHp:100, atk:5, atkSpeed:1.0, range:40, speed:60, atkTimer:0,
+          currentTarget:null, targetSwitchTimer:0, firstAttackDone:true, st:{}
+        });
+      }
+    }
+    // 换目标计时
+    if (u.targetSwitchTimer>0) u.targetSwitchTimer-=dt;
     if (u.hp<=0) return;
     if (u.st.polymorphed>0||u.st.iceBlock>0||u.st.stun>0) return;
 
@@ -504,8 +523,30 @@ function update(dt) {
 
     u.atkTimer-=dt;
     const def = UNIT_TYPES[u.type] || { color:'#fff' };
+    
+    // 目标切换检测
+    if (bestT && bestT !== u.currentTarget) {
+      u.currentTarget = bestT;
+      u.targetSwitchTimer = 0.5; // 换目标需要0.5秒才能出手
+    }
+    
     if (bestT && bestD<=u.range+(bestT.type===undefined?20:0)) {
-      if (u.atkTimer<=0) { doAttack(u,bestT,def); u.atkTimer=1/atkSpd; }
+      // 首次出手延迟0.3秒
+      if (!u.firstAttackDone) {
+        u.firstAttackDone = true;
+        u.atkTimer = Math.min(u.atkTimer, 0.3);
+      }
+      // 换目标后需要等
+      if (u.targetSwitchTimer<=0 && u.atkTimer<=0) {
+        // 火法dot叠加：连续攻击同一目标时，burn层数+1
+        if (u.burnStack && bestT.st) {
+          bestT.st.burnStacks = (bestT.st.burnStacks||0) + 1;
+          bestT.st.burnDps = Math.max(bestT.st.burnDps||0, 5 * bestT.st.burnStacks);
+          bestT.st.burn = 3;
+        }
+        doAttack(u,bestT,def);
+        u.atkTimer=1/atkSpd;
+      }
     } else {
       u.x += u.speed*u.dir*dt;
       // 接近基地时三路汇合：y向基地中线靠拢
