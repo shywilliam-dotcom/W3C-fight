@@ -649,17 +649,21 @@ function update(dt) {
         }
       });
     }
-    // 奥法召唤傀儡：CD15秒，生命585
+    // 奥法召唤傀儡：CD25秒，每个奥法最多同时3个傀儡
     if (u.type==='arcane') {
       if (u.golemCD>0) u.golemCD-=dt;
       else {
-        game.units.push({
-          x:u.x, y:u.y, lane:u.lane, side:u.side, type:'golem',
-          dir:u.dir, level:1, atkType:'normal', armorType:'heavy',
-          hp:585, maxHp:585, atk:12, atkSpeed:1.0, range:40, speed:55, atkTimer:0,
-          dmgReduce:0.5, st:{}
-        });
-        u.golemCD = 15;
+        // 统计本奥法的存活傀儡数
+        const golemCount = game.units.filter(o=>o.type==='golem' && o.side===u.side && o.hp>0).length;
+        if (golemCount < 3) {
+          game.units.push({
+            x:u.x, y:u.y + (Math.random()-0.5)*30, lane:u.lane, side:u.side, type:'golem',
+            dir:u.dir, level:1, atkType:'normal', armorType:'heavy',
+            hp:585, maxHp:585, atk:12, atkSpeed:1.0, range:40, speed:55, atkTimer:0,
+            dmgReduce:0.5, st:{}, firstAttackDone:true, targetSwitchTimer:0
+          });
+        }
+        u.golemCD = 25;
       }
     }
     // 奥法群体护盾：CD15秒，给周围5个单位加30%血护盾
