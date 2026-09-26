@@ -722,6 +722,16 @@ function update(dt) {
       }
     } else {
       u.x += u.speed*u.dir*dt;
+      // 碰撞体积：同阵营同路单位保持最小距离
+      game.units.forEach(o => {
+        if (o===u || o.side!==u.side || o.lane!==u.lane || o.hp<=0) return;
+        const d = u.x - o.x;
+        const minD = 15;
+        if (Math.abs(d) < minD && Math.abs(o.y-u.y) < 20) {
+          if (d > 0) u.x = o.x + minD;
+          else u.x = o.x - minD;
+        }
+      });
       // 接近基地时三路汇合：y向基地中线靠拢
       if (u.side==='my' && u.x>950) {
         u.y += (300-u.y)*0.03;
