@@ -135,17 +135,17 @@ const UNIT_TYPES = {
   // 弓手升级（大招=穿透箭）
   musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:170, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'piercing',
     skill1:{k:'instantKill',v:0.08}, skill2:{k:'splash',v:0.25}, desc:'8%即死+25%溅射（中期强）' },
-  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:230, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'piercing',
+  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:230, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
     skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭+超远射程（初期强）' },
-  crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:130, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'piercing',
+  crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:130, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
     skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, desc:'20%连锁连击(最多5次)+无视护甲（后期强）' },
 
   // 法师升级（大招=暴风雪）
-  arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
+  arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'unarmored', ult:'arcaneBlink',
     skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.40}, desc:'10%变羊+群体护盾40%血（初期强）' },
   ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
     skill1:{k:'iceBlock',v:1}, skill2:{k:'shieldAlly',v:0.15}, desc:'冰箱+33%易伤+友方护盾减伤15%（中期强）' },
-  fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'blizzard',
+  fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'fireBlast',
     skill1:{k:'summonSkeleton',v:2}, skill2:{k:'burnStack',v:1}, desc:'每2秒召唤骷髅+dot叠加（后期强）' },
 
   // 攻城车升级（大招=弹幕）
@@ -355,8 +355,8 @@ function doAttack(att, tgt, def) {
   }
   // 6级大招
   if (att.ultimate && tgt.type!==undefined) {
+    // 旋风斩（野蛮人）
     if (att.ultimate==='whirlwind' && Math.random()<0.5) {
-      // 旋风斩：周围所有敌人受100%伤害
       game.units.forEach(o => {
         if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
             Math.abs(o.x-att.x)<80) applyDmg(att,o,dmg,def);
@@ -371,30 +371,44 @@ function doAttack(att, tgt, def) {
     }
     // 格斗家大招：躲闪时50%概率无敌1秒+周围120范围100%伤害
     if (att.ultimate==='dodgeUlt') {
-      if (Math.random()<0.5) {
-        att.st.iceBlock = 1; // 用iceBlock字段做无敌
+      if (!att.dodgeUltCD || att.dodgeUltCD<=0) {
+        att.st.iceBlock = 1;
         game.units.forEach(o => {
           if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
               Math.abs(o.x-att.x)<120) applyDmg(att,o,dmg,def);
         });
+        att.dodgeUltCD = 15;
       }
     }
-    if (att.ultimate==='piercing') {
-      // 穿透箭：直线穿透整条路所有敌人
-      game.units.forEach(o => {
-        if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
-            (att.dir>0 ? o.x>att.x : o.x<att.x)) applyDmg(att,o,dmg*0.8,def);
-      });
+    // 游侠大招：箭雨150范围伤害（20秒CD）
+    if (att.ultimate==='arrowRain') {
+      if (!att.arrowRainCD || att.arrowRainCD<=0) {
+        game.units.forEach(o => {
+          if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
+              Math.abs(o.x-tgt.x)<150) applyDmg(att,o,dmg,def);
+        });
+        att.arrowRainCD = 20;
+      }
     }
-    if (att.ultimate==='blizzard' && Math.random()<0.3) {
-      // 暴风雪：目标周围范围持续伤害
-      game.units.forEach(o => {
-        if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
-            Math.abs(o.x-tgt.x)<80) applyDmg(att,o,dmg*0.5,def);
-      });
+    // 弩手大招：连发3次，每次20%连击（15秒CD）
+    if (att.ultimate==='rapidFire') {
+      if (!att.rapidFireCD || att.rapidFireCD<=0) {
+        for (let i=0;i<3;i++) {
+          applyDmg(att,tgt,dmg,def);
+          if (Math.random()<0.20) applyDmg(att,tgt,dmg,def);
+        }
+        att.rapidFireCD = 15;
+      }
     }
+    // 火法大招：对目标500%伤害（20秒CD）
+    if (att.ultimate==='fireBlast') {
+      if (!att.fireBlastCD || att.fireBlastCD<=0) {
+        applyDmg(att,tgt,dmg*5,def);
+        att.fireBlastCD = 20;
+      }
+    }
+    // 弹幕（攻城车基础）
     if (att.ultimate==='barrage') {
-      // 弹幕：额外打2个最近敌人
       let extra=0;
       game.units.forEach(o => {
         if (extra>=2) return;
@@ -423,6 +437,15 @@ function applyDmg(att, tgt, dmg, def) {
         let counterDmg = tgt.atk * 1.0;
         att.hp -= counterDmg;
         spawnProj(tgt, att, '#FF6B9D');
+      }
+      // 格斗家大招：躲闪时50%概率无敌1秒+周围120范围100%伤害
+      if (tgt.ultimate==='dodgeUlt' && (!tgt.dodgeUltCD || tgt.dodgeUltCD<=0) && Math.random()<0.5) {
+        tgt.st.iceBlock = 1;
+        game.units.forEach(o => {
+          if (o.lane===tgt.lane && o.side!==tgt.side && o.hp>0 &&
+              Math.abs(o.x-tgt.x)<120) applyDmg(tgt,o,tgt.atk,def);
+        });
+        tgt.dodgeUltCD = 15;
       }
       return;
     }
@@ -509,6 +532,27 @@ function update(dt) {
     if (u.targetSwitchTimer>0) u.targetSwitchTimer-=dt;
     // 圣骑士大招CD
     if (u.holyUltCD>0) u.holyUltCD-=dt;
+    if (u.dodgeUltCD>0) u.dodgeUltCD-=dt;
+    if (u.arrowRainCD>0) u.arrowRainCD-=dt;
+    if (u.rapidFireCD>0) u.rapidFireCD-=dt;
+    if (u.fireBlastCD>0) u.fireBlastCD-=dt;
+    if (u.arcaneBlinkCD>0) u.arcaneBlinkCD-=dt;
+    // 奥法大招：濒死时无敌1秒，传送回基地，回20%血（CD60秒）
+    if (u.ultimate==='arcaneBlink' && u.hp>0 && u.hp < u.maxHp*0.15 && (!u.arcaneBlinkCD || u.arcaneBlinkCD<=0)) {
+      u.st.iceBlock = 1;
+      u.x = u.side==='my' ? 100 : 1100;
+      u.hp = Math.max(u.hp, u.maxHp*0.20);
+      u.arcaneBlinkCD = 60;
+    }
+    // 攻城车死亡爆炸：造成2次攻击伤害
+    if (u.hp<=0 && u.atkType==='siege' && !u.exploded) {
+      u.exploded = true;
+      game.units.forEach(o => {
+        if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<80) {
+          applyDmg(u,o,u.atk*2,def);
+        }
+      });
+    }
     // 奥法召唤傀儡：CD15秒，生命585
     if (u.type==='arcane') {
       if (u.golemCD>0) u.golemCD-=dt;
