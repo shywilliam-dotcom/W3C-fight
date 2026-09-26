@@ -59,14 +59,9 @@
 <canvas id="gameCanvas" width="1200" height="600"></canvas>
 
 <div id="control-panel">
-  <span style="color:#aaa;font-size:13px;">选兵种：</span>
-  <button class="btn btn-melee" data-type="melee">近战(60)</button>
-  <button class="btn btn-archer" data-type="archer">弓手(80)</button>
-  <button class="btn btn-mage" data-type="mage">法师(90)</button>
-  <button class="btn btn-cannon" data-type="cannon">攻城车(110)</button>
   <button class="btn btn-speed" id="speed-btn">1x</button>
   <button class="btn btn-restart" onclick="restartGame()">重开</button>
-  <span id="info">选兵种→点蓝圈放兵营；点已有兵营→选升级路线</span>
+  <span id="info">点空兵营槽位建造，点兵营升级，点单位看状态</span>
 </div>
 
 <div id="game-over">
@@ -97,8 +92,46 @@ const MY_TOWER_X = [280, 350, 420];
 // 中间交战区 420~780 完全让开
 // 敌方塔
 const EN_TOWER_X = [780, 850, 920];
+// ============ 名字库 ============
+const NAME_POOLS = {
+  melee: ['赵铁柱','王大力','李铁山','张铁柱','刘大勇','陈石头','杨守义','黄开山','赵铁柱','孙铁柱','周大勇','吴铁牛','郑石头','马守山','朱开山','林铁柱','何大勇','高铁山','罗石头','郑守义','梁铁柱','宋大勇','唐铁牛','许石头','韩开山','冯铁柱','邓大勇','曹铁山','彭石头','萧守义','田铁柱','董大勇','袁铁牛','潘石头','蒋开山','蔡铁柱','余大勇','于铁山','杜石头','叶守义'],
+  barbarian: ['拓跋野','呼延烈','独孤狂','慕容风','尉迟刚','宇文霸','长孙悍','东方啸','南宫烈','西门狂','北野苍','南烽火','苍狼','铁背','巨石','荒天','裂地','破军','斩马','踏风','燎原','焚天','碎星','裂空','断岳','崩山','吼天','裂风','嗜血','狂沙','蛮荒','野性','咆哮','撕裂','狂战','突袭','重击','野蛮','粗犷','不羁'],
+  paladin: ['白圣光','李启明','王济世','张明德','赵永安','刘长安','陈泰安','杨太平','黄护国','周安民','吴定邦','郑安国','马卫国','朱怀德','林承恩','何忠义','高尚礼','罗守正','梁崇文','宋尚武','唐景明','许修远','韩德昭','冯济世','邓安民','曹定邦','彭安国','萧明德','田永安','董长安','袁泰安','蔡护国','余安民','于定邦','杜卫国','朱怀德','林承恩','何忠义','高尚礼','罗守正'],
+  fighter: ['林小风','陈轻灵','赵无影','张三丰','李寻欢','叶孤鸿','风清扬','陆小凤','花满楼','司空摘星','西门吹雪','楚留香','胡铁花','姬冰雁','中原一点红','李坏','傅红雪','叶开','丁灵琳','上官金虹','荆无命','吕凤先','郭嵩阳','燕南天','小鱼儿','花无缺','铁心兰','苏樱','唐钰','阿奴','景天','雪见','龙葵','长卿','紫萱','重楼','云天河','韩菱纱','柳梦璃','慕容紫英'],
+  archer: ['风射手','林飞羽','叶轻箭','赵穿云','李逐月','孙惊鸿','周落雁','吴射雕','郑惊弓','马百步','朱穿杨','林射日','何追风','高逐电','罗逐风','梁穿云','宋落星','唐惊鸿','许望月','韩追日','冯射风','邓落霞','曹惊羽','彭穿空','萧追云','田逐月','林飞羽','叶轻箭','赵穿云','李逐月'],
+  ranger: ['逍遥游','自在行','踏歌行','醉天涯','梦红尘','笑江湖','饮风霜','卧云端','看星河','听松涛','抚古琴','舞长剑','踏落花','逐流水','追浮云','揽明月','摘星辰','弄潮儿','侠客行','隐者归','浪子心','游子吟','闲人叹','过客行','旅人歌','隐士居','逸士游','闲云鹤','野鹤鸣','孤鸿影','独行者','自在天','逍遥津','漫游客','漫步者','旅行者','漂泊客','流浪者','漫步者','逍遥子'],
+  crossbow: ['精准','百步穿杨','机关算尽','连珠箭','破甲锥','穿云箭','追魂箭','索命箭','锁喉箭','透骨箭','裂石弓','惊雷弩','暴雨弩','流星弩','连弩机','神弩手','铁弩手','铜弩手','精弩手','锐弩手','穿甲弩','破山弩','裂空弩','追命弩','夺命弩','绝影弩','无影弩','无形弩','无声弩','无迹弩','神臂弩','神弩将军','弩手','连弩手','重弩手','轻弩手','长弩手','短弩手','硬弩手','软弩手'],
+  musketeer: ['枪出如龙','一枪毙命','弹无虚发','百步穿杨','精准打击','致命一击','爆头专家','霰弹枪手','狙击王','神枪手','快枪手','老枪手','铁枪手','铜枪手','银枪手','金枪手','神射手','狙击手','歼灭者','收割者','终结者','毁灭者','破坏者','爆破手','爆破专家','弹药专家','枪械大师','武器大师','军火专家','枪炮师','火枪手','枪手','射手','刺客','暗杀者','行刑者','刽子手','审判者','裁决者','复仇者'],
+  mage: ['星尘','月辉','风语','雷音','火焰','冰霜','大地','水流','光明','黑暗','星辰','月华','风声','雷鸣','火舞','冰凝','地裂','水漫','光辉','暗影','奥术','秘法','神秘','玄妙','玄奥','幽秘','幽冥','幽暗','幽暗','深邃','渊博','博学','智者','贤者','先知','预言者','占卜师','占星师','观星者','望气者','望气'],
+  arcane: ['奥法星','秘法月','咒言','符文','法阵','结界','护盾','传送','闪现','闪烁','瞬移','变形','变羊','变猪','变蛙','变鸦','变狼','变熊','变鹰','变蛇','变蝎','变蛛','变虫','变蚁','变蝇','变蚊','变蛾','变蝶','变蜂','魔法使','法师','术士','巫师','魔女','魔导','魔导师','大魔导师','大法师','元素使','通灵者'],
+  ice: ['冰魄','寒霜','雪凝','冰封','霜冻','寒月','冷星','冰刃','霜华','雪舞','冰棺','冰牢','冰墙','冰盾','冰甲','冰衣','冰纱','冰丝','冰绡','冰绫','冰罗','冰绮','冰纨','冰纨','冰纨','冰纨','冰纨','冰纨','冰纨','冰纨','冰雪','寒冰','极寒','酷寒','严寒','凛冽','刺骨','透骨','心寒','冰冷'],
+  fire: ['暗焰','幽火','冥炎','鬼火','邪焰','妖火','魔焰','黑炎','红炎','紫炎','蓝炎','绿炎','金炎','银炎','白炎','青炎','赤炎','橙炎','黄炎','灰炎','血焰','骨焰','魂焰','魄焰','魄焰','魄焰','魄焰','魄焰','魄焰','魄焰','暗火','黑火','冥火','鬼火','邪火','妖火','魔火','黑火','暗火','幽火'],
+  cannon: ['重锤','铁壁','铜墙','铁墙','石墙','土墙','木墙','砖墙','钢墙','铁炮','铜炮','钢炮','银炮','金炮','重炮','巨炮','大炮','小炮','榴弹炮','加农炮','臼炮','迫击炮','火箭炮','榴弹','炮弹','炸弹','炸药','火药','硝石','硫磺','木炭','钢铁','精钢','玄铁','寒铁','陨铁','星铁','月铁','日铁','雷铁'],
+  rocket: ['火箭','飞弹','导弹','巡航','追踪','锁定','制导','精确','精准','致命','毁灭','破坏','爆炸','爆裂','爆破','爆燃','爆轰','爆震','爆鸣','爆响','爆燃','爆轰','爆震','爆鸣','爆响','飞火','流星','火焰','烈焰','炽焰','灼热','炽热','滚烫','燃烧','焚烧','烧毁','烧尽','燃尽','燃爆','燃轰'],
+  tesla: ['闪电','雷霆','惊雷','霹雳','电闪','雷鸣','电弧','电火花','电击','电疗','电磁','电磁波','电磁场','电磁力','电磁场','电磁炮','电磁轨','电磁枪','电磁剑','电磁盾','电磁甲','电磁衣','电磁纱','电磁丝','电磁绡','电磁绫','电磁罗','电磁绮','电磁纨','电磁绮','闪电侠','雷霆侠','惊雷侠','霹雳侠','电闪侠','雷鸣侠','电弧侠','电火侠','电击侠','电疗侠'],
+  skeleton: ['白骨','枯骨','残骸','尸骨','遗骸','残骨','碎骨','裂骨','断骨','残肢','断臂','断腿','残躯','残骸','遗骸','尸骨','白骨精','骷髅王','骷髅兵','骷髅士','骷髅将','骷髅帅','骷髅侯','骷髅伯','骷髅子','骷髅男','骷髅女','骷髅童','骷髅老','骷髅少','骷髅头','骷髅手','骷髅脚','骷髅身','骷髅架','骷髅骨','骷髅魂','骷髅魄','骷髅灵','骷髅鬼']
+};
+
+// 已用名字集合
+const usedNames = new Set();
+function getUnitName(type) {
+  const pool = NAME_POOLS[type] || ['无名'];
+  const avail = pool.filter(n => !usedNames.has(n));
+  if (avail.length === 0) return pool[Math.floor(Math.random()*pool.length)];
+  const name = avail[Math.floor(Math.random()*avail.length)];
+  usedNames.add(name);
+  return name;
+}
+
 // 敌方兵营（镜像）
 const EN_BARRACK_POS = [
+  {x:1080, lane:0, dy:-15}, {x:1040, lane:0, dy:-15},
+  {x:1080, lane:0, dy:15},  {x:1040, lane:0, dy:15},
+  {x:1080, lane:1, dy:-15}, {x:1040, lane:1, dy:-15},
+  {x:1080, lane:1, dy:15},  {x:1040, lane:1, dy:15},
+  {x:1080, lane:2, dy:-15}, {x:1040, lane:2, dy:-15},
+  {x:1080, lane:2, dy:15},  {x:1040, lane:2, dy:15}
+];
   {x:1080, lane:0, dy:-15}, {x:1040, lane:0, dy:-15},
   {x:1080, lane:0, dy:15},  {x:1040, lane:0, dy:15},
   {x:1080, lane:1, dy:-15}, {x:1040, lane:1, dy:-15},
@@ -176,7 +209,7 @@ const UPGRADE_PATHS = {
 // ============ 状态 ============
 let game = { gold:300, time:0, speed:1, selectedType:null,
   towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
-  goldAcc:0, upgradeMenu:null // {barrackIdx, x, y}
+  goldAcc:0, upgradeMenu:null, selectedUnit:null
 };
 
 const canvas = document.getElementById('gameCanvas');
@@ -185,7 +218,8 @@ const ctx = canvas.getContext('2d');
 function initGame() {
   game = { gold:300, time:0, speed:1, selectedType:null,
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
-    goldAcc:0, upgradeMenu:null };
+    goldAcc:0, upgradeMenu:null, selectedUnit:null };
+  usedNames.clear();
 
   // 我方基地（1个，横跨三路）
   game.towers.push({ x:MY_BASE_X, y:300, side:'my', isBase:true, hp:3000, maxHp:3000,
@@ -229,6 +263,7 @@ function spawnUnit(b) {
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
   const u = {
     x:b.x, y:LANE_Y[b.lane]+(b.dy||0), lane:b.lane, side:b.side, type:b.unitType,
+    name:getUnitName(b.unitType),
     dir: b.side==='my'?1:-1, level:lv,
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
@@ -855,8 +890,7 @@ function render() {
     const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
     if (!ex) {
       ctx.beginPath(); ctx.arc(slot.x, y, 12, 0, Math.PI*2);
-      if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; }
-      else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=1.5; }
+      if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; }      else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=1.5; }
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = game.selectedType?'#4CAF50':'#4A6FA5';
       ctx.font='14px sans-serif'; ctx.textAlign='center'; ctx.fillText('+', slot.x, y+4); ctx.textAlign='start';
@@ -909,6 +943,14 @@ function render() {
     ctx.fillStyle='#333'; ctx.fillRect(u.x-9,u.y-s-7,18,3);
     ctx.fillStyle=pct>0.5?'#4CAF50':pct>0.25?'#FF9800':'#F44336';
     ctx.fillRect(u.x-9,u.y-s-7,18*pct,3);
+    // 名字
+    ctx.fillStyle='#fff'; ctx.font='8px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(u.name||'', u.x, u.y-s-10); ctx.textAlign='start';
+    // 选中框
+    if (game.selectedUnit===u) {
+      ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(u.x,u.y,s+3,0,Math.PI*2); ctx.stroke();
+    }
   });
 
   // 弹道
@@ -916,6 +958,35 @@ function render() {
     const cx=p.x+(p.tx-p.x)*p.p, cy=p.y+(p.ty-p.y)*p.p;
     ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fill();
   });
+
+  // 建造菜单
+  if (game.buildMenu) {
+    const m = game.buildMenu;
+    const types = ['melee','archer','mage','cannon'];
+    const names = ['近战(60)','弓手(80)','法师(90)','攻城车(110)'];
+    const costs = [60,80,90,110];
+    const mw=180, mh=types.length*36+10;
+    const mx = Math.min(m.x, 1200-mw-10);
+    const my = Math.max(10, m.y-mh/2);
+    ctx.fillStyle='rgba(0,0,0,0.92)';
+    ctx.fillRect(mx, my, mw, mh);
+    ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2;
+    ctx.strokeRect(mx, my, mw, mh);
+    ctx.fillStyle='#4CAF50'; ctx.font='bold 13px sans-serif';
+    ctx.fillText('建造兵营', mx+10, my+18);
+    m.hits = [];
+    types.forEach((t,i) => {
+      const py = my+25+i*36;
+      const cost = costs[i];
+      const can = game.gold>=cost;
+      ctx.fillStyle = can?'#4CAF50':'#666';
+      ctx.fillRect(mx+5, py, mw-10, 30);
+      ctx.fillStyle = can?'#fff':'#999';
+      ctx.font='12px sans-serif';
+      ctx.fillText(names[i], mx+12, py+18);
+      m.hits.push({ x:mx+5, y:py, w:mw-10, h:30, key:t, cost:cost });
+    });
+  }
 
   // 升级菜单（Canvas上绘制）
   if (game.upgradeMenu) {
@@ -973,6 +1044,37 @@ function render() {
       }));
     }
   }
+
+  // 选中单位状态面板（底部中间）
+  if (game.selectedUnit && game.selectedUnit.hp > 0) {
+    const u = game.selectedUnit;
+    const def = UNIT_TYPES[u.type];
+    const pw = 300, ph = 100;
+    const px = (1200-pw)/2, py = 600-ph-10;
+    ctx.fillStyle='rgba(0,0,0,0.9)';
+    ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
+    ctx.strokeRect(px, py, pw, ph);
+    ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
+    ctx.fillText(`${def.name} · Lv.${u.level} · ${u.name}`, px+10, py+20);
+    ctx.fillStyle='#fff'; ctx.font='11px sans-serif';
+    ctx.fillText(`HP: ${Math.round(u.hp)}/${u.maxHp}  ATK: ${Math.round(u.atk)}  攻速: ${u.atkSpeed.toFixed(2)}`, px+10, py+40);
+    ctx.fillText(`射程: ${Math.round(u.range)}  移速: ${u.speed}  攻击类型: ${u.atkType}  护甲: ${u.armorType}`, px+10, py+58);
+    // 技能
+    let skillText = '';
+    if (u.dodge) skillText += `闪避${Math.round(u.dodge*100)}% `;
+    if (u.crit) skillText += `暴击${Math.round(u.crit*100)}% `;
+    if (u.poison) skillText += `毒${Math.round(u.poison*100)}% `;
+    if (u.doubleStrike) skillText += `连击${Math.round(u.doubleStrike*100)}% `;
+    if (u.instantKill) skillText += `即死${Math.round(u.instantKill*100)}% `;
+    if (u.polymorpth) skillText += `变羊${Math.round(u.polymorpth*100)}% `;
+    if (u.aoe) skillText += `AOE `;
+    if (u.armorPierce) skillText += `穿甲 `;
+    ctx.fillStyle='#4CAF50'; ctx.fillText(`技能: ${skillText||'无'}`, px+10, py+76);
+    if (u.ultimate) {
+      ctx.fillStyle='#e94560'; ctx.fillText(`大招: ${u.ultimate}`, px+10, py+92);
+    }
+  }
 }
 
 function shade(c,p) {
@@ -991,6 +1093,25 @@ canvas.addEventListener('click', e => {
   const sx = 1200/rect.width, sy = 600/rect.height;
   const cx = (e.clientX-rect.left)*sx;
   const cy = (e.clientY-rect.top)*sy;
+
+  // 建造菜单点击
+  if (game.buildMenu) {
+    const m = game.buildMenu;
+    if (m.hits) {
+      for (const h of m.hits) {
+        if (cx>=h.x && cx<=h.x+h.w && cy>=h.y && cy<=h.y+h.h) {
+          if (game.gold>=h.cost) {
+            game.gold -= h.cost;
+            game.barracks.push({ x:m.slot.x, lane:m.slot.lane, dy:m.slot.dy||0, side:'my', unitType:h.key, level:1, hp:2000, maxHp:2000, spawnTimer:1, alive:true, armorType:'fort' });
+          }
+          game.buildMenu = null;
+          return;
+        }
+      }
+    }
+    game.buildMenu = null;
+    return;
+  }
 
   // 升级菜单点击
   if (game.upgradeMenu) {
@@ -1022,6 +1143,20 @@ canvas.addEventListener('click', e => {
     return;
   }
 
+  // 找最近单位
+  let nearUnit = null, nd = Infinity;
+  game.units.forEach(u => {
+    if (u.hp<=0) return;
+    const d = Math.hypot(cx-u.x, cy-u.y);
+    if (d < nd && d < 20) { nd = d; nearUnit = u; }
+  });
+  if (nearUnit) {
+    game.selectedUnit = nearUnit;
+    game.upgradeMenu = null;
+    return;
+  }
+  game.selectedUnit = null;
+
   // 找最近路
   let lane=-1, ld=Infinity;
   LANE_Y.forEach((y,i)=>{const d=Math.abs(cy-y); if(d<ld){ld=d;lane=i;}});
@@ -1034,12 +1169,9 @@ canvas.addEventListener('click', e => {
       const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
       if (ex) {
         game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
-      } else if (game.selectedType) {
-        const def = UNIT_TYPES[game.selectedType];
-        if (game.gold>=def.cost) {
-          game.gold -= def.cost;
-          game.barracks.push({ x:slot.x, lane:slot.lane, dy:slot.dy||0, side:'my', unitType:game.selectedType, level:1, spawnTimer:1, alive:true });
-        }
+      } else {
+        // 弹出建造菜单
+        game.buildMenu = { x:cx, y:cy, slot:slot, hits:null };
       }
       return;
     }
@@ -1047,13 +1179,6 @@ canvas.addEventListener('click', e => {
 });
 
 // 按钮
-document.querySelectorAll('#control-panel .btn-melee,#control-panel .btn-archer,#control-panel .btn-mage,#control-panel .btn-cannon').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('#control-panel .btn').forEach(b=>b.classList.remove('btn-selected'));
-    btn.classList.add('btn-selected');
-    game.selectedType = btn.dataset.type;
-  });
-});
 document.getElementById('speed-btn').addEventListener('click', () => {
   game.speed = game.speed===1?2:game.speed===2?3:1;
   document.getElementById('speed-btn').textContent = game.speed+'x';
