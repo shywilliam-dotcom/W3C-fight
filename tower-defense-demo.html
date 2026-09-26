@@ -56,7 +56,7 @@
   <div>⚔ 单位:<b id="unit-count">0</b></div>
 </div>
 
-<canvas id="gameCanvas" width="1200" height="600"></canvas>
+<canvas id="gameCanvas" width="1200" height="720"></canvas>
 
 <div id="control-panel">
   <button class="btn btn-speed" id="speed-btn">1x</button>
@@ -72,7 +72,7 @@
 
 <script>
 // ============ 布局 ============
-const LANE_Y = [150, 300, 450];
+const LANE_Y = [180, 360, 540];
 const LANE_NAMES = ['上路','中路','下路'];
 const MY_BASE_X = 50;
 const EN_BASE_X = 1150;
@@ -80,12 +80,12 @@ const EN_BASE_X = 1150;
 // 兵营槽位（田字格，密集在基地前方）
 const BARRACK_SLOTS = [
   // 每路2×2小田字格，3路共12个（间距拉大不重叠）
-  {x:120, lane:0, dy:-15}, {x:160, lane:0, dy:-15},
-  {x:120, lane:0, dy:15},  {x:160, lane:0, dy:15},
-  {x:120, lane:1, dy:-15}, {x:160, lane:1, dy:-15},
-  {x:120, lane:1, dy:15},  {x:160, lane:1, dy:15},
-  {x:120, lane:2, dy:-15}, {x:160, lane:2, dy:-15},
-  {x:120, lane:2, dy:15},  {x:160, lane:2, dy:15}
+  {x:120, lane:0, dy:-20}, {x:160, lane:0, dy:-20},
+  {x:120, lane:0, dy:20},  {x:160, lane:0, dy:20},
+  {x:120, lane:1, dy:-20}, {x:160, lane:1, dy:-20},
+  {x:120, lane:1, dy:20},  {x:160, lane:1, dy:20},
+  {x:120, lane:2, dy:-20}, {x:160, lane:2, dy:-20},
+  {x:120, lane:2, dy:20},  {x:160, lane:2, dy:20}
 ];
 // 我方塔（每路3座，后退留出战斗空间）
 const MY_TOWER_X = [280, 350, 420];
@@ -230,10 +230,10 @@ function initGame() {
   usedNames.clear();
 
   // 我方基地（1个，横跨三路）
-  game.towers.push({ x:MY_BASE_X, y:300, side:'my', isBase:true, hp:3000, maxHp:3000,
+  game.towers.push({ x:MY_BASE_X, y:360, side:'my', isBase:true, hp:3000, maxHp:3000,
     atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
   // 敌方基地
-  game.towers.push({ x:EN_BASE_X, y:300, side:'enemy', isBase:true, hp:3000, maxHp:3000,
+  game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
     atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
   // 每条路的塔
@@ -269,8 +269,9 @@ function spawnUnit(b) {
   const rangeMul = 1 + (lv-1)*0.05;
   // 后期rush：300秒后新出兵攻击每60秒+15%
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
+  const yOff = (Math.random()-0.5)*40; // 每路3单位并行，y偏移±20
   const u = {
-    x:b.x, y:LANE_Y[b.lane]+(b.dy||0), lane:b.lane, side:b.side, type:b.unitType,
+    x:b.x, y:LANE_Y[b.lane]+(b.dy||0)+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
     name:getUnitName(b.unitType),
     dir: b.side==='my'?1:-1, level:lv,
     atkType: def.atkType || 'normal',
@@ -749,20 +750,20 @@ function update(dt) {
         if (o===u || o.side!==u.side || o.lane!==u.lane || o.hp<=0) return;
         const d = u.x - o.x;
         const minD = 15;
-        if (Math.abs(d) < minD && Math.abs(o.y-u.y) < 20) {
+        if (Math.abs(d) < minD && Math.abs(o.y-u.y) < 10) {
           if (d > 0) u.x = o.x + minD;
           else u.x = o.x - minD;
         }
       });
       // 接近基地时三路汇合：y向基地中线靠拢
       if (u.side==='my' && u.x>950) {
-        u.y += (300-u.y)*0.03;
-        u.lane = Math.round((u.y-150)/150); // 更新所属路
+        u.y += (360-u.y)*0.03;
+        u.lane = Math.round((u.y-180)/180); // 更新所属路
         if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
       }
       if (u.side==='enemy' && u.x<250) {
-        u.y += (300-u.y)*0.03;
-        u.lane = Math.round((u.y-150)/150);
+        u.y += (360-u.y)*0.03;
+        u.lane = Math.round((u.y-180)/180);
         if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
       }
       if (u.x<30) u.x=30;
@@ -827,16 +828,16 @@ function endGame(win) {
 
 // ============ 渲染 ============
 function render() {
-  ctx.clearRect(0,0,1200,600);
+  ctx.clearRect(0,0,1200,720);
 
   // 路：三路在基地处汇合（橄榄球形状）
-  ctx.lineWidth = 70;
+  ctx.lineWidth = 80;
   ctx.lineCap = 'round';
   LANE_Y.forEach((y,i) => {
     // 我方路：从基地(50,300)弯到三路位置
     ctx.strokeStyle = '#16163a';
     ctx.beginPath();
-    ctx.moveTo(50, 300);
+    ctx.moveTo(50, 360);
     ctx.quadraticCurveTo(200, y, 380, y);
     ctx.stroke();
     // 中间直道
@@ -847,7 +848,7 @@ function render() {
     // 敌方路：弯到敌方基地
     ctx.beginPath();
     ctx.moveTo(820, y);
-    ctx.quadraticCurveTo(1000, y, 1150, 300);
+    ctx.quadraticCurveTo(1000, y, 1150, 360);
     ctx.stroke();
   });
   // 路边框
@@ -855,10 +856,10 @@ function render() {
   ctx.strokeStyle = '#0f3460';
   LANE_Y.forEach((y,i) => {
     ctx.beginPath();
-    ctx.moveTo(50, 300);
+    ctx.moveTo(50, 360);
     ctx.quadraticCurveTo(200, y, 380, y);
     ctx.lineTo(820, y);
-    ctx.quadraticCurveTo(1000, y, 1150, 300);
+    ctx.quadraticCurveTo(1000, y, 1150, 360);
     ctx.stroke();
   });
   ctx.lineCap = 'butt';
@@ -869,7 +870,7 @@ function render() {
 
   // 中间交战区标记（虚线）
   ctx.strokeStyle='#2a2a5a'; ctx.setLineDash([8,8]); ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(600,100); ctx.lineTo(600,500); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(600,100); ctx.lineTo(600,620); ctx.stroke();
   ctx.setLineDash([]);
   ctx.fillStyle='#333'; ctx.font='12px sans-serif'; ctx.textAlign='center';
   ctx.fillText('⚔ 交战区 ⚔', 600, 95); ctx.textAlign='start';
@@ -1256,7 +1257,7 @@ function render() {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type];
     const pw = 300, ph = 100;
-    const px = (1200-pw)/2, py = 600-ph-10;
+    const px = (1200-pw)/2, py = 720-ph-10;
     ctx.fillStyle='rgba(0,0,0,0.9)';
     ctx.fillRect(px, py, pw, ph);
     ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
@@ -1296,7 +1297,7 @@ function shade(c,p) {
 canvas.addEventListener('click', e => {
   if (game.gameOver) return;
   const rect = canvas.getBoundingClientRect();
-  const sx = 1200/rect.width, sy = 600/rect.height;
+  const sx = 1200/rect.width, sy = 720/rect.height;
   const cx = (e.clientX-rect.left)*sx;
   const cy = (e.clientY-rect.top)*sy;
 
@@ -1366,7 +1367,7 @@ canvas.addEventListener('click', e => {
   // 找最近路
   let lane=-1, ld=Infinity;
   LANE_Y.forEach((y,i)=>{const d=Math.abs(cy-y); if(d<ld){ld=d;lane=i;}});
-  if (ld>80) return;
+  if (ld>100) return;
 
   // 找兵营槽位
   for (const slot of BARRACK_SLOTS) {
