@@ -146,7 +146,7 @@ const UNIT_TYPES = {
   rocket:   { name:'火箭炮', shape:'square', size:11, hp:250, atk:20, atkSpeed:0.3, range:220, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'splashRange',v:150}, skill2:{k:'burn',v:1}, desc:'大范围溅射150+灼烧（中期强）' },
   tesla:    { name:'特斯拉', shape:'square', size:11, hp:250, atk:20, atkSpeed:0.3, range:190, speed:50, cost:165, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
-    skill1:{k:'chainLightning',v:8}, skill2:{k:'stun',v:0.15}, desc:'连锁闪电8目标+15%昏迷（后期强）' },
+    skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:10}, desc:'连锁闪电8目标+电圈50范围10/s（后期强）' },
   siege:    { name:'攻城炮', shape:'square', size:13, hp:350, atk:35, atkSpeed:0.35, range:160, speed:50, cost:165, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射（早期强）' }
 };
@@ -226,7 +226,7 @@ function spawnUnit(b) {
     aoe:0, dmgReduce:0, buildingDamage:0,
     iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
     armorPierce:false, summonGolem:0, chainLightning:0, longRange:0,
-    stun:0, vulnerable:0, dodgeCounter:false, execute:0,
+    stun:0, vulnerable:0, dodgeCounter:false, execute:0, electricField:0,
     ultimate: lv>=6 ? def.ult : null,
     st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0 }
   };
@@ -256,6 +256,7 @@ function spawnUnit(b) {
     else if (s.k==='vulnerable') u.vulnerable = s.v*mul;
     else if (s.k==='dodgeCounter') u.dodgeCounter = !!s.v;
     else if (s.k==='execute') u.execute = s.v;
+    else if (s.k==='electricField') u.electricField = s.v;
   });
   // 格斗家专属：闪避随等级大幅成长（后期型）
   if (b.unitType==='fighter') u.dodge += (lv-1)*0.05;
@@ -335,6 +336,8 @@ function doAttack(att, tgt, def) {
       });
       if(!next) break;
       applyDmg(att,next,dmg*Math.pow(0.7,i),def);
+      // 连锁闪电每目标15%概率眩晕
+      if (att.stun>0 && Math.random()<att.stun) next.st.stun=1.5;
       hit.push(next); cur=next;
     }
   }
@@ -440,6 +443,14 @@ function update(dt) {
     else if (u.iceBlock) { if(u.st.iceBlockCD>0){u.st.iceBlockCD-=dt; if(u.st.iceBlockCD<=0){u.st.iceBlock=2;u.hp=u.maxHp;}} }
     if (u.st.stun>0) u.st.stun-=dt;
     if (u.st.vulnerable>0) u.st.vulnerable-=dt;
+    // 特斯拉电圈：身边50范围每秒10伤害
+    if (u.electricField>0) {
+      game.units.forEach(o => {
+        if (o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<50 && Math.abs(o.y-u.y)<50) {
+          o.hp -= u.electricField*dt;
+        }
+      });
+    }
     // 圣骑士低血爆发回血：血量<50%时CD10秒回50%血
     if (u.holyHeal) {
       if (u.holyHealCD>0) u.holyHealCD-=dt;
