@@ -549,7 +549,7 @@ function update(dt) {
       u.exploded = true;
       game.units.forEach(o => {
         if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<80) {
-          applyDmg(u,o,u.atk*2,def);
+          applyDmg(u,o,u.atk*2,null);
         }
       });
     }
