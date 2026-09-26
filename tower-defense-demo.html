@@ -119,36 +119,36 @@ const UNIT_TYPES = {
     skill1:{k:'splashRange',v:40}, skill2:{k:'buildingDamage',v:1.5}, desc:'溅射+对塔1.5倍' },
 
   // 近战升级（大招=旋风斩）
-  barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:280, atk:15, atkSpeed:0.9, range:45, speed:60, cost:90, color:'#8B4513', atkType:'normal', armorType:'heavy', ult:'whirlwind',
-    skill1:{k:'aoe',v:2}, skill2:{k:'berserk',v:1}, desc:'群伤2目标+狂暴攻速' },
+  barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:320, atk:18, atkSpeed:0.9, range:45, speed:60, cost:90, color:'#8B4513', atkType:'normal', armorType:'heavy', ult:'whirlwind',
+    skill1:{k:'aoe',v:2}, skill2:{k:'berserk',v:1}, desc:'群伤2目标+狂暴攻速（早期强）' },
   paladin:  { name:'圣骑士', shape:'circle', size:11, hp:220, atk:12, atkSpeed:1.0, range:40, speed:60, cost:90, color:'#FFD700', atkType:'normal', armorType:'heavy', ult:'whirlwind',
-    skill1:{k:'holyHeal',v:1}, skill2:{k:'dmgReduce',v:0.50}, desc:'低血回血+50%减伤' },
-  fighter:  { name:'格斗家', shape:'circle', size:10, hp:180, atk:18, atkSpeed:1.3, range:35, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'whirlwind',
-    skill1:{k:'dodge',v:0.15}, skill2:{k:'crit',v:0.20}, desc:'15%闪避+20%暴击' },
+    skill1:{k:'holyHeal',v:1}, skill2:{k:'dmgReduce',v:0.30}, desc:'低血回血+30%减伤（中期强）' },
+  fighter:  { name:'格斗家', shape:'circle', size:10, hp:150, atk:15, atkSpeed:1.3, range:35, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'whirlwind',
+    skill1:{k:'dodge',v:0.20}, skill2:{k:'crit',v:0.25}, desc:'20%闪避+25%暴击（后期强）' },
 
   // 弓手升级（大招=穿透箭）
   musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:150, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'piercing',
-    skill1:{k:'instantKill',v:0.08}, skill2:{k:'splash',v:0.25}, desc:'8%即死+25%溅射' },
-  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:9, atkSpeed:1.0, range:200, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'piercing',
-    skill1:{k:'poison',v:0.30}, skill2:{k:'longRange',v:1}, desc:'30%毒箭+超远射程' },
+    skill1:{k:'instantKill',v:0.05}, skill2:{k:'splash',v:0.25}, desc:'5%即死+25%溅射（中期强）' },
+  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:12, atkSpeed:1.0, range:200, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'piercing',
+    skill1:{k:'poison',v:0.20}, skill2:{k:'longRange',v:1}, desc:'20%毒箭+超远射程（初期强）' },
   crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:130, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'piercing',
-    skill1:{k:'doubleStrike',v:0.25}, skill2:{k:'armorPierce',v:1}, desc:'25%连击+无视护甲' },
+    skill1:{k:'doubleStrike',v:0.15}, skill2:{k:'armorPierce',v:1}, desc:'15%连击+无视护甲（后期强）' },
 
   // 法师升级（大招=暴风雪）
-  arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
-    skill1:{k:'polymorph',v:0.15}, skill2:{k:'summonGolem',v:0.10}, desc:'15%变羊+10%召唤傀儡' },
-  ice:      { name:'冰法', shape:'diamond', size:10, hp:90, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
-    skill1:{k:'iceBlock',v:1}, skill2:{k:'dmgReduce',v:0.30}, desc:'冰箱+30%减伤' },
-  fire:     { name:'火法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#FF4500', atkType:'magic', armorType:'unarmored', ult:'blizzard',
-    skill1:{k:'burn',v:1}, skill2:{k:'crit',v:0.20}, desc:'灼烧+20%暴击' },
+  arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
+    skill1:{k:'polymorph',v:0.10}, skill2:{k:'summonGolem',v:0.05}, desc:'10%变羊+5%召唤傀儡（初期强）' },
+  ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
+    skill1:{k:'iceBlock',v:1}, skill2:{k:'dmgReduce',v:0.30}, desc:'冰箱+30%减伤（中期强）' },
+  fire:     { name:'火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#FF4500', atkType:'magic', armorType:'unarmored', ult:'blizzard',
+    skill1:{k:'burn',v:1}, skill2:{k:'crit',v:0.20}, desc:'灼烧+20%暴击（后期强）' },
 
   // 攻城车升级（大招=弹幕）
-  rocket:   { name:'火箭炮', shape:'square', size:11, hp:250, atk:18, atkSpeed:0.35, range:180, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
-    skill1:{k:'splashRange',v:80}, skill2:{k:'burn',v:1}, desc:'大范围溅射+灼烧' },
-  tesla:    { name:'特斯拉', shape:'square', size:11, hp:250, atk:25, atkSpeed:0.3, range:190, speed:50, cost:165, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
-    skill1:{k:'chainLightning',v:5}, skill2:{k:'crit',v:0.15}, desc:'连锁闪电5目标+15%暴击' },
-  siege:    { name:'攻城炮', shape:'square', size:13, hp:300, atk:30, atkSpeed:0.35, range:160, speed:50, cost:165, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
-    skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射' }
+  rocket:   { name:'火箭炮', shape:'square', size:11, hp:250, atk:20, atkSpeed:0.35, range:180, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
+    skill1:{k:'splashRange',v:80}, skill2:{k:'burn',v:1}, desc:'大范围溅射+灼烧（中期强）' },
+  tesla:    { name:'特斯拉', shape:'square', size:11, hp:250, atk:20, atkSpeed:0.3, range:190, speed:50, cost:165, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
+    skill1:{k:'chainLightning',v:8}, skill2:{k:'crit',v:0.15}, desc:'连锁闪电8目标+15%暴击（后期强）' },
+  siege:    { name:'攻城炮', shape:'square', size:13, hp:350, atk:35, atkSpeed:0.35, range:160, speed:50, cost:165, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
+    skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射（早期强）' }
 };
 
 const UPGRADE_PATHS = {
