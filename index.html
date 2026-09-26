@@ -1375,6 +1375,20 @@ canvas.addEventListener('click', e => {
     return;
   }
 
+  // 找兵营槽位（优先检测，避免被兵挡住）
+  for (const slot of BARRACK_SLOTS) {
+    const sy = LANE_Y[slot.lane] + (slot.dy||0);
+    if (Math.abs(cx-slot.x)<22 && Math.abs(cy-sy)<22) {
+      const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
+      if (ex) {
+        game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
+      } else {
+        game.buildMenu = { x:cx, y:cy, slot:slot, hits:null };
+      }
+      return;
+    }
+  }
+
   // 找最近单位
   let nearUnit = null, nd = Infinity;
   game.units.forEach(u => {
@@ -1388,26 +1402,6 @@ canvas.addEventListener('click', e => {
     return;
   }
   game.selectedUnit = null;
-
-  // 找最近路
-  let lane=-1, ld=Infinity;
-  LANE_Y.forEach((y,i)=>{const d=Math.abs(cy-y); if(d<ld){ld=d;lane=i;}});
-  if (ld>100) return;
-
-  // 找兵营槽位
-  for (const slot of BARRACK_SLOTS) {
-    const sy = LANE_Y[slot.lane] + (slot.dy||0);
-    if (Math.abs(cx-slot.x)<22 && Math.abs(cy-sy)<22) {
-      const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
-      if (ex) {
-        game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
-      } else {
-        // 弹出建造菜单
-        game.buildMenu = { x:cx, y:cy, slot:slot, hits:null };
-      }
-      return;
-    }
-  }
 });
 
 // 按钮
