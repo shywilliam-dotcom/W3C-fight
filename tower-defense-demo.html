@@ -772,9 +772,10 @@ function update(dt) {
     } else {
       u.x += u.speed*u.dir*dt;
       u.animState = 'walk';
-      // 碰撞体积：同阵营同路单位保持最小距离（减小，允许多排并行）
+      // 碰撞体积：同阵营同路单位保持最小距离（召唤物无碰撞，自由穿过）
       game.units.forEach(o => {
         if (o===u || o.side!==u.side || o.lane!==u.lane || o.hp<=0) return;
+        if (u.type==='golem' || u.type==='skeleton' || o.type==='golem' || o.type==='skeleton') return;
         const d = u.x - o.x;
         const minD = 10;
         if (Math.abs(d) < minD && Math.abs(o.y-u.y) < 20) {
