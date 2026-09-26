@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>三路兵营战 - Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e; color: #eee;
+    font-family: 'Microsoft YaHei', sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 10px;
+  }
+  #hud {
+    width: 1200px; display: flex; justify-content: space-between; align-items: center;
+    background: #16213e; padding: 10px 20px; border-radius: 8px 8px 0 0;
+    border: 1px solid #0f3460;
+  }
+  #gold-display { color: #ffd700; font-weight: bold; font-size: 20px; }
+  canvas {
+    background: #0f0f23; border: 1px solid #0f3460; border-top: none; border-bottom: none;
+    cursor: pointer;
+  }
+  #control-panel {
+    width: 1200px; background: #16213e; padding: 12px 20px;
+    border-radius: 0 0 8px 8px; border: 1px solid #0f3460;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .btn {
+    padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 14px; font-weight: bold; transition: transform 0.1s;
+  }
+  .btn:hover { transform: scale(1.05); }
+  .btn-melee { background: #4CAF50; color: #fff; }
+  .btn-archer { background: #FF9800; color: #fff; }
+  .btn-mage { background: #9C27B0; color: #fff; }
+  .btn-cannon { background: #F44336; color: #fff; }
+  .btn-selected { outline: 3px solid #fff; }
+  .btn-speed { background: #607D8B; color: #fff; }
+  .btn-restart { background: #e94560; color: #fff; }
+  #info { margin-left: auto; font-size: 13px; color: #aaa; }
+  #game-over {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: rgba(0,0,0,0.95); border: 2px solid #e94560; border-radius: 12px;
+    padding: 40px; text-align: center; display: none; z-index: 200;
+  }
+  #game-over h2 { font-size: 36px; margin-bottom: 15px; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div>💰 <span id="gold-display">0</span></div>
+  <div>⏱ <b id="time-display">0:00</b></div>
+  <div>🛡 我方塔:<b id="my-towers">0</b> 敌方塔:<b id="enemy-towers">0</b></div>
+  <div>⚔ 单位:<b id="unit-count">0</b></div>
+</div>
+
+<canvas id="gameCanvas" width="1200" height="600"></canvas>
+
+<div id="control-panel">
+  <span style="color:#aaa;font-size:13px;">选兵种：</span>
+  <button class="btn btn-melee" data-type="melee">近战(60)</button>
+  <button class="btn btn-archer" data-type="archer">弓手(80)</button>
+  <button class="btn btn-mage" data-type="mage">法师(90)</button>
+  <button class="btn btn-cannon" data-type="cannon">攻城车(110)</button>
+  <button class="btn btn-speed" id="speed-btn">1x</button>
+  <button class="btn btn-restart" onclick="restartGame()">重开</button>
+  <span id="info">选兵种→点蓝圈放兵营；点已有兵营→选升级路线</span>
+</div>
+
+<div id="game-over">
+  <h2 id="go-title">胜利！</h2>
+  <p id="go-desc"></p>
+  <button class="btn btn-restart" onclick="restartGame()">再来</button>
+</div>
+
+<script>
+// ============ 布局 ============
+const LANE_Y = [150, 300, 450];
+const LANE_NAMES = ['上路','中路','下路'];
+const MY_BASE_X = 50;
+const EN_BASE_X = 1150;
+
+// 兵营槽位（田字格，密集在基地前方）
+const BARRACK_SLOTS = [
+  {x:130, lane:0}, {x:130, lane:2},
+  {x:190, lane:0}, {x:190, lane:2}
+];
+// 我方塔（每路3座，高血高防）
+const MY_TOWER_X = [350, 420, 490];
+// 中间交战区 500~700 完全让开
+// 敌方塔
+const EN_TOWER_X = [710, 780, 850];
+// 敌方兵营（田字格镜像）
+const EN_BARRACK_POS = [
+  {x:1070, lane:0}, {x:1070, lane:2},
+  {x:1010, lane:0}, {x:1010, lane:2}
+];
+
+// ============ 兵种（魔兽攻防相克） ============
+// atkType: normal(普通) / pierce(穿刺) / magic(魔法) / siege(攻城)
+// armorType: unarmored(无甲小兵) / fort(城甲塔/基地)
+// 攻防相克表（魔兽争霸3原版）
+// armorType: unarmored(无甲) / light(轻甲) / medium(中甲) / heavy(重甲) / fort(城甲)
+// atkType: normal / pierce / magic / siege / chaos(混乱=无视一切)
+const ATK_MUL = {
+  normal: { unarmored:1.0, light:1.5, medium:1.0, heavy:1.0, fort:0.5 },
+  pierce: { unarmored:1.5, light:0.75, medium:1.0, heavy:1.0, fort:0.35 },
+  magic:  { unarmored:1.25, light:0.75, medium:1.0, heavy:2.0, fort:0.35 },
+  siege:  { unarmored:1.5, light:0.5, medium:1.0, heavy:1.0, fort:1.5 },
+  chaos:  { unarmored:1.0, light:1.0, medium:1.0, heavy:1.0, fort:1.0 }
+};
+
+// 每个兵种：skill1 + skill2（随等级+10%/级），ult（6级大招）
+// ult: whirlwind(近战系) / piercing(弓手系) / blizzard(法师系) / barrage(攻城系)
+const UNIT_TYPES = {
+  melee:    { name:'刀盾手', shape:'circle', size:10, hp:300, atk:10, atkSpeed:1.0, range:40, speed:60, cost:60, color:'#4CAF50', atkType:'normal', armorType:'heavy', ult:'whirlwind',
+    skill1:{k:'dmgReduce',v:0.10}, skill2:{k:'crit',v:0.10}, desc:'10%减伤+10%暴击' },
+  archer:   { name:'弓手', shape:'triangle', size:9, hp:120, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:'piercing',
+    skill1:{k:'poison',v:0.20}, skill2:{k:'crit',v:0.10}, desc:'20%毒箭+10%暴击' },
+  mage:     { name:'法师', shape:'diamond', size:9, hp:100, atk:12, atkSpeed:0.6, range:120, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'blizzard',
+    skill1:{k:'burn',v:1}, skill2:{k:'crit',v:0.10}, desc:'灼烧+10%暴击' },
+  cannon:   { name:'攻城车', shape:'square', size:11, hp:350, atk:22, atkSpeed:0.35, range:170, speed:50, cost:110, color:'#F44336', atkType:'siege', armorType:'fort', ult:'barrage',
+    skill1:{k:'splashRange',v:40}, skill2:{k:'buildingDamage',v:1.5}, desc:'溅射+对塔1.5倍' },
+
+  // 近战升级（大招=旋风斩）
+  barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:320, atk:18, atkSpeed:0.9, range:45, speed:60, cost:90, color:'#8B4513', atkType:'normal', armorType:'heavy', ult:'whirlwind',
+    skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, desc:'群伤2目标+斩杀5%血（早期强）' },
+  paladin:  { name:'圣骑士', shape:'circle', size:11, hp:220, atk:12, atkSpeed:1.0, range:40, speed:60, cost:90, color:'#FFD700', atkType:'normal', armorType:'heavy', ult:'holyUlt',
+    skill1:{k:'holyHeal',v:1}, skill2:{k:'dmgReduce',v:0.30}, desc:'低血回血+30%减伤（中期强）' },
+  fighter:  { name:'格斗家', shape:'circle', size:10, hp:250, atk:20, atkSpeed:1.3, range:45, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'dodgeUlt',
+    skill1:{k:'dodge',v:0.15}, skill2:{k:'charge',v:200}, desc:'15%闪避+冲锋200范围（后期强）' },
+
+  // 弓手升级（大招=穿透箭）
+  musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:170, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'piercing',
+    skill1:{k:'instantKill',v:0.08}, skill2:{k:'splash',v:0.25}, desc:'8%即死+25%溅射（中期强）' },
+  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:230, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
+    skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭+超远射程（初期强）' },
+  crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:130, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
+    skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, desc:'20%连锁连击(最多5次)+无视护甲（后期强）' },
+
+  // 法师升级（大招=暴风雪）
+  arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'unarmored', ult:'arcaneBlink',
+    skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.40}, desc:'10%变羊+群体护盾40%血（初期强）' },
+  ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
+    skill1:{k:'iceBlock',v:1}, skill2:{k:'shieldAlly',v:0.15}, desc:'冰箱+33%易伤+友方护盾减伤15%（中期强）' },
+  fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'fireBlast',
+    skill1:{k:'summonSkeleton',v:2}, skill2:{k:'burnStack',v:1}, desc:'每2秒召唤骷髅+dot叠加（后期强）' },
+
+  // 攻城车升级（大招=弹幕）
+  rocket:   { name:'火箭炮', shape:'square', size:11, hp:180, atk:25, atkSpeed:0.3, range:220, speed:50, cost:247, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
+    skill1:{k:'splashRange',v:150}, skill2:{k:'splash',v:0.25}, desc:'大范围溅射150+25%溅射伤害（中期强）' },
+  tesla:    { name:'特斯拉', shape:'square', size:11, hp:180, atk:25, atkSpeed:0.3, range:190, speed:50, cost:247, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
+    skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标+电圈50范围20/s（后期强）' },
+  siege:    { name:'攻城炮', shape:'square', size:13, hp:252, atk:25, atkSpeed:0.35, range:160, speed:50, cost:247, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
+    skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射（早期强）' }
+};
+
+const UPGRADE_PATHS = {
+  melee: [{key:'barbarian',name:'斧头野蛮人'},{key:'paladin',name:'圣骑士'},{key:'fighter',name:'格斗家'}],
+  archer:[{key:'musketeer',name:'火枪手'},{key:'ranger',name:'游侠'},{key:'crossbow',name:'破甲弩手'}],
+  mage:  [{key:'arcane',name:'奥法'},{key:'ice',name:'冰法'},{key:'fire',name:'火法'}],
+  cannon:[{key:'rocket',name:'火箭炮'},{key:'tesla',name:'特斯拉'},{key:'siege',name:'攻城炮'}]
+};
+
+// ============ 状态 ============
+let game = { gold:300, time:0, speed:1, selectedType:null,
+  towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
+  goldAcc:0, upgradeMenu:null // {barrackIdx, x, y}
+};
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function initGame() {
+  game = { gold:300, time:0, speed:1, selectedType:null,
+    towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
+    goldAcc:0, upgradeMenu:null };
+
+  // 我方基地（1个，横跨三路）
+  game.towers.push({ x:MY_BASE_X, y:300, side:'my', isBase:true, hp:3000, maxHp:3000,
+    atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
+  // 敌方基地
+  game.towers.push({ x:EN_BASE_X, y:300, side:'enemy', isBase:true, hp:3000, maxHp:3000,
+    atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
+
+  // 每条路的塔
+  for (let lane=0; lane<3; lane++) {
+    const y = LANE_Y[lane];
+    const isMid = lane===1;
+    const tRange = isMid ? 160 : 100;
+    MY_TOWER_X.forEach(tx => {
+      game.towers.push({ x:tx, y, lane, side:'my', isBase:false,
+        hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+    });
+    EN_TOWER_X.forEach(tx => {
+      game.towers.push({ x:tx, y, lane, side:'enemy', isBase:false,
+        hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+    });
+    // 初始无兵营，全靠玩家/AI自己建
+  }
+  document.getElementById('game-over').style.display = 'none';
+}
+
+// ============ 经济 ============
+function income() {
+  let base = 2;
+  let myT = game.towers.filter(t=>t.side==='my'&&t.alive&&!t.isBase).length;
+  return base + myT * 0.5;
+}
+
+// ============ 出兵 ============
+function spawnUnit(b) {
+  const def = UNIT_TYPES[b.unitType];
+  const lv = b.level || 1;
+  const mul = Math.pow(1.15, lv-1);  // 每级+15%血攻（指数成长）
+  const rangeMul = 1 + (lv-1)*0.05;
+  // 后期rush：300秒后新出兵攻击每60秒+15%
+  const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
+  const u = {
+    x:b.x, y:LANE_Y[b.lane], lane:b.lane, side:b.side, type:b.unitType,
+    dir: b.side==='my'?1:-1, level:lv,
+    atkType: def.atkType || 'normal',
+    armorType: def.armorType || 'unarmored',
+    hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
+    atk:Math.round(def.atk*mul*timeMul*2), atkSpeed:def.atkSpeed/2,  // 攻击加倍，攻速减半
+    range:def.range*rangeMul, speed:def.speed, atkTimer:0,
+    crit:0, dodge:0, instantKill:0, polymorpth:0,
+    burnDps:0, poison:0, poisonDps:0, splash:0,
+    doubleStrike:0, multiTarget:0, splashRange:0,
+    aoe:0, dmgReduce:0, buildingDamage:0,
+    iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
+    armorPierce:false, summonGolem:0, chainLightning:0, longRange:0,
+    stun:0, vulnerable:0, dodgeCounter:false, execute:0, electricField:0,
+    summonSkeleton:0, skeletonTimer:0, burnStack:0,
+    currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
+    shieldWall:0, shieldCD:0, shield:0,
+    shieldAlly:0, shieldAllyCD:0, dmgReduce:0,
+    golemCD:0, charge:0, chargeCD:0,
+    ultimate: lv>=6 ? def.ult : null,
+    st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 }
+  };
+  // 自动应用skill1和skill2（按等级缩放）
+  [def.skill1, def.skill2].forEach(s => {
+    if (!s) return;
+    if (s.k==='dmgReduce') u.dmgReduce = s.v*mul;
+    else if (s.k==='crit') u.crit = s.v*mul;
+    else if (s.k==='dodge') u.dodge = s.v*mul;
+    else if (s.k==='instantKill') u.instantKill = s.v*mul;
+    else if (s.k==='polymorph') u.polymorpth = s.v*mul;
+    else if (s.k==='burn') u.burnDps = 20*mul;
+    else if (s.k==='poison') { u.poison = s.v*mul; u.poisonDps = 6*mul; }
+    else if (s.k==='splash') u.splash = s.v*mul;
+    else if (s.k==='splashRange') u.splashRange = s.v*rangeMul;
+    else if (s.k==='doubleStrike') u.doubleStrike = s.v*mul;
+    else if (s.k==='armorPierce') u.armorPierce = !!s.v;
+    else if (s.k==='aoe') u.aoe = s.v;
+    else if (s.k==='berserk') u.berserk = !!s.v;
+    else if (s.k==='holyHeal') u.holyHeal = !!s.v;
+    else if (s.k==='iceBlock') u.iceBlock = !!s.v;
+    else if (s.k==='summonGolem') u.summonGolem = s.v*mul;
+    else if (s.k==='chainLightning') u.chainLightning = s.v;
+    else if (s.k==='buildingDamage') u.buildingDamage = s.v;
+    else if (s.k==='longRange') u.range *= 1.3;
+    else if (s.k==='stun') u.stun = s.v*mul;
+    else if (s.k==='vulnerable') u.vulnerable = s.v*mul;
+    else if (s.k==='dodgeCounter') u.dodgeCounter = !!s.v;
+    else if (s.k==='execute') u.execute = s.v;
+    else if (s.k==='electricField') u.electricField = s.v;
+    else if (s.k==='summonSkeleton') u.summonSkeleton = s.v;
+    else if (s.k==='burnStack') u.burnStack = 1;
+    else if (s.k==='shieldWall') u.shieldWall = s.v;
+    else if (s.k==='shieldAlly') u.shieldAlly = s.v;
+    else if (s.k==='charge') u.charge = s.v;
+  });
+  // 格斗家专属：闪避随等级大幅成长（后期型）
+  if (b.unitType==='fighter') u.dodge += (lv-1)*0.05;
+  game.units.push(u);
+}
+
+// ============ 战斗 ============
+function doAttack(att, tgt, def) {
+  let dmg = att.atk;
+  if (att.crit && Math.random()<att.crit) dmg*=2;
+  if (att.holyStrike && Math.random()<att.holyStrike) dmg*=1.5;
+  if (att.instantKill && Math.random()<att.instantKill && tgt.type!==undefined) {
+    tgt.hp = 0; spawnProj(att,tgt,'#FFD700'); return;
+  }
+  // 斩杀：目标血量<5%时直接击杀
+  if (att.execute && tgt.type!==undefined && tgt.hp < tgt.maxHp*att.execute) {
+    tgt.hp = 0; spawnProj(att,tgt,'#FF4500'); return;
+  }
+  let targets=[tgt];
+  if (att.multiTarget && Math.random()<att.multiTarget && tgt.type!==undefined) {
+    game.units.forEach(o => {
+      if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
+          Math.abs(o.x-att.x)<att.range+30) targets.push(o);
+    });
+  }
+  // 连锁连击：每次攻击都有概率再触发一次，最多连打5次
+  let strikes = 1;
+  if (att.doubleStrike>0) {
+    while (strikes<5 && Math.random()<att.doubleStrike) strikes++;
+  }
+  targets.forEach(t => { for(let i=0;i<strikes;i++) applyDmg(att,t,dmg,def); });
+
+  if (tgt.type!==undefined) {
+    if (att.polymorpth && Math.random()<att.polymorpth) tgt.st.polymorphed=2;
+    if (att.burnDps>0) { tgt.st.burn=3; tgt.st.burnDps=att.burnDps; }
+    // 攻城车通用dot：灼烧5/s持续3秒
+    if (att.atkType==='siege') { tgt.st.burn=3; tgt.st.burnDps=Math.max(tgt.st.burnDps||0, 5); }
+    if (att.poison>0 && Math.random()<att.poison) { tgt.st.poison=3; tgt.st.poisonDps=att.poisonDps; }
+    // 特斯拉昏迷
+    if (att.stun>0 && Math.random()<att.stun) tgt.st.stun=1.5;
+    // 冰法易伤debuff
+    if (att.vulnerable>0 && Math.random()<att.vulnerable) tgt.st.vulnerable=3;
+  }
+  if (att.splash && Math.random()<att.splash) {
+    game.units.forEach(o => {
+      if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
+          Math.abs(o.x-tgt.x)<50) applyDmg(att,o,dmg*0.5,def);
+    });
+  }
+  if (att.splashRange>0 && tgt.type!==undefined) {
+    game.units.forEach(o => {
+      if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
+          Math.abs(o.x-tgt.x)<att.splashRange) applyDmg(att,o,dmg*0.6,def);
+    });
+  }
+  if (att.aoe>0 && tgt.type!==undefined) {
+    let hit=0;
+    game.units.forEach(o => {
+      if (hit>=att.aoe-1) return;
+      if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
+          Math.abs(o.x-att.x)<60) { applyDmg(att,o,dmg*0.8,def); hit++; }
+    });
+  }
+  // 特斯拉连锁闪电：跳chainLightning个目标，伤害递减
+  if (att.chainLightning>0 && tgt.type!==undefined) {
+    let hit=[tgt];
+    let cur=tgt;
+    for(let i=1;i<att.chainLightning;i++){
+      let next=null,nd=Infinity;
+      game.units.forEach(o=>{
+        if(o.lane===att.lane&&o.side!==att.side&&o.hp>0&&hit.indexOf(o)<0&&Math.abs(o.x-cur.x)<100){
+          const d=Math.abs(o.x-cur.x); if(d<nd){nd=d;next=o;}
+        }
+      });
+      if(!next) break;
+      applyDmg(att,next,dmg*Math.pow(0.7,i),def);
+      // 连锁闪电每目标15%概率眩晕
+      if (att.stun>0 && Math.random()<att.stun) next.st.stun=1.5;
+      hit.push(next); cur=next;
+    }
+  }
+  // 6级大招
+  if (att.ultimate && tgt.type!==undefined) {
+    // 旋风斩（野蛮人）
+    if (att.ultimate==='whirlwind' && Math.random()<0.5) {
+      game.units.forEach(o => {
+        if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
+            Math.abs(o.x-att.x)<80) applyDmg(att,o,dmg,def);
+      });
+    }
+    // 圣骑士大招：回血100%（60秒CD）
+    if (att.ultimate==='holyUlt') {
+      if (!att.holyUltCD || att.holyUltCD<=0) {
+        att.hp = att.maxHp;
+        att.holyUltCD = 60;
+      }
+    }
+    // 格斗家大招：躲闪时50%概率无敌1秒+周围120范围100%伤害
+    if (att.ultimate==='dodgeUlt') {
+      if (!att.dodgeUltCD || att.dodgeUltCD<=0) {
+        att.st.iceBlock = 1;
+        game.units.forEach(o => {
+          if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
+              Math.abs(o.x-att.x)<120) applyDmg(att,o,dmg,def);
+        });
+        att.dodgeUltCD = 15;
+      }
+    }
+    // 游侠大招：箭雨150范围伤害（20秒CD）
+    if (att.ultimate==='arrowRain') {
+      if (!att.arrowRainCD || att.arrowRainCD<=0) {
+        game.units.forEach(o => {
+          if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
+              Math.abs(o.x-tgt.x)<150) applyDmg(att,o,dmg,def);
+        });
+        att.arrowRainCD = 20;
+      }
+    }
+    // 弩手大招：连发3次，每次20%连击（15秒CD）
+    if (att.ultimate==='rapidFire') {
+      if (!att.rapidFireCD || att.rapidFireCD<=0) {
+        for (let i=0;i<3;i++) {
+          applyDmg(att,tgt,dmg,def);
+          if (Math.random()<0.20) applyDmg(att,tgt,dmg,def);
+        }
+        att.rapidFireCD = 15;
+      }
+    }
+    // 火法大招：对目标500%伤害（20秒CD）
+    if (att.ultimate==='fireBlast') {
+      if (!att.fireBlastCD || att.fireBlastCD<=0) {
+        applyDmg(att,tgt,dmg*5,def);
+        att.fireBlastCD = 20;
+      }
+    }
+    // 弹幕（攻城车基础）
+    if (att.ultimate==='barrage') {
+      let extra=0;
+      game.units.forEach(o => {
+        if (extra>=2) return;
+        if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
+            Math.abs(o.x-att.x)<att.range+50) { applyDmg(att,o,dmg*0.7,def); extra++; }
+      });
+    }
+  }
+  spawnProj(att,tgt,def.color||'#fff');
+}
+
+function applyDmg(att, tgt, dmg, def) {
+  // 魔兽攻防相克：用目标的armorType
+  const tgtArmor = tgt.armorType || (tgt.type===undefined ? 'fort' : 'unarmored');
+  let mul = (ATK_MUL[att.atkType] && ATK_MUL[att.atkType][tgtArmor]) || 1.0;
+  let fd = dmg * mul;
+  if (tgt.type===undefined || tgt.maxHp && tgt.unitType===undefined && tgt.side && !tgt.st) {
+    // 防御塔/基地/兵营（建筑类，无st属性）
+    if (att.buildingDamage) fd *= att.buildingDamage;
+    tgt.hp -= fd;
+  } else {
+    if (tgt.st.iceBlock>0) return;
+    if (tgt.dodge && Math.random()<tgt.dodge) {
+      // 闪避反击：格斗家闪避后立刻反击攻击者
+      if (tgt.dodgeCounter && att.hp>0) {
+        let counterDmg = tgt.atk * 1.0;
+        att.hp -= counterDmg;
+        spawnProj(tgt, att, '#FF6B9D');
+      }
+      // 格斗家大招：躲闪时50%概率无敌1秒+周围120范围100%伤害
+      if (tgt.ultimate==='dodgeUlt' && (!tgt.dodgeUltCD || tgt.dodgeUltCD<=0) && Math.random()<0.5) {
+        tgt.st.iceBlock = 1;
+        game.units.forEach(o => {
+          if (o.lane===tgt.lane && o.side!==tgt.side && o.hp>0 &&
+              Math.abs(o.x-tgt.x)<120) applyDmg(tgt,o,tgt.atk,def);
+        });
+        tgt.dodgeUltCD = 15;
+      }
+      return;
+    }
+    if (tgt.dmgReduce && !att.armorPierce) fd *= (1-tgt.dmgReduce);
+    // 易伤debuff：受到伤害+30%
+    if (tgt.st.vulnerable>0) fd *= 1.3;
+    // 护盾吸收伤害
+    if (tgt.shield>0) {
+      absorbed = Math.min(tgt.shield, fd);
+      tgt.shield -= absorbed;
+      fd -= absorbed;
+    }
+    tgt.hp -= fd;
+    // 冰法被动：攻击冰法的单位攻速降低20%，持续3秒
+    if (tgt.type==='ice' && att.st) att.st.slow = 3;
+    // 小兵杀小兵给5%造价金币（塔杀不算）
+    if (tgt.hp <= 0 && UNIT_TYPES[tgt.type]) {
+      game.gold += Math.round(UNIT_TYPES[tgt.type].cost * 0.05);
+    }
+  }
+}
+
+function spawnProj(a,t,c) {
+  game.projectiles.push({ x:a.x, y:a.y, tx:t.x, ty:t.y!==undefined?t.y:t.y, p:0, color:c });
+}
+
+// ============ 更新 ============
+function update(dt) {
+  if (game.gameOver) return;
+  game.time += dt;
+  game.goldAcc += income()*dt;
+  if (game.goldAcc>=1) { let g=Math.floor(game.goldAcc); game.gold+=g; game.goldAcc-=g; }
+
+  // 双方AI补兵+升级（由外部脚本控制，这里不内置）
+
+  // 出兵（攻城车类20秒，其他15秒）
+  game.barracks.forEach(b => {
+    if (!b.alive) return;
+    b.spawnTimer -= dt;
+    if (b.spawnTimer<=0) {
+      spawnUnit(b);
+      const isSiege = ['cannon','rocket','tesla','siege'].includes(b.unitType);
+      b.spawnTimer = isSiege ? 20 : 15;
+    }
+  });
+
+  // 单位更新
+  game.units.forEach(u => {
+    if (u.st.polymorphed>0) u.st.polymorphed-=dt;
+    if (u.st.burn>0) { u.st.burn-=dt; u.hp-=u.st.burnDps*dt; }
+    if (u.st.poison>0) { u.st.poison-=dt; u.hp-=u.st.poisonDps*dt; }
+    if (u.st.iceBlock>0) { u.st.iceBlock-=dt; if(u.st.iceBlock<=0) u.st.iceBlockCD=10; }
+    else if (u.iceBlock) { if(u.st.iceBlockCD>0){u.st.iceBlockCD-=dt; if(u.st.iceBlockCD<=0){u.st.iceBlock=2;u.hp=u.maxHp;}} }
+    if (u.st.stun>0) u.st.stun-=dt;
+    if (u.st.vulnerable>0) u.st.vulnerable-=dt;
+    if (u.st.slow>0) u.st.slow-=dt;
+    // 特斯拉电圈：身边50范围每秒10伤害
+    if (u.electricField>0) {
+      game.units.forEach(o => {
+        if (o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<50 && Math.abs(o.y-u.y)<50) {
+          o.hp -= u.electricField*dt;
+        }
+      });
+    }
+    // 圣骑士低血爆发回血：血量<50%时CD10秒回50%血
+    if (u.holyHeal) {
+      if (u.holyHealCD>0) u.holyHealCD-=dt;
+      else if (u.hp < u.maxHp*0.5) { u.hp = Math.min(u.maxHp, u.hp + u.maxHp*0.25); u.holyHealCD=15; }
+    }
+    // 暗火法：每2秒召唤1个100血小骷髅
+    if (u.summonSkeleton>0) {
+      u.skeletonTimer -= dt;
+      if (u.skeletonTimer<=0) {
+        u.skeletonTimer = u.summonSkeleton;
+        game.units.push({
+          x:u.x, y:u.y, lane:u.lane, side:u.side, type:'skeleton',
+          dir:u.dir, level:1, atkType:'normal', armorType:'unarmored',
+          hp:100, maxHp:100, atk:5, atkSpeed:1.0, range:40, speed:60, atkTimer:0,
+          currentTarget:null, targetSwitchTimer:0, firstAttackDone:true, st:{}
+        });
+      }
+    }
+    // 换目标计时
+    if (u.targetSwitchTimer>0) u.targetSwitchTimer-=dt;
+    // 圣骑士大招CD
+    if (u.holyUltCD>0) u.holyUltCD-=dt;
+    if (u.dodgeUltCD>0) u.dodgeUltCD-=dt;
+    if (u.arrowRainCD>0) u.arrowRainCD-=dt;
+    if (u.rapidFireCD>0) u.rapidFireCD-=dt;
+    if (u.fireBlastCD>0) u.fireBlastCD-=dt;
+    if (u.arcaneBlinkCD>0) u.arcaneBlinkCD-=dt;
+    // 格斗家冲锋：200范围内直接冲到敌人面前，CD5秒
+    if (u.charge>0 && (u.chargeCD<=0)) {
+      let nearest = null, nd = Infinity;
+      game.units.forEach(o => {
+        if (o.lane!==u.lane || o.side===u.side || o.hp<=0) return;
+        const d = Math.abs(o.x - u.x);
+        if (d < nd && d < u.charge) { nd = d; nearest = o; }
+      });
+      if (nearest) {
+        // 直接冲到敌人面前
+        u.x = nearest.x - 50 * u.dir;
+        u.chargeCD = 5;
+      }
+    }
+    if (u.chargeCD>0) u.chargeCD-=dt;
+    // 奥法大招：濒死时无敌1秒，传送回基地，回20%血（CD60秒）
+    if (u.ultimate==='arcaneBlink' && u.hp>0 && u.hp < u.maxHp*0.15 && (!u.arcaneBlinkCD || u.arcaneBlinkCD<=0)) {
+      u.st.iceBlock = 1;
+      u.x = u.side==='my' ? 100 : 1100;
+      u.hp = Math.max(u.hp, u.maxHp*0.20);
+      u.arcaneBlinkCD = 60;
+    }
+    // 攻城车死亡爆炸：造成2次攻击伤害
+    if (u.hp<=0 && u.atkType==='siege' && !u.exploded) {
+      u.exploded = true;
+      game.units.forEach(o => {
+        if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<80) {
+          applyDmg(u,o,u.atk*2,null);
+        }
+      });
+    }
+    // 奥法召唤傀儡：CD15秒，生命585
+    if (u.type==='arcane') {
+      if (u.golemCD>0) u.golemCD-=dt;
+      else {
+        game.units.push({
+          x:u.x, y:u.y, lane:u.lane, side:u.side, type:'golem',
+          dir:u.dir, level:1, atkType:'normal', armorType:'heavy',
+          hp:585, maxHp:585, atk:12, atkSpeed:1.0, range:40, speed:55, atkTimer:0,
+          dmgReduce:0.5, st:{}
+        });
+        u.golemCD = 15;
+      }
+    }
+    // 奥法群体护盾：CD15秒，给周围5个单位加30%血护盾
+    if (u.shieldWall>0) {
+      if (u.shieldCD>0) u.shieldCD-=dt;
+      else {
+        var shieldAmount = Math.round(u.maxHp * u.shieldWall);
+        var count = 0;
+        game.units.forEach(o => {
+          if (count>=5) return;
+          if (o.side===u.side && o.hp>0 && Math.abs(o.x-u.x)<150) {
+            o.shield = Math.max(o.shield||0, shieldAmount);
+            count++;
+          }
+        });
+        u.shieldCD = 15;
+      }
+    }
+    // 冰法友方护盾：CD3秒，给1个友方加15%减伤护盾
+    if (u.shieldAlly>0) {
+      if (u.shieldAllyCD>0) u.shieldAllyCD-=dt;
+      else {
+        var target = null, bestHpPct = 1;
+        game.units.forEach(o => {
+          if (o.side===u.side && o.hp>0 && Math.abs(o.x-u.x)<150 && o!==u) {
+            var pct = o.hp/o.maxHp;
+            if (pct < bestHpPct) { bestHpPct = pct; target = o; }
+          }
+        });
+        if (target) {
+          target.dmgReduce = Math.max(target.dmgReduce||0, u.shieldAlly);
+          u.shieldAllyCD = 3;
+        }
+      }
+    }
+    if (u.hp<=0) return;
+    if (u.st.polymorphed>0||u.st.iceBlock>0||u.st.stun>0) return;
+
+    // 狂暴：血越少攻速越快（最多+60%攻速）
+    let atkSpd = u.atkSpeed;
+    if (u.berserk) {
+      const hpPct = u.hp/u.maxHp;
+      atkSpd = u.atkSpeed * (1 + (1-hpPct)*0.6);
+    }
+    // 易伤debuff：攻速降低20%
+    if (u.st.vulnerable>0) atkSpd *= 0.8;
+    // 冰法被动减速：攻速降低20%
+    if (u.st.slow>0) atkSpd *= 0.8;
+
+    // 找目标
+    let bestT=null, bestD=Infinity;
+    game.units.forEach(o => {
+      if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+      const d = Math.abs(o.x-u.x);
+      if (d<=u.range && d<bestD) { bestD=d; bestT=o; }
+    });
+    // 找塔
+    game.towers.forEach(t => {
+      if (t.lane!==u.lane&&!t.isBase) return;
+      if (t.side===u.side||!t.alive) return;
+      const d = Math.abs(t.x-u.x)+(t.isBase?Math.abs(t.y-u.y)*0.5:0);
+      if (d<=u.range+20 && d<bestD) { bestD=d; bestT=t; }
+    });
+    // 找兵营：该路所有塔被摧毁后才能打兵营
+    if (bestD > u.range+20) {
+      const enemySide = u.side==='my'?'enemy':'my';
+      const laneTowers = game.towers.filter(t=>t.side===enemySide&&t.lane===u.lane&&t.alive&&!t.isBase);
+      if (laneTowers.length===0) {
+        game.barracks.forEach(b => {
+          if (b.side===enemySide&&b.lane===u.lane&&b.alive) {
+            const d = Math.abs(b.x-u.x);
+            if (d<=u.range+20 && d<bestD) { bestD=d; bestT=b; }
+          }
+        });
+      }
+    }
+
+    u.atkTimer-=dt;
+    const def = UNIT_TYPES[u.type] || { color:'#fff' };
+    
+    // 目标切换检测
+    if (bestT && bestT !== u.currentTarget) {
+      u.currentTarget = bestT;
+      u.targetSwitchTimer = 0.5; // 换目标需要0.5秒才能出手
+    }
+    
+    if (bestT && bestD<=u.range+(bestT.type===undefined?20:0)) {
+      // 首次出手延迟0.3秒
+      if (!u.firstAttackDone) {
+        u.firstAttackDone = true;
+        u.atkTimer = Math.min(u.atkTimer, 0.3);
+      }
+      // 换目标后需要等
+      if (u.targetSwitchTimer<=0 && u.atkTimer<=0) {
+        // 火法dot叠加：连续攻击同一目标时，burn层数+1
+        if (u.burnStack && bestT.st) {
+          bestT.st.burnStacks = (bestT.st.burnStacks||0) + 1;
+          bestT.st.burnDps = Math.max(bestT.st.burnDps||0, 5 * bestT.st.burnStacks);
+          bestT.st.burn = 3;
+        }
+        doAttack(u,bestT,def);
+        u.atkTimer=1/atkSpd;
+      }
+    } else {
+      u.x += u.speed*u.dir*dt;
+      // 接近基地时三路汇合：y向基地中线靠拢
+      if (u.side==='my' && u.x>950) {
+        u.y += (300-u.y)*0.03;
+        u.lane = Math.round((u.y-150)/150); // 更新所属路
+        if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
+      }
+      if (u.side==='enemy' && u.x<250) {
+        u.y += (300-u.y)*0.03;
+        u.lane = Math.round((u.y-150)/150);
+        if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
+      }
+      if (u.x<30) u.x=30;
+      if (u.x>1170) u.x=1170;
+    }
+  });
+  game.units = game.units.filter(u=>u.hp>0);
+  // 兵营被摧毁
+  game.barracks.forEach(b => { if (b.alive && b.hp<=0) b.alive=false; });
+
+  // 塔攻击
+  game.towers.forEach(t => {
+    if (!t.alive) return;
+    t.atkTimer-=dt;
+    if (t.atkTimer<=0) {
+      let best=null, bd=Infinity;
+      game.units.forEach(u => {
+        if (!t.isBase && u.lane!==t.lane) return;
+        if (u.side===t.side||u.hp<=0||u.st.iceBlock>0) return;
+        const d = Math.abs(u.x-t.x)+Math.abs(u.y-t.y)*0.3;
+        if (d<=t.range && d<bd) { bd=d; best=u; }
+      });
+      if (best) { best.hp-=t.atk; t.atkTimer=1.0;
+        game.projectiles.push({x:t.x,y:t.y-20,tx:best.x,ty:best.y,p:0,color:t.side==='my'?'#4FC3F7':'#EF5350'});
+      } else t.atkTimer=0.1;
+    }
+  });
+
+  // 弹道
+  game.projectiles.forEach(p=>p.p+=dt*5);
+  game.projectiles = game.projectiles.filter(p=>p.p<1);
+
+  // 塔死亡
+  game.towers.forEach(t => {
+    if (t.alive && t.hp<=0) { t.alive=false; if(t.side==='enemy') game.gold+=200; }
+  });
+
+  // 胜负
+  const myB = game.towers.find(t=>t.isBase&&t.side==='my');
+  const enB = game.towers.find(t=>t.isBase&&t.side==='enemy');
+  if (myB && !myB.alive) endGame(false);
+  if (enB && !enB.alive) endGame(true);
+
+  // HUD
+  document.getElementById('gold-display').textContent = Math.floor(game.gold);
+  const m=Math.floor(game.time/60), s=Math.floor(game.time%60);
+  document.getElementById('time-display').textContent = m+':'+String(s).padStart(2,'0');
+  document.getElementById('my-towers').textContent = game.towers.filter(t=>t.side==='my'&&t.alive).length;
+  document.getElementById('enemy-towers').textContent = game.towers.filter(t=>t.side==='enemy'&&t.alive).length;
+  document.getElementById('unit-count').textContent = game.units.length;
+}
+
+function endGame(win) {
+  game.gameOver = true;
+  document.getElementById('go-title').textContent = win?'胜利！':'失败...';
+  document.getElementById('go-title').style.color = win?'#4CAF50':'#F44336';
+  document.getElementById('go-desc').textContent = win?
+    `用时${Math.floor(game.time/60)}分${Math.floor(game.time%60)}秒`:
+    '基地被摧毁了...';
+  document.getElementById('game-over').style.display='block';
+}
+
+// ============ 渲染 ============
+function render() {
+  ctx.clearRect(0,0,1200,600);
+
+  // 路：三路在基地处汇合（橄榄球形状）
+  ctx.lineWidth = 70;
+  ctx.lineCap = 'round';
+  LANE_Y.forEach((y,i) => {
+    // 我方路：从基地(50,300)弯到三路位置
+    ctx.strokeStyle = '#16163a';
+    ctx.beginPath();
+    ctx.moveTo(50, 300);
+    ctx.quadraticCurveTo(200, y, 380, y);
+    ctx.stroke();
+    // 中间直道
+    ctx.beginPath();
+    ctx.moveTo(380, y);
+    ctx.lineTo(820, y);
+    ctx.stroke();
+    // 敌方路：弯到敌方基地
+    ctx.beginPath();
+    ctx.moveTo(820, y);
+    ctx.quadraticCurveTo(1000, y, 1150, 300);
+    ctx.stroke();
+  });
+  // 路边框
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#0f3460';
+  LANE_Y.forEach((y,i) => {
+    ctx.beginPath();
+    ctx.moveTo(50, 300);
+    ctx.quadraticCurveTo(200, y, 380, y);
+    ctx.lineTo(820, y);
+    ctx.quadraticCurveTo(1000, y, 1150, 300);
+    ctx.stroke();
+  });
+  ctx.lineCap = 'butt';
+  ctx.fillStyle='#555'; ctx.font='11px sans-serif';
+  ctx.fillText('上路', 380, LANE_Y[0]-50);
+  ctx.fillText('中路', 600, LANE_Y[1]-50);
+  ctx.fillText('下路', 380, LANE_Y[2]-50);
+
+  // 中间交战区标记（虚线）
+  ctx.strokeStyle='#2a2a5a'; ctx.setLineDash([8,8]); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(600,100); ctx.lineTo(600,500); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#333'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('⚔ 交战区 ⚔', 600, 95); ctx.textAlign='start';
+
+  // 基地
+  game.towers.filter(t=>t.isBase).forEach(t => {
+    ctx.fillStyle = t.side==='my'?'#1565C0':'#C62828';
+    ctx.beginPath();
+    ctx.moveTo(t.x, t.y-50); ctx.lineTo(t.x+30, t.y); ctx.lineTo(t.x, t.y+50); ctx.lineTo(t.x-30, t.y);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#FFD700'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('基地', t.x, t.y+65); ctx.textAlign='start';
+    // 血条
+    ctx.fillStyle='#333'; ctx.fillRect(t.x-40, t.y+70, 80, 6);
+    ctx.fillStyle = t.alive?'#4CAF50':'#F44336';
+    ctx.fillRect(t.x-40, t.y+70, 80*(t.hp/t.maxHp), 6);
+  });
+
+  // 塔
+  game.towers.forEach(t => {
+    if (t.isBase) return;
+    if (!t.alive) {
+      ctx.fillStyle='#444'; ctx.fillRect(t.x-12, t.y-25, 24, 20);
+      ctx.fillStyle='#666'; ctx.font='9px sans-serif'; ctx.fillText('废墟', t.x-10, t.y-12);
+      return;
+    }
+    ctx.fillStyle = t.side==='my'?'#1565C0':'#C62828';
+    ctx.fillRect(t.x-12, t.y-35, 24, 35);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(t.x-12, t.y-35, 24, 35);
+    ctx.fillStyle = t.side==='my'?'#42A5F5':'#EF5350';
+    ctx.beginPath(); ctx.moveTo(t.x-12,t.y-35); ctx.lineTo(t.x,t.y-48); ctx.lineTo(t.x+12,t.y-35); ctx.fill(); ctx.stroke();
+    // 血条
+    const pct = t.hp/t.maxHp;
+    ctx.fillStyle='#333'; ctx.fillRect(t.x-15, t.y+3, 30, 4);
+    ctx.fillStyle = pct>0.5?'#4CAF50':pct>0.25?'#FF9800':'#F44336';
+    ctx.fillRect(t.x-15, t.y+3, 30*pct, 4);
+  });
+
+  // 空兵营槽位（田字格）
+  BARRACK_SLOTS.forEach(slot => {
+    const y = LANE_Y[slot.lane];
+    const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5);
+    if (!ex) {
+      ctx.beginPath(); ctx.arc(slot.x, y, 14, 0, Math.PI*2);
+      if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; }
+      else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=1.5; }
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = game.selectedType?'#4CAF50':'#4A6FA5';
+      ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.fillText('+', slot.x, y+5); ctx.textAlign='start';
+    }
+  });
+
+  // 兵营
+  game.barracks.forEach(b => {
+    const y = LANE_Y[b.lane];
+    const def = UNIT_TYPES[b.unitType];
+    if (!b.alive) {
+      // 被毁兵营画废墟
+      ctx.fillStyle='#444';
+      ctx.fillRect(b.x-10, y-28, 20, 18);
+      ctx.strokeStyle='#222'; ctx.strokeRect(b.x-10, y-28, 20, 18);
+      return;
+    }
+    ctx.fillStyle = b.side==='my'?'#2196F3':'#F44336';
+    ctx.fillRect(b.x-10, y-28, 20, 18);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-10, y-28, 20, 18);
+    ctx.fillStyle=def.color;
+    ctx.beginPath(); ctx.arc(b.x, y-19, 5, 0, Math.PI*2); ctx.fill();
+    // 血量条
+    if (b.hp < b.maxHp) {
+      ctx.fillStyle='#333'; ctx.fillRect(b.x-12, y-30, 24, 3);
+      ctx.fillStyle='#4CAF50'; ctx.fillRect(b.x-12, y-30, 24*(b.hp/b.maxHp), 3);
+    }
+    // 等级标记
+    if (b.level>1) {
+      ctx.fillStyle='#FFD700'; ctx.font='9px sans-serif';
+      ctx.fillText('Lv'+b.level, b.x-6, y+8);
+    }
+  });
+
+  // 单位
+  game.units.forEach(u => {
+    const def = UNIT_TYPES[u.type] || { color:'#9E9E9E', size:12, shape:'square' };
+    let c = u.side==='my'?def.color:shade(def.color,-30);
+    if (u.st.iceBlock>0) c='#00FFFF';
+    if (u.st.polymorphed>0) c='#FFD700';
+    ctx.fillStyle=c; ctx.strokeStyle=u.side==='my'?'#fff':'#ff0'; ctx.lineWidth=1;
+    const s=def.size;
+    ctx.beginPath();
+    if(def.shape==='circle') ctx.arc(u.x,u.y,s,0,Math.PI*2);
+    else if(def.shape==='triangle'){ctx.moveTo(u.x,u.y-s);ctx.lineTo(u.x-s,u.y+s);ctx.lineTo(u.x+s,u.y+s);ctx.closePath();}
+    else if(def.shape==='diamond'){ctx.moveTo(u.x,u.y-s);ctx.lineTo(u.x+s,u.y);ctx.lineTo(u.x,u.y+s);ctx.lineTo(u.x-s,u.y);ctx.closePath();}
+    else ctx.rect(u.x-s,u.y-s,s*2,s*2);
+    ctx.fill(); ctx.stroke();
+    // 血条
+    const pct=u.hp/u.maxHp;
+    ctx.fillStyle='#333'; ctx.fillRect(u.x-9,u.y-s-7,18,3);
+    ctx.fillStyle=pct>0.5?'#4CAF50':pct>0.25?'#FF9800':'#F44336';
+    ctx.fillRect(u.x-9,u.y-s-7,18*pct,3);
+  });
+
+  // 弹道
+  game.projectiles.forEach(p => {
+    const cx=p.x+(p.tx-p.x)*p.p, cy=p.y+(p.ty-p.y)*p.p;
+    ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fill();
+  });
+
+  // 升级菜单（Canvas上绘制）
+  if (game.upgradeMenu) {
+    const m = game.upgradeMenu;
+    const b = m.barrack;
+    const paths = UPGRADE_PATHS[b.unitType];
+    const curLv = b.level || 1;
+    const lvCost = curLv * 100;
+    const maxLv = 10;
+    const canUpLv = curLv < maxLv && game.gold >= lvCost;
+    const totalH = (paths ? paths.length : 0) * 36 + 70;
+    const mw=220, mh=totalH;
+    const mx = Math.min(m.x, 1200-mw-10);
+    const my = Math.max(10, m.y-mh/2);
+    ctx.fillStyle='rgba(0,0,0,0.92)';
+    ctx.fillRect(mx, my, mw, mh);
+    ctx.strokeStyle='#e94560'; ctx.lineWidth=2;
+    ctx.strokeRect(mx, my, mw, mh);
+    // 标题：兵种名 + 等级
+    ctx.fillStyle='#e94560'; ctx.font='bold 14px sans-serif';
+    ctx.fillText(`${UNIT_TYPES[b.unitType].name} Lv.${curLv}`, mx+10, my+20);
+    // 等级升级行
+    let y = my+30;
+    if (curLv < maxLv) {
+      ctx.fillStyle = canUpLv ? '#FFD700' : '#555';
+      ctx.fillRect(mx+5, y, mw-10, 30);
+      ctx.fillStyle = canUpLv ? '#000' : '#888';
+      ctx.font='bold 12px sans-serif';
+      ctx.fillText(`⬆ 升Lv.${curLv+1} (${lvCost}金) +10%血攻`, mx+12, y+12);
+      ctx.font='10px sans-serif'; ctx.fillText(`每级+10%属性/技能`, mx+12, y+25);
+      m.lvHit = { x:mx+5, y, w:mw-10, h:30, cost:lvCost };
+    } else {
+      ctx.fillStyle='#FFD700'; ctx.font='12px sans-serif';
+      ctx.fillText('★ 已满级 Lv.10 ★', mx+12, y+18);
+      m.lvHit = null;
+    }
+    y += 40;
+    // 进阶路线
+    if (paths) {
+      paths.forEach((p,i) => {
+        const py = y+i*36;
+        const cost = UNIT_TYPES[p.key].cost;
+        const can = game.gold>=cost;
+        ctx.fillStyle = can?'#4CAF50':'#666';
+        ctx.fillRect(mx+5, py, mw-10, 30);
+        ctx.fillStyle = can?'#fff':'#999';
+        ctx.font='13px sans-serif';
+        ctx.fillText(`${i+1}. ${p.name} (${cost}金)`, mx+12, py+12);
+        ctx.font='10px sans-serif'; ctx.fillStyle = can?'#ccc':'#555';
+        ctx.fillText(UNIT_TYPES[p.key].desc||'', mx+12, py+25);
+      });
+      m.menuHits = paths.map((p,i) => ({
+        x:mx+5, y:y+i*36, w:mw-10, h:30,
+        key:p.key, cost:UNIT_TYPES[p.key].cost
+      }));
+    }
+  }
+}
+
+function shade(c,p) {
+  const n=parseInt(c.replace('#',''),16);
+  const a=Math.round(2.55*p);
+  const R=Math.max(0,Math.min(255,(n>>16)+a));
+  const G=Math.max(0,Math.min(255,((n>>8)&0xff)+a));
+  const B=Math.max(0,Math.min(255,(n&0xff)+a));
+  return '#'+(0x1000000+R*0x10000+G*0x100+B).toString(16).slice(1);
+}
+
+// ============ 交互 ============
+canvas.addEventListener('click', e => {
+  if (game.gameOver) return;
+  const rect = canvas.getBoundingClientRect();
+  const sx = 1200/rect.width, sy = 600/rect.height;
+  const cx = (e.clientX-rect.left)*sx;
+  const cy = (e.clientY-rect.top)*sy;
+
+  // 升级菜单点击
+  if (game.upgradeMenu) {
+    const m = game.upgradeMenu;
+    // 先检查等级升级
+    if (m.lvHit) {
+      const h = m.lvHit;
+      if (cx>=h.x && cx<=h.x+h.w && cy>=h.y && cy<=h.y+h.h) {
+        if (game.gold>=h.cost) {
+          game.gold -= h.cost;
+          m.barrack.level = (m.barrack.level||1) + 1;
+        }
+        return; // 不关菜单，可继续操作
+      }
+    }
+    if (m.menuHits) {
+      for (const h of m.menuHits) {
+        if (cx>=h.x && cx<=h.x+h.w && cy>=h.y && cy<=h.y+h.h) {
+          if (game.gold>=h.cost) {
+            game.gold -= h.cost;
+            m.barrack.unitType = h.key;
+          }
+          game.upgradeMenu = null;
+          return;
+        }
+      }
+    }
+    game.upgradeMenu = null; // 点别处关闭
+    return;
+  }
+
+  // 找最近路
+  let lane=-1, ld=Infinity;
+  LANE_Y.forEach((y,i)=>{const d=Math.abs(cy-y); if(d<ld){ld=d;lane=i;}});
+  if (ld>80) return;
+
+  // 找兵营（田字格）
+  for (const slot of BARRACK_SLOTS) {
+    const sy = LANE_Y[slot.lane];
+    if (Math.abs(cx-slot.x)<25 && Math.abs(cy-sy)<25) {
+      const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5);
+      if (ex) {
+        game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
+      } else if (game.selectedType) {
+        const def = UNIT_TYPES[game.selectedType];
+        if (game.gold>=def.cost) {
+          game.gold -= def.cost;
+          game.barracks.push({ x:slot.x, lane:slot.lane, side:'my', unitType:game.selectedType, level:1, spawnTimer:1, alive:true });
+        }
+      }
+      return;
+    }
+  }
+});
+
+// 按钮
+document.querySelectorAll('#control-panel .btn-melee,#control-panel .btn-archer,#control-panel .btn-mage,#control-panel .btn-cannon').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#control-panel .btn').forEach(b=>b.classList.remove('btn-selected'));
+    btn.classList.add('btn-selected');
+    game.selectedType = btn.dataset.type;
+  });
+});
+document.getElementById('speed-btn').addEventListener('click', () => {
+  game.speed = game.speed===1?2:game.speed===2?3:1;
+  document.getElementById('speed-btn').textContent = game.speed+'x';
+});
+function restartGame() { initGame(); }
+
+// ============ 主循环 ============
+let lastT=0;
+function loop(t) {
+  const dt = Math.min((t-lastT)/1000, 0.1)*game.speed;
+  lastT = t;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+initGame();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
