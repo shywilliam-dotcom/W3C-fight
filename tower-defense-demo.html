@@ -208,7 +208,7 @@ function income() {
 function spawnUnit(b) {
   const def = UNIT_TYPES[b.unitType];
   const lv = b.level || 1;
-  const mul = 1 + (lv-1)*0.15;  // 每级+15%血攻
+  const mul = Math.pow(1.15, lv-1);  // 每级+15%血攻（指数成长）
   const rangeMul = 1 + (lv-1)*0.05;
   // 后期rush：300秒后新出兵攻击每60秒+15%
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
@@ -258,7 +258,7 @@ function spawnUnit(b) {
     else if (s.k==='execute') u.execute = s.v;
   });
   // 格斗家专属：闪避随等级大幅成长（后期型）
-  if (type==='fighter') u.dodge += (lv-1)*0.05;
+  if (b.unitType==='fighter') u.dodge += (lv-1)*0.05;
   game.units.push(u);
 }
 
