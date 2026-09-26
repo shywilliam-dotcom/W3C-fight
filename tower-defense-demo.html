@@ -143,8 +143,8 @@ const UNIT_TYPES = {
     skill1:{k:'burn',v:1}, skill2:{k:'crit',v:0.20}, desc:'灼烧+20%暴击（后期强）' },
 
   // 攻城车升级（大招=弹幕）
-  rocket:   { name:'火箭炮', shape:'square', size:11, hp:250, atk:20, atkSpeed:0.35, range:180, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
-    skill1:{k:'splashRange',v:80}, skill2:{k:'burn',v:1}, desc:'大范围溅射+灼烧（中期强）' },
+  rocket:   { name:'火箭炮', shape:'square', size:11, hp:250, atk:20, atkSpeed:0.3, range:220, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
+    skill1:{k:'splashRange',v:150}, skill2:{k:'burn',v:1}, desc:'大范围溅射150+灼烧（中期强）' },
   tesla:    { name:'特斯拉', shape:'square', size:11, hp:250, atk:20, atkSpeed:0.3, range:190, speed:50, cost:165, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'stun',v:0.15}, desc:'连锁闪电8目标+15%昏迷（后期强）' },
   siege:    { name:'攻城炮', shape:'square', size:13, hp:350, atk:35, atkSpeed:0.35, range:160, speed:50, cost:165, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
@@ -238,7 +238,7 @@ function spawnUnit(b) {
     else if (s.k==='dodge') u.dodge = s.v*mul;
     else if (s.k==='instantKill') u.instantKill = s.v*mul;
     else if (s.k==='polymorph') u.polymorpth = s.v*mul;
-    else if (s.k==='burn') u.burnDps = 5*mul;
+    else if (s.k==='burn') u.burnDps = 20*mul;
     else if (s.k==='poison') { u.poison = s.v*mul; u.poisonDps = 6*mul; }
     else if (s.k==='splash') u.splash = s.v*mul;
     else if (s.k==='splashRange') u.splashRange = s.v*rangeMul;
