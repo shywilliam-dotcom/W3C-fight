@@ -192,16 +192,7 @@ function initGame() {
       game.towers.push({ x:tx, y, lane, side:'enemy', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
-    // 我方初始兵营（每路2个：近战+弓手）
-    game.barracks.push({ x:BARRACK_SLOTS[0], lane, side:'my', unitType:'melee', level:1,
-      hp:2000, maxHp:2000, spawnTimer:0.5+lane*0.3, alive:true, armorType:'fort' });
-    game.barracks.push({ x:BARRACK_SLOTS[1], lane, side:'my', unitType:'archer', level:1,
-      hp:2000, maxHp:2000, spawnTimer:1.0+lane*0.3, alive:true, armorType:'fort' });
-    // 敌方初始兵营（对称）
-    game.barracks.push({ x:EN_BARRACK_POS[3], lane, side:'enemy', unitType:'melee', level:1,
-      hp:2000, maxHp:2000, spawnTimer:0.5+lane*0.3, alive:true, armorType:'fort' });
-    game.barracks.push({ x:EN_BARRACK_POS[2], lane, side:'enemy', unitType:'archer', level:1,
-      hp:2000, maxHp:2000, spawnTimer:1.0+lane*0.3, alive:true, armorType:'fort' });
+    // 初始无兵营，全靠玩家/AI自己建
   }
   document.getElementById('game-over').style.display = 'none';
 }
@@ -219,8 +210,8 @@ function spawnUnit(b) {
   const lv = b.level || 1;
   const mul = 1 + (lv-1)*0.15;  // 每级+15%血攻
   const rangeMul = 1 + (lv-1)*0.05;
-  // 后期rush：300秒后新出兵攻击每60秒+25%
-  const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.25;
+  // 后期rush：300秒后新出兵攻击每60秒+15%
+  const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
   const u = {
     x:b.x, y:LANE_Y[b.lane], lane:b.lane, side:b.side, type:b.unitType,
     dir: b.side==='my'?1:-1, level:lv,
