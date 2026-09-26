@@ -208,6 +208,20 @@ let game = { gold:300, time:0, speed:1, selectedType:null,
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// 加载兵种图片
+const spriteImgs = {};
+const spriteTypes = ['paladin','ice'];
+spriteTypes.forEach(t => {
+  const img = new Image();
+  img.src = 'sprites/' + t + '.png';
+  spriteImgs[t] = img;
+});
+// 兵种类型→图片映射
+const typeToSprite = {
+  paladin: 'paladin',
+  ice: 'ice'
+};
+
 function initGame() {
   game = { gold:300, time:0, speed:1, selectedType:null,
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
@@ -719,9 +733,11 @@ function update(dt) {
         }
         doAttack(u,bestT,def);
         u.atkTimer=1/atkSpd;
+        u.animState = u.atkType==='magic' ? 'cast' : 'attack';
       }
     } else {
       u.x += u.speed*u.dir*dt;
+      u.animState = 'walk';
       // 碰撞体积：同阵营同路单位保持最小距离
       game.units.forEach(o => {
         if (o===u || o.side!==u.side || o.lane!==u.lane || o.hp<=0) return;
@@ -930,17 +946,51 @@ function render() {
   // 单位
   game.units.forEach(u => {
     const def = UNIT_TYPES[u.type] || { color:'#9E9E9E', size:12, shape:'square' };
-    let c = u.side==='my'?def.color:shade(def.color,-30);
-    if (u.st.iceBlock>0) c='#00FFFF';
-    if (u.st.polymorphed>0) c='#FFD700';
-    ctx.fillStyle=c; ctx.strokeStyle=u.side==='my'?'#fff':'#ff0'; ctx.lineWidth=1;
-    const s=def.size;
-    ctx.beginPath();
-    if(def.shape==='circle') ctx.arc(u.x,u.y,s,0,Math.PI*2);
-    else if(def.shape==='triangle'){ctx.moveTo(u.x,u.y-s);ctx.lineTo(u.x-s,u.y+s);ctx.lineTo(u.x+s,u.y+s);ctx.closePath();}
-    else if(def.shape==='diamond'){ctx.moveTo(u.x,u.y-s);ctx.lineTo(u.x+s,u.y);ctx.lineTo(u.x,u.y+s);ctx.lineTo(u.x-s,u.y);ctx.closePath();}
-    else ctx.rect(u.x-s,u.y-s,s*2,s*2);
-    ctx.fill(); ctx.stroke();
+    const s = def.size;
+    const spriteKey = typeToSprite[u.type];
+    const sprite = spriteKey ? spriteImgs[spriteKey] : null;
+
+    // 动画偏移
+    let animY = 0, animScale = 1;
+    if (u.animState === 'walk') {
+      animY = Math.sin(game.time*10 + u.x*0.1) * 2;
+    } else if (u.animState === 'attack') {
+      animScale = 1.15;
+      animY = -2;
+    } else if (u.animState === 'cast') {
+      animScale = 1.1;
+      animY = -1;
+    } else {
+      animY = Math.sin(game.time*3 + u.x*0.05) * 1; // 闲置呼吸
+    }
+
+    if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+      // 用图片绘制
+      const drawSize = s * 2.5 * animScale;
+      const flip = u.side==='enemy'; // 敌方镜像
+      ctx.save();
+      ctx.translate(u.x, u.y + animY);
+      if (flip) ctx.scale(-1, 1);
+      // 冰法发光效果
+      if (u.type === 'ice' && (u.animState === 'cast' || u.atkTimer > 0.8)) {
+        ctx.shadowColor = '#5dade2';
+        ctx.shadowBlur = 15;
+      }
+      ctx.drawImage(sprite, -drawSize/2, -drawSize/2 - s*0.3, drawSize, drawSize);
+      ctx.restore();
+    } else {
+      // 原来的几何图形
+      let c = u.side==='my'?def.color:shade(def.color,-30);
+      if (u.st.iceBlock>0) c='#00FFFF';
+      if (u.st.polymorphed>0) c='#FFD700';
+      ctx.fillStyle=c; ctx.strokeStyle=u.side==='my'?'#fff':'#ff0'; ctx.lineWidth=1;
+      ctx.beginPath();
+      if(def.shape==='circle') ctx.arc(u.x,u.y,s,0,Math.PI*2);
+      else if(def.shape==='triangle'){ctx.moveTo(u.x,u.y-s);ctx.lineTo(u.x-s,u.y+s);ctx.lineTo(u.x+s,u.y+s);ctx.closePath();}
+      else if(def.shape==='diamond'){ctx.moveTo(u.x,u.y-s);ctx.lineTo(u.x+s,u.y);ctx.lineTo(u.x,u.y+s);ctx.lineTo(u.x-s,u.y);ctx.closePath();}
+      else ctx.rect(u.x-s,u.y-s,s*2,s*2);
+      ctx.fill(); ctx.stroke();
+    }
     // 血条
     const pct=u.hp/u.maxHp;
     ctx.fillStyle='#333'; ctx.fillRect(u.x-9,u.y-s-7,18,3);

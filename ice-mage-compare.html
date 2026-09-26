@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>冰法素材对比</title>
+<style>
+  body { background:#1a1a2e; color:#eee; font-family:sans-serif; display:flex; gap:40px; justify-content:center; padding:40px; }
+  .box { text-align:center; }
+  h2 { margin-bottom:20px; }
+  canvas { background:#0f0f23; border:2px solid #0f3460; border-radius:8px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>方案1: Canvas手绘冰法</h2>
+  <canvas id="c1" width="200" height="200"></canvas>
+</div>
+<div class="box">
+  <h2>方案2: 开源素材冰法</h2>
+  <canvas id="c2" width="200" height="200"></canvas>
+</div>
+<script>
+// 方案1: Canvas手绘Q版冰法（Kingdom Rush风格：粗描边、圆润、夸张）
+const ctx1 = document.getElementById('c1').getContext('2d');
+// 身体（法师袍）
+ctx1.lineWidth = 3;
+ctx1.strokeStyle = '#000';
+ctx1.fillStyle = '#1a5276';
+ctx1.beginPath();
+ctx1.ellipse(100, 140, 35, 40, 0, 0, Math.PI*2);
+ctx1.fill(); ctx1.stroke();
+// 头
+ctx1.fillStyle = '#f5cba7';
+ctx1.beginPath();
+ctx1.arc(100, 90, 28, 0, Math.PI*2);
+ctx1.fill(); ctx1.stroke();
+// 尖顶帽
+ctx1.fillStyle = '#2980b9';
+ctx1.beginPath();
+ctx1.moveTo(65, 75);
+ctx1.lineTo(100, 20);
+ctx1.lineTo(135, 75);
+ctx1.closePath();
+ctx1.fill(); ctx1.stroke();
+// 帽尖弯月
+ctx1.fillStyle = '#2980b9';
+ctx1.beginPath();
+ctx1.moveTo(100, 20);
+ctx1.quadraticCurveTo(120, 10, 125, 25);
+ctx1.lineTo(115, 30);
+ctx1.quadraticCurveTo(110, 20, 100, 25);
+ctx1.closePath();
+ctx1.fill(); ctx1.stroke();
+// 帽子上的雪花
+ctx1.fillStyle = '#aed6f1';
+ctx1.font = '16px sans-serif';
+ctx1.textAlign = 'center';
+ctx1.fillText('❄', 100, 65);
+// 眼睛（发光蓝色）
+ctx1.fillStyle = '#000';
+ctx1.beginPath();
+ctx1.arc(90, 90, 4, 0, Math.PI*2);
+ctx1.arc(110, 90, 4, 0, Math.PI*2);
+ctx1.fill();
+ctx1.fillStyle = '#5dade2';
+ctx1.beginPath();
+ctx1.arc(90, 90, 2, 0, Math.PI*2);
+ctx1.arc(110, 90, 2, 0, Math.PI*2);
+ctx1.fill();
+// 嘴巴（严肃）
+ctx1.strokeStyle = '#000';
+ctx1.lineWidth = 2;
+ctx1.beginPath();
+ctx1.moveTo(92, 105);
+ctx1.lineTo(108, 105);
+ctx1.stroke();
+// 冰晶法杖
+ctx1.strokeStyle = '#6e2c00';
+ctx1.lineWidth = 4;
+ctx1.beginPath();
+ctx1.moveTo(145, 110);
+ctx1.lineTo(145, 170);
+ctx1.stroke();
+// 法杖顶端冰晶
+ctx1.fillStyle = '#85c1e9';
+ctx1.strokeStyle = '#000';
+ctx1.lineWidth = 2;
+ctx1.beginPath();
+ctx1.moveTo(145, 90);
+ctx1.lineTo(135, 110);
+ctx1.lineTo(145, 105);
+ctx1.lineTo(155, 110);
+ctx1.closePath();
+ctx1.fill(); ctx1.stroke();
+// 袍子上的冰晶图案
+ctx1.fillStyle = '#aed6f1';
+ctx1.font = '14px sans-serif';
+ctx1.fillText('❄', 100, 145);
+ctx1.fillText('❄', 85, 155);
+ctx1.fillText('❄', 115, 155);
+
+// 方案2: 开源素材（用像素风格模拟，从itch.io免费素材风格）
+const ctx2 = document.getElementById('c2').getContext('2d');
+// 像素风格：小方块组成
+const px = 8, ox = 40, oy = 30;
+function p(x, y, c) { ctx2.fillStyle = c; ctx2.fillRect(ox+x*px, oy+y*px, px, px); }
+// 帽子（深蓝）
+p(4,0,'#1a5276'); p(3,1,'#1a5276'); p(4,1,'#1a5276'); p(5,1,'#1a5276');
+p(2,2,'#1a5276'); p(3,2,'#1a5276'); p(4,2,'#1a5276'); p(5,2,'#1a5276'); p(6,2,'#1a5276');
+p(1,3,'#1a5276'); p(2,3,'#1a5276'); p(3,3,'#1a5276'); p(4,3,'#1a5276'); p(5,3,'#1a5276'); p(6,3,'#1a5276'); p(7,3,'#1a5276');
+// 脸
+p(2,4,'#f5cba7'); p(3,4,'#f5cba7'); p(4,4,'#f5cba7'); p(5,4,'#f5cba7'); p(6,4,'#f5cba7');
+p(2,5,'#f5cba7'); p(3,5,'#000'); p(4,5,'#f5cba7'); p(5,5,'#000'); p(6,5,'#f5cba7');
+p(3,6,'#f5cba7'); p(4,6,'#f5cba7'); p(5,6,'#f5cba7');
+// 身体（袍子）
+p(2,7,'#1a5276'); p(3,7,'#1a5276'); p(4,7,'#1a5276'); p(5,7,'#1a5276'); p(6,7,'#1a5276');
+p(2,8,'#1a5276'); p(3,8,'#2980b9'); p(4,8,'#2980b9'); p(5,8,'#2980b9'); p(6,8,'#1a5276');
+p(2,9,'#1a5276'); p(3,9,'#1a5276'); p(4,9,'#1a5276'); p(5,9,'#1a5276'); p(6,9,'#1a5276');
+p(3,10,'#1a5276'); p(4,10,'#1a5276'); p(5,10,'#1a5276');
+// 法杖
+p(8,5,'#6e2c00'); p(8,6,'#6e2c00'); p(8,7,'#6e2c00'); p(8,8,'#6e2c00'); p(8,9,'#6e2c00');
+p(8,4,'#85c1e9');
+</script>
+</body>
+</html>
