@@ -160,11 +160,11 @@ const UNIT_TYPES = {
     skill1:{k:'splashRange',v:40}, skill2:{k:'buildingDamage',v:1.5}, desc:'溅射+对塔1.5倍' },
 
   // 近战升级（大招=旋风斩）
-  barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:320, atk:18, atkSpeed:0.9, range:45, speed:60, cost:90, color:'#8B4513', atkType:'normal', armorType:'heavy', ult:'whirlwind',
+  barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:320, atk:18, atkSpeed:0.9, range:40, speed:60, cost:90, color:'#8B4513', atkType:'normal', armorType:'heavy', ult:'whirlwind',
     skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, desc:'群伤2目标+斩杀5%血（早期强）' },
   paladin:  { name:'圣骑士', shape:'circle', size:11, hp:220, atk:12, atkSpeed:1.0, range:40, speed:60, cost:90, color:'#FFD700', atkType:'normal', armorType:'heavy', ult:'holyUlt',
     skill1:{k:'holyHeal',v:1}, skill2:{k:'dmgReduce',v:0.30}, desc:'低血回血+30%减伤（中期强）' },
-  fighter:  { name:'格斗家', shape:'circle', size:10, hp:250, atk:20, atkSpeed:1.3, range:45, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'dodgeUlt',
+  fighter:  { name:'格斗家', shape:'circle', size:10, hp:250, atk:20, atkSpeed:1.3, range:40, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'dodgeUlt',
     skill1:{k:'dodge',v:0.15}, skill2:{k:'charge',v:200}, desc:'15%闪避+冲锋200范围（后期强）' },
 
   // 弓手升级（大招=穿透箭）
@@ -226,9 +226,10 @@ const typeToSprite = { paladin:'paladin', barbarian:'paladin', fighter:'paladin'
   ice:'ice', mage:'mage', arcane:'arcane', fire:'darkfire' };
 
 function initGame() {
-  game = { gold:300, time:0, speed:1, selectedType:null,
+  game = { gold:500, time:0, speed:1, selectedType:null,
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
-    goldAcc:0, upgradeMenu:null, selectedUnit:null };
+    goldAcc:0, upgradeMenu:null, selectedUnit:null,
+    prepTime:15, bountyAnnounced:false };
   usedNames.clear();
 
   // 我方基地（1个，横跨三路）
@@ -533,8 +534,8 @@ function applyDmg(att, tgt, dmg, def) {
     tgt.hp -= fd;
     // 冰法被动：攻击冰法的单位攻速降低20%，持续3秒
     if (tgt.type==='ice' && att.st) att.st.slow = 3;
-    // 小兵杀小兵给5%造价金币（塔杀不算）
-    if (tgt.hp <= 0 && UNIT_TYPES[tgt.type]) {
+    // 小兵杀小兵给5%造价金币（塔杀不算，前60秒无赏金）
+    if (tgt.hp <= 0 && UNIT_TYPES[tgt.type] && game.time >= 60) {
       game.gold += Math.round(UNIT_TYPES[tgt.type].cost * 0.05);
     }
   }
@@ -547,7 +548,21 @@ function spawnProj(a,t,c) {
 // ============ 更新 ============
 function update(dt) {
   if (game.gameOver) return;
+
+  // 准备阶段：倒计时，不出兵不交战
+  if (game.prepTime > 0) {
+    game.prepTime -= dt;
+    if (game.prepTime <= 0) game.prepTime = 0;
+    return;
+  }
+
   game.time += dt;
+
+  // 60秒通告赏金开启
+  if (!game.bountyAnnounced && game.time >= 60) {
+    game.bountyAnnounced = true;
+  }
+
   game.goldAcc += income()*dt;
   if (game.goldAcc>=1) { let g=Math.floor(game.goldAcc); game.gold+=g; game.goldAcc-=g; }
 
@@ -918,9 +933,10 @@ function render() {
     ctx.fillRect(t.x-40, t.y+70, 80*(t.hp/t.maxHp), 6);
   });
 
-  // 塔
+  // 塔（准备阶段隐藏敌方塔）
   game.towers.forEach(t => {
     if (t.isBase) return;
+    if (game.prepTime > 0 && t.side === 'enemy') return;
     if (!t.alive) {
       ctx.fillStyle='#444'; ctx.fillRect(t.x-12, t.y-25, 24, 20);
       ctx.fillStyle='#666'; ctx.font='9px sans-serif'; ctx.fillText('废墟', t.x-10, t.y-12);
@@ -1309,6 +1325,27 @@ function render() {
     if (u.ultimate) {
       ctx.fillStyle='#e94560'; ctx.fillText(`大招: ${u.ultimate}`, px+10, py+92);
     }
+  }
+
+  // 准备阶段提示
+  if (game.prepTime > 0) {
+    ctx.fillStyle='rgba(0,0,0,0.7)';
+    ctx.fillRect(350, 300, 500, 80);
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
+    ctx.strokeRect(350, 300, 500, 80);
+    ctx.fillStyle='#FFD700'; ctx.font='bold 22px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('准备阶段', 600, 335);
+    ctx.fillStyle='#fff'; ctx.font='16px sans-serif';
+    ctx.fillText(`${Math.ceil(game.prepTime)} 秒后开战`, 600, 362);
+    ctx.textAlign='start';
+  }
+
+  // 赏金开启通告
+  if (game.bountyAnnounced && game.time < 65) {
+    ctx.fillStyle='rgba(255,215,0,0.9)';
+    ctx.font='bold 18px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('⚔ 击杀敌方小兵可获得金币收益！⚔', 600, 130);
+    ctx.textAlign='start';
   }
 }
 
