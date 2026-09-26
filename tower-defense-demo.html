@@ -400,13 +400,13 @@ function update(dt) {
 
   // 双方AI补兵+升级（由外部脚本控制，这里不内置）
 
-  // 出兵（每路每方上限15）
+  // 出兵（每路每方上限10，每方最多30）
   game.barracks.forEach(b => {
     if (!b.alive) return;
     b.spawnTimer -= dt;
     if (b.spawnTimer<=0) {
       const cnt = game.units.filter(u=>u.lane===b.lane && u.side===b.side).length;
-      if (cnt<15) { spawnUnit(b); b.spawnTimer=3.5; }
+      if (cnt<10) { spawnUnit(b); b.spawnTimer=3.5; }
       else b.spawnTimer=0.5;
     }
   });
