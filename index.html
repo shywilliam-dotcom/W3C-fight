@@ -222,6 +222,8 @@ for (const t in spriteData) {
   img.src = spriteData[t];
   spriteImgs[t] = img;
 }
+const typeToSprite = { paladin:'paladin', barbarian:'paladin', fighter:'paladin',
+  ice:'ice', mage:'mage', arcane:'arcane', fire:'darkfire' };
 
 function initGame() {
   game = { gold:300, time:0, speed:1, selectedType:null,
