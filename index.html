@@ -709,6 +709,11 @@ function update(dt) {
     }
 
     u.atkTimer-=dt;
+    // 动画计时：attack/cast持续0.25秒后回walk
+    if (u.animState==='attack' || u.animState==='cast') {
+      u._animT = (u._animT||0) + dt;
+      if (u._animT > 0.25) { u.animState='walk'; u._animT=0; }
+    }
     const def = UNIT_TYPES[u.type] || { color:'#fff' };
     
     // 目标切换检测
@@ -950,11 +955,6 @@ function render() {
     const spriteKey = typeToSprite[u.type];
     const sprite = spriteKey ? spriteImgs[spriteKey] : null;
 
-    // 动画帧计时：attack/cast持续0.25秒后自动回walk
-    if (u.animState==='attack' || u.animState==='cast') {
-      u._animT = (u._animT||0) + dt;
-      if (u._animT > 0.25) { u.animState='walk'; u._animT=0; }
-    }
     // 动画偏移
     let animY = 0, animScale = 1, animRot = 0, animX = 0;
     if (u.animState === 'walk') {
