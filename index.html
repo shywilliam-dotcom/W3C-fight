@@ -84,10 +84,16 @@ const EN_BASE_X = 1150;
 
 // 兵营槽位（田字格，密集在基地前方）
 const BARRACK_SLOTS = [
-  // 每路4个，紧凑排列（间距12）
-  {x:125, lane:0}, {x:137, lane:0}, {x:149, lane:0}, {x:161, lane:0},
-  {x:125, lane:1}, {x:137, lane:1}, {x:149, lane:1}, {x:161, lane:1},
-  {x:125, lane:2}, {x:137, lane:2}, {x:149, lane:2}, {x:161, lane:2}
+  // 每路2×2小田字格，3路共12个
+  // 上路
+  {x:130, lane:0, dy:-8}, {x:160, lane:0, dy:-8},
+  {x:130, lane:0, dy:8},  {x:160, lane:0, dy:8},
+  // 中路
+  {x:130, lane:1, dy:-8}, {x:160, lane:1, dy:-8},
+  {x:130, lane:1, dy:8},  {x:160, lane:1, dy:8},
+  // 下路
+  {x:130, lane:2, dy:-8}, {x:160, lane:2, dy:-8},
+  {x:130, lane:2, dy:8},  {x:160, lane:2, dy:8}
 ];
 // 我方塔（每路3座，高血高防）
 const MY_TOWER_X = [350, 420, 490];
@@ -96,9 +102,12 @@ const MY_TOWER_X = [350, 420, 490];
 const EN_TOWER_X = [710, 780, 850];
 // 敌方兵营（镜像）
 const EN_BARRACK_POS = [
-  {x:1075, lane:0}, {x:1063, lane:0}, {x:1051, lane:0}, {x:1039, lane:0},
-  {x:1075, lane:1}, {x:1063, lane:1}, {x:1051, lane:1}, {x:1039, lane:1},
-  {x:1075, lane:2}, {x:1063, lane:2}, {x:1051, lane:2}, {x:1039, lane:2}
+  {x:1070, lane:0, dy:-8}, {x:1040, lane:0, dy:-8},
+  {x:1070, lane:0, dy:8},  {x:1040, lane:0, dy:8},
+  {x:1070, lane:1, dy:-8}, {x:1040, lane:1, dy:-8},
+  {x:1070, lane:1, dy:8},  {x:1040, lane:1, dy:8},
+  {x:1070, lane:2, dy:-8}, {x:1040, lane:2, dy:-8},
+  {x:1070, lane:2, dy:8},  {x:1040, lane:2, dy:8}
 ];
 
 // ============ 兵种（魔兽攻防相克） ============
@@ -222,7 +231,7 @@ function spawnUnit(b) {
   // 后期rush：300秒后新出兵攻击每60秒+15%
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
   const u = {
-    x:b.x, y:LANE_Y[b.lane], lane:b.lane, side:b.side, type:b.unitType,
+    x:b.x, y:LANE_Y[b.lane]+(b.dy||0), lane:b.lane, side:b.side, type:b.unitType,
     dir: b.side==='my'?1:-1, level:lv,
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
@@ -843,45 +852,44 @@ function render() {
     ctx.fillRect(t.x-15, t.y+3, 30*pct, 4);
   });
 
-  // 空兵营槽位（田字格）
+  // 空兵营槽位
   BARRACK_SLOTS.forEach(slot => {
-    const y = LANE_Y[slot.lane];
-    const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5);
+    const y = LANE_Y[slot.lane] + (slot.dy||0);
+    const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
     if (!ex) {
-      ctx.beginPath(); ctx.arc(slot.x, y, 14, 0, Math.PI*2);
+      ctx.beginPath(); ctx.arc(slot.x, y, 12, 0, Math.PI*2);
       if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; }
       else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=1.5; }
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = game.selectedType?'#4CAF50':'#4A6FA5';
-      ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.fillText('+', slot.x, y+5); ctx.textAlign='start';
+      ctx.font='14px sans-serif'; ctx.textAlign='center'; ctx.fillText('+', slot.x, y+4); ctx.textAlign='start';
     }
   });
 
   // 兵营
   game.barracks.forEach(b => {
-    const y = LANE_Y[b.lane];
+    const y = LANE_Y[b.lane] + (b.dy||0);
     const def = UNIT_TYPES[b.unitType];
     if (!b.alive) {
-      // 被毁兵营画废墟
       ctx.fillStyle='#444';
-      ctx.fillRect(b.x-10, y-28, 20, 18);
-      ctx.strokeStyle='#222'; ctx.strokeRect(b.x-10, y-28, 20, 18);
+      ctx.fillRect(b.x-9, y-24, 18, 16);
+      ctx.strokeStyle='#222'; ctx.strokeRect(b.x-9, y-24, 18, 16);
       return;
     }
     ctx.fillStyle = b.side==='my'?'#2196F3':'#F44336';
-    ctx.fillRect(b.x-10, y-28, 20, 18);
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-10, y-28, 20, 18);
+    ctx.fillRect(b.x-9, y-24, 18, 16);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-9, y-24, 18, 16);
     ctx.fillStyle=def.color;
-    ctx.beginPath(); ctx.arc(b.x, y-19, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.x, y-16, 4, 0, Math.PI*2); ctx.fill();
     // 血量条
     if (b.hp < b.maxHp) {
-      ctx.fillStyle='#333'; ctx.fillRect(b.x-12, y-30, 24, 3);
-      ctx.fillStyle='#4CAF50'; ctx.fillRect(b.x-12, y-30, 24*(b.hp/b.maxHp), 3);
+      ctx.fillStyle='#333'; ctx.fillRect(b.x-11, y-26, 22, 3);
+      ctx.fillStyle='#4CAF50'; ctx.fillRect(b.x-11, y-26, 22*(b.hp/b.maxHp), 3);
     }
     // 等级标记
     if (b.level>1) {
       ctx.fillStyle='#FFD700'; ctx.font='9px sans-serif';
-      ctx.fillText('Lv'+b.level, b.x-6, y+8);
+      ctx.fillText(b.level, b.x-4, y+7);
     }
   });
 
@@ -1022,18 +1030,18 @@ canvas.addEventListener('click', e => {
   LANE_Y.forEach((y,i)=>{const d=Math.abs(cy-y); if(d<ld){ld=d;lane=i;}});
   if (ld>80) return;
 
-  // 找兵营（田字格）
+  // 找兵营槽位
   for (const slot of BARRACK_SLOTS) {
-    const sy = LANE_Y[slot.lane];
-    if (Math.abs(cx-slot.x)<25 && Math.abs(cy-sy)<25) {
-      const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5);
+    const sy = LANE_Y[slot.lane] + (slot.dy||0);
+    if (Math.abs(cx-slot.x)<22 && Math.abs(cy-sy)<22) {
+      const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
       if (ex) {
         game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
       } else if (game.selectedType) {
         const def = UNIT_TYPES[game.selectedType];
         if (game.gold>=def.cost) {
           game.gold -= def.cost;
-          game.barracks.push({ x:slot.x, lane:slot.lane, side:'my', unitType:game.selectedType, level:1, spawnTimer:1, alive:true });
+          game.barracks.push({ x:slot.x, lane:slot.lane, dy:slot.dy||0, side:'my', unitType:game.selectedType, level:1, spawnTimer:1, alive:true });
         }
       }
       return;
