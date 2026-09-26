@@ -109,13 +109,13 @@ const ATK_MUL = {
 // 每个兵种：skill1 + skill2（随等级+10%/级），ult（6级大招）
 // ult: whirlwind(近战系) / piercing(弓手系) / blizzard(法师系) / barrage(攻城系)
 const UNIT_TYPES = {
-  melee:    { name:'刀盾手', shape:'circle', size:10, hp:180, atk:10, atkSpeed:1.0, range:40, speed:60, cost:60, color:'#4CAF50', atkType:'normal', armorType:'heavy', ult:'whirlwind',
+  melee:    { name:'刀盾手', shape:'circle', size:10, hp:300, atk:10, atkSpeed:1.0, range:40, speed:60, cost:60, color:'#4CAF50', atkType:'normal', armorType:'heavy', ult:'whirlwind',
     skill1:{k:'dmgReduce',v:0.10}, skill2:{k:'crit',v:0.10}, desc:'10%减伤+10%暴击' },
-  archer:   { name:'弓手', shape:'triangle', size:9, hp:60, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:'piercing',
+  archer:   { name:'弓手', shape:'triangle', size:9, hp:120, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:'piercing',
     skill1:{k:'poison',v:0.20}, skill2:{k:'crit',v:0.10}, desc:'20%毒箭+10%暴击' },
-  mage:     { name:'法师', shape:'diamond', size:9, hp:50, atk:12, atkSpeed:0.6, range:120, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'blizzard',
+  mage:     { name:'法师', shape:'diamond', size:9, hp:100, atk:12, atkSpeed:0.6, range:120, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'blizzard',
     skill1:{k:'burn',v:1}, skill2:{k:'crit',v:0.10}, desc:'灼烧+10%暴击' },
-  cannon:   { name:'攻城车', shape:'square', size:11, hp:90, atk:22, atkSpeed:0.35, range:170, speed:50, cost:110, color:'#F44336', atkType:'siege', armorType:'fort', ult:'barrage',
+  cannon:   { name:'攻城车', shape:'square', size:11, hp:350, atk:22, atkSpeed:0.35, range:170, speed:50, cost:110, color:'#F44336', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'splashRange',v:40}, skill2:{k:'buildingDamage',v:1.5}, desc:'溅射+对塔1.5倍' },
 
   // 近战升级（大招=旋风斩）
@@ -143,11 +143,11 @@ const UNIT_TYPES = {
     skill1:{k:'burn',v:1}, skill2:{k:'crit',v:0.20}, desc:'灼烧+20%暴击' },
 
   // 攻城车升级（大招=弹幕）
-  rocket:   { name:'火箭炮', shape:'square', size:11, hp:90, atk:18, atkSpeed:0.35, range:180, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
+  rocket:   { name:'火箭炮', shape:'square', size:11, hp:250, atk:18, atkSpeed:0.35, range:180, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'splashRange',v:80}, skill2:{k:'burn',v:1}, desc:'大范围溅射+灼烧' },
-  tesla:    { name:'特斯拉', shape:'square', size:11, hp:90, atk:25, atkSpeed:0.3, range:190, speed:50, cost:165, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
+  tesla:    { name:'特斯拉', shape:'square', size:11, hp:250, atk:25, atkSpeed:0.3, range:190, speed:50, cost:165, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'chainLightning',v:5}, skill2:{k:'crit',v:0.15}, desc:'连锁闪电5目标+15%暴击' },
-  siege:    { name:'攻城炮', shape:'square', size:13, hp:120, atk:30, atkSpeed:0.35, range:160, speed:50, cost:165, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
+  siege:    { name:'攻城炮', shape:'square', size:13, hp:300, atk:30, atkSpeed:0.35, range:160, speed:50, cost:165, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射' }
 };
 
@@ -173,24 +173,24 @@ function initGame() {
     goldAcc:0, upgradeMenu:null };
 
   // 我方基地（1个，横跨三路）
-  game.towers.push({ x:MY_BASE_X, y:300, side:'my', isBase:true, hp:5000, maxHp:5000,
-    atk:45, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
+  game.towers.push({ x:MY_BASE_X, y:300, side:'my', isBase:true, hp:3000, maxHp:3000,
+    atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
   // 敌方基地
-  game.towers.push({ x:EN_BASE_X, y:300, side:'enemy', isBase:true, hp:5000, maxHp:5000,
-    atk:45, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
+  game.towers.push({ x:EN_BASE_X, y:300, side:'enemy', isBase:true, hp:3000, maxHp:3000,
+    atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
   // 每条路的塔
   for (let lane=0; lane<3; lane++) {
     const y = LANE_Y[lane];
     const isMid = lane===1;
-    const tRange = isMid ? 160 : 100; // 中路塔射程远，能支援上下路
+    const tRange = isMid ? 160 : 100;
     MY_TOWER_X.forEach(tx => {
       game.towers.push({ x:tx, y, lane, side:'my', isBase:false,
-        hp:1500, maxHp:1500, atk:35, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+        hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
     EN_TOWER_X.forEach(tx => {
       game.towers.push({ x:tx, y, lane, side:'enemy', isBase:false,
-        hp:1500, maxHp:1500, atk:35, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+        hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
     // 我方初始兵营（每路2个：近战+弓手）
     game.barracks.push({ x:BARRACK_SLOTS[0], lane, side:'my', unitType:'melee', level:1,
@@ -217,7 +217,7 @@ function income() {
 function spawnUnit(b) {
   const def = UNIT_TYPES[b.unitType];
   const lv = b.level || 1;
-  const mul = 1 + (lv-1)*0.1;
+  const mul = 1 + (lv-1)*0.15;  // 每级+15%血攻
   const rangeMul = 1 + (lv-1)*0.05;
   const u = {
     x:b.x, y:LANE_Y[b.lane], lane:b.lane, side:b.side, type:b.unitType,
