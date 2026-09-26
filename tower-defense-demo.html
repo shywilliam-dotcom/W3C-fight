@@ -124,7 +124,7 @@ const UNIT_TYPES = {
   paladin:  { name:'圣骑士', shape:'circle', size:11, hp:220, atk:12, atkSpeed:1.0, range:40, speed:60, cost:90, color:'#FFD700', atkType:'normal', armorType:'heavy', ult:'whirlwind',
     skill1:{k:'holyHeal',v:1}, skill2:{k:'dmgReduce',v:0.30}, desc:'低血回血+30%减伤（中期强）' },
   fighter:  { name:'格斗家', shape:'circle', size:10, hp:150, atk:15, atkSpeed:1.3, range:35, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'whirlwind',
-    skill1:{k:'dodge',v:0.25}, skill2:{k:'dodgeCounter',v:1}, desc:'25%闪避+闪避反击（后期强）' },
+    skill1:{k:'dodge',v:0.15}, skill2:{k:'dodgeCounter',v:1}, desc:'15%闪避+闪避反击（后期强）' },
 
   // 弓手升级（大招=穿透箭）
   musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:150, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'piercing',
@@ -257,6 +257,8 @@ function spawnUnit(b) {
     else if (s.k==='dodgeCounter') u.dodgeCounter = !!s.v;
     else if (s.k==='execute') u.execute = s.v;
   });
+  // 格斗家专属：闪避随等级大幅成长（后期型）
+  if (type==='fighter') u.dodge += (lv-1)*0.05;
   game.units.push(u);
 }
 
