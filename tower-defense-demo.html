@@ -135,8 +135,8 @@ const UNIT_TYPES = {
   // 弓手升级（大招=穿透箭）
   musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:150, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'piercing',
     skill1:{k:'instantKill',v:0.05}, skill2:{k:'splash',v:0.25}, desc:'5%即死+25%溅射（中期强）' },
-  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:200, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'piercing',
-    skill1:{k:'poison',v:0.20}, skill2:{k:'longRange',v:1}, desc:'20%毒箭+超远射程（初期强）' },
+  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:230, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'piercing',
+    skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭+超远射程（初期强）' },
   crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:130, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'piercing',
     skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, desc:'20%连锁连击(最多5次)+无视护甲（后期强）' },
 
@@ -144,7 +144,7 @@ const UNIT_TYPES = {
   arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
     skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.30}, desc:'10%变羊+群体护盾30%血（初期强）' },
   ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
-    skill1:{k:'iceBlock',v:1}, skill2:{k:'vulnerable',v:0.33}, desc:'冰箱+33%易伤debuff（中期强）' },
+    skill1:{k:'iceBlock',v:1}, skill2:{k:'shieldAlly',v:0.15}, desc:'冰箱+33%易伤+友方护盾减伤15%（中期强）' },
   fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'blizzard',
     skill1:{k:'summonSkeleton',v:2}, skill2:{k:'burnStack',v:1}, desc:'每2秒召唤骷髅+dot叠加（后期强）' },
 
@@ -236,6 +236,7 @@ function spawnUnit(b) {
     summonSkeleton:0, skeletonTimer:0, burnStack:0,
     currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
     shieldWall:0, shieldCD:0, shield:0,
+    shieldAlly:0, shieldAllyCD:0, dmgReduce:0,
     ultimate: lv>=6 ? def.ult : null,
     st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 }
   };
@@ -269,6 +270,7 @@ function spawnUnit(b) {
     else if (s.k==='summonSkeleton') u.summonSkeleton = s.v;
     else if (s.k==='burnStack') u.burnStack = 1;
     else if (s.k==='shieldWall') u.shieldWall = s.v;
+    else if (s.k==='shieldAlly') u.shieldAlly = s.v;
   });
   // 格斗家专属：闪避随等级大幅成长（后期型）
   if (b.unitType==='fighter') u.dodge += (lv-1)*0.05;
@@ -512,6 +514,23 @@ function update(dt) {
           }
         });
         u.shieldCD = 15;
+      }
+    }
+    // 冰法友方护盾：CD3秒，给1个友方加15%减伤护盾
+    if (u.shieldAlly>0) {
+      if (u.shieldAllyCD>0) u.shieldAllyCD-=dt;
+      else {
+        var target = null, bestHpPct = 1;
+        game.units.forEach(o => {
+          if (o.side===u.side && o.hp>0 && Math.abs(o.x-u.x)<150 && o!==u) {
+            var pct = o.hp/o.maxHp;
+            if (pct < bestHpPct) { bestHpPct = pct; target = o; }
+          }
+        });
+        if (target) {
+          target.dmgReduce = Math.max(target.dmgReduce||0, u.shieldAlly);
+          u.shieldAllyCD = 3;
+        }
       }
     }
     if (u.hp<=0) return;
