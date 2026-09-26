@@ -82,15 +82,21 @@ const LANE_NAMES = ['上路','中路','下路'];
 const MY_BASE_X = 50;
 const EN_BASE_X = 1150;
 
-// 兵营槽位（每路4个，在道路尽头靠近基地，并列）
-const BARRACK_SLOTS = [110, 170, 230, 290];
-// 我方塔（高血高防，在兵营前面）
-const MY_TOWER_X = [370, 440];
-// 中间交战区 480~720 完全让开
+// 兵营槽位（田字格，密集在基地前方）
+const BARRACK_SLOTS = [
+  {x:130, lane:0}, {x:130, lane:2},
+  {x:190, lane:0}, {x:190, lane:2}
+];
+// 我方塔（每路3座，高血高防）
+const MY_TOWER_X = [350, 420, 490];
+// 中间交战区 500~700 完全让开
 // 敌方塔
-const EN_TOWER_X = [760, 830];
-// 敌方兵营
-const EN_BARRACK_POS = [910, 970, 1030, 1090];
+const EN_TOWER_X = [710, 780, 850];
+// 敌方兵营（田字格镜像）
+const EN_BARRACK_POS = [
+  {x:1070, lane:0}, {x:1070, lane:2},
+  {x:1010, lane:0}, {x:1010, lane:2}
+];
 
 // ============ 兵种（魔兽攻防相克） ============
 // atkType: normal(普通) / pierce(穿刺) / magic(魔法) / siege(攻城)
@@ -129,7 +135,7 @@ const UNIT_TYPES = {
   // 弓手升级（大招=穿透箭）
   musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:150, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'piercing',
     skill1:{k:'instantKill',v:0.05}, skill2:{k:'splash',v:0.25}, desc:'5%即死+25%溅射（中期强）' },
-  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:12, atkSpeed:1.0, range:200, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'piercing',
+  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:200, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'piercing',
     skill1:{k:'poison',v:0.20}, skill2:{k:'longRange',v:1}, desc:'20%毒箭+超远射程（初期强）' },
   crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:130, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'piercing',
     skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, desc:'20%连击+无视护甲（后期强）' },
@@ -143,11 +149,11 @@ const UNIT_TYPES = {
     skill1:{k:'burn',v:1}, skill2:{k:'crit',v:0.20}, desc:'灼烧+20%暴击（后期强）' },
 
   // 攻城车升级（大招=弹幕）
-  rocket:   { name:'火箭炮', shape:'square', size:11, hp:250, atk:20, atkSpeed:0.3, range:220, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
+  rocket:   { name:'火箭炮', shape:'square', size:11, hp:200, atk:20, atkSpeed:0.3, range:220, speed:50, cost:165, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'splashRange',v:150}, skill2:{k:'burn',v:1}, desc:'大范围溅射150+灼烧（中期强）' },
-  tesla:    { name:'特斯拉', shape:'square', size:11, hp:250, atk:20, atkSpeed:0.3, range:190, speed:50, cost:165, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
+  tesla:    { name:'特斯拉', shape:'square', size:11, hp:200, atk:20, atkSpeed:0.3, range:190, speed:50, cost:165, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:10}, desc:'连锁闪电8目标+电圈50范围10/s（后期强）' },
-  siege:    { name:'攻城炮', shape:'square', size:13, hp:350, atk:35, atkSpeed:0.35, range:160, speed:50, cost:165, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
+  siege:    { name:'攻城炮', shape:'square', size:13, hp:280, atk:35, atkSpeed:0.35, range:160, speed:50, cost:165, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射（早期强）' }
 };
 
@@ -655,19 +661,18 @@ function render() {
     ctx.fillRect(t.x-15, t.y+3, 30*pct, 4);
   });
 
-  // 空兵营槽位
-  LANE_Y.forEach((y, lane) => {
-    BARRACK_SLOTS.forEach(sx => {
-      const ex = game.barracks.find(b=>b.side==='my'&&b.lane===lane&&Math.abs(b.x-sx)<5);
-      if (!ex) {
-        ctx.beginPath(); ctx.arc(sx, y, 14, 0, Math.PI*2);
-        if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; }
-        else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=1.5; }
-        ctx.fill(); ctx.stroke();
-        ctx.fillStyle = game.selectedType?'#4CAF50':'#4A6FA5';
-        ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.fillText('+', sx, y+5); ctx.textAlign='start';
-      }
-    });
+  // 空兵营槽位（田字格）
+  BARRACK_SLOTS.forEach(slot => {
+    const y = LANE_Y[slot.lane];
+    const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5);
+    if (!ex) {
+      ctx.beginPath(); ctx.arc(slot.x, y, 14, 0, Math.PI*2);
+      if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; }
+      else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=1.5; }
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = game.selectedType?'#4CAF50':'#4A6FA5';
+      ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.fillText('+', slot.x, y+5); ctx.textAlign='start';
+    }
   });
 
   // 兵营
@@ -835,18 +840,18 @@ canvas.addEventListener('click', e => {
   LANE_Y.forEach((y,i)=>{const d=Math.abs(cy-y); if(d<ld){ld=d;lane=i;}});
   if (ld>80) return;
 
-  // 找兵营
-  for (const sx_pos of BARRACK_SLOTS) {
-    if (Math.abs(cx-sx_pos)<25) {
-      const ex = game.barracks.find(b=>b.side==='my'&&b.lane===lane&&Math.abs(b.x-sx_pos)<5);
+  // 找兵营（田字格）
+  for (const slot of BARRACK_SLOTS) {
+    const sy = LANE_Y[slot.lane];
+    if (Math.abs(cx-slot.x)<25 && Math.abs(cy-sy)<25) {
+      const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5);
       if (ex) {
-        // 打开升级菜单
         game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
       } else if (game.selectedType) {
         const def = UNIT_TYPES[game.selectedType];
         if (game.gold>=def.cost) {
           game.gold -= def.cost;
-          game.barracks.push({ x:sx_pos, lane, side:'my', unitType:game.selectedType, level:1, spawnTimer:1, alive:true });
+          game.barracks.push({ x:slot.x, lane:slot.lane, side:'my', unitType:game.selectedType, level:1, spawnTimer:1, alive:true });
         }
       }
       return;
