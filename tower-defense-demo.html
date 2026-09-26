@@ -236,7 +236,7 @@ function spawnUnit(b) {
     summonSkeleton:0, skeletonTimer:0, burnStack:0,
     currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
     ultimate: lv>=6 ? def.ult : null,
-    st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0 }
+    st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 }
   };
   // 自动应用skill1和skill2（按等级缩放）
   [def.skill1, def.skill2].forEach(s => {
@@ -413,6 +413,8 @@ function applyDmg(att, tgt, dmg, def) {
     // 易伤debuff：受到伤害+30%
     if (tgt.st.vulnerable>0) fd *= 1.3;
     tgt.hp -= fd;
+    // 冰法被动：攻击冰法的单位攻速降低20%，持续3秒
+    if (tgt.type==='ice' && att.st) att.st.slow = 3;
     // 小兵杀小兵给5%造价金币（塔杀不算）
     if (tgt.hp <= 0 && UNIT_TYPES[tgt.type]) {
       game.gold += Math.round(UNIT_TYPES[tgt.type].cost * 0.05);
@@ -455,6 +457,7 @@ function update(dt) {
     else if (u.iceBlock) { if(u.st.iceBlockCD>0){u.st.iceBlockCD-=dt; if(u.st.iceBlockCD<=0){u.st.iceBlock=2;u.hp=u.maxHp;}} }
     if (u.st.stun>0) u.st.stun-=dt;
     if (u.st.vulnerable>0) u.st.vulnerable-=dt;
+    if (u.st.slow>0) u.st.slow-=dt;
     // 特斯拉电圈：身边50范围每秒10伤害
     if (u.electricField>0) {
       game.units.forEach(o => {
@@ -492,6 +495,10 @@ function update(dt) {
       const hpPct = u.hp/u.maxHp;
       atkSpd = u.atkSpeed * (1 + (1-hpPct)*0.6);
     }
+    // 易伤debuff：攻速降低20%
+    if (u.st.vulnerable>0) atkSpd *= 0.8;
+    // 冰法被动减速：攻速降低20%
+    if (u.st.slow>0) atkSpd *= 0.8;
 
     // 找目标
     let bestT=null, bestD=Infinity;
