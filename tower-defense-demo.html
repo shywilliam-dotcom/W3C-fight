@@ -138,7 +138,7 @@ const UNIT_TYPES = {
   ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:200, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'piercing',
     skill1:{k:'poison',v:0.20}, skill2:{k:'longRange',v:1}, desc:'20%毒箭+超远射程（初期强）' },
   crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:130, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'piercing',
-    skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, desc:'20%连击+无视护甲（后期强）' },
+    skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, desc:'20%连锁连击(最多5次)+无视护甲（后期强）' },
 
   // 法师升级（大招=暴风雪）
   arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
@@ -294,7 +294,11 @@ function doAttack(att, tgt, def) {
           Math.abs(o.x-att.x)<att.range+30) targets.push(o);
     });
   }
-  let strikes = (att.doubleStrike && Math.random()<att.doubleStrike) ? 2 : 1;
+  // 连锁连击：每次攻击都有概率再触发一次，最多连打5次
+  let strikes = 1;
+  if (att.doubleStrike>0) {
+    while (strikes<5 && Math.random()<att.doubleStrike) strikes++;
+  }
   targets.forEach(t => { for(let i=0;i<strikes;i++) applyDmg(att,t,dmg,def); });
 
   if (tgt.type!==undefined) {
