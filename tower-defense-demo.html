@@ -181,7 +181,7 @@ const UNIT_TYPES = {
   ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
     skill1:{k:'iceBlock',v:1}, skill2:{k:'shieldAlly',v:0.15}, desc:'冰箱+33%易伤+友方护盾减伤15%（中期强）' },
   fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'fireBlast',
-    skill1:{k:'summonSkeleton',v:2}, skill2:{k:'burnStack',v:1}, desc:'每2秒召唤骷髅+dot叠加（后期强）' },
+    skill1:{k:'summonSkeleton',v:5}, skill2:{k:'burnStack',v:1}, desc:'每5秒召唤骷髅+dot叠加（后期强）' },
 
   // 攻城车升级（大招=弹幕）
   rocket:   { name:'火箭炮', shape:'square', size:11, hp:180, atk:25, atkSpeed:0.3, range:220, speed:50, cost:247, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'barrage',
@@ -649,21 +649,17 @@ function update(dt) {
         }
       });
     }
-    // 奥法召唤傀儡：CD25秒，每个奥法最多同时3个傀儡
+    // 奥法召唤傀儡：CD15秒，生命585
     if (u.type==='arcane') {
       if (u.golemCD>0) u.golemCD-=dt;
       else {
-        // 统计本奥法的存活傀儡数
-        const golemCount = game.units.filter(o=>o.type==='golem' && o.side===u.side && o.hp>0).length;
-        if (golemCount < 3) {
-          game.units.push({
-            x:u.x, y:u.y + (Math.random()-0.5)*30, lane:u.lane, side:u.side, type:'golem',
-            dir:u.dir, level:1, atkType:'normal', armorType:'heavy',
-            hp:585, maxHp:585, atk:12, atkSpeed:1.0, range:40, speed:55, atkTimer:0,
-            dmgReduce:0.5, st:{}, firstAttackDone:true, targetSwitchTimer:0
-          });
-        }
-        u.golemCD = 25;
+        game.units.push({
+          x:u.x, y:u.y, lane:u.lane, side:u.side, type:'golem',
+          dir:u.dir, level:1, atkType:'normal', armorType:'heavy',
+          hp:585, maxHp:585, atk:12, atkSpeed:1.0, range:40, speed:55, atkTimer:0,
+          dmgReduce:0.5, st:{}
+        });
+        u.golemCD = 15;
       }
     }
     // 奥法群体护盾：CD15秒，给周围5个单位加30%血护盾
@@ -1286,7 +1282,7 @@ function render() {
   // 选中单位状态面板（底部中间）
   if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
-    const def = UNIT_TYPES[u.type];
+    const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
     const pw = 300, ph = 100;
     const px = (1200-pw)/2, py = 720-ph-10;
     ctx.fillStyle='rgba(0,0,0,0.9)';
