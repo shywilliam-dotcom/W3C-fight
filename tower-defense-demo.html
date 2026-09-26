@@ -133,8 +133,8 @@ const UNIT_TYPES = {
     skill1:{k:'dodge',v:0.15}, skill2:{k:'dodgeCounter',v:1}, desc:'15%闪避+闪避反击（后期强）' },
 
   // 弓手升级（大招=穿透箭）
-  musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:150, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'piercing',
-    skill1:{k:'instantKill',v:0.05}, skill2:{k:'splash',v:0.25}, desc:'5%即死+25%溅射（中期强）' },
+  musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:170, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'piercing',
+    skill1:{k:'instantKill',v:0.08}, skill2:{k:'splash',v:0.25}, desc:'8%即死+25%溅射（中期强）' },
   ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:230, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'piercing',
     skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭+超远射程（初期强）' },
   crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:130, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'piercing',
@@ -142,7 +142,7 @@ const UNIT_TYPES = {
 
   // 法师升级（大招=暴风雪）
   arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
-    skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.60}, desc:'10%变羊+群体护盾60%血（初期强）' },
+    skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.40}, desc:'10%变羊+群体护盾40%血（初期强）' },
   ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
     skill1:{k:'iceBlock',v:1}, skill2:{k:'shieldAlly',v:0.15}, desc:'冰箱+33%易伤+友方护盾减伤15%（中期强）' },
   fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'blizzard',
@@ -153,7 +153,7 @@ const UNIT_TYPES = {
     skill1:{k:'splashRange',v:150}, skill2:{k:'splash',v:0.25}, desc:'大范围溅射150+25%溅射伤害（中期强）' },
   tesla:    { name:'特斯拉', shape:'square', size:11, hp:180, atk:20, atkSpeed:0.3, range:190, speed:50, cost:247, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标+电圈50范围20/s（后期强）' },
-  siege:    { name:'攻城炮', shape:'square', size:13, hp:252, atk:35, atkSpeed:0.35, range:160, speed:50, cost:247, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
+  siege:    { name:'攻城炮', shape:'square', size:13, hp:252, atk:25, atkSpeed:0.35, range:160, speed:50, cost:247, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射（早期强）' }
 };
 
