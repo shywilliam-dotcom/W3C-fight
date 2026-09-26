@@ -482,14 +482,14 @@ function update(dt) {
 
   // 双方AI补兵+升级（由外部脚本控制，这里不内置）
 
-  // 出兵（固定15秒间隔）
-  const baseInterval = 15;
+  // 出兵（攻城车类20秒，其他15秒）
   game.barracks.forEach(b => {
     if (!b.alive) return;
     b.spawnTimer -= dt;
     if (b.spawnTimer<=0) {
       spawnUnit(b);
-      b.spawnTimer = baseInterval;
+      const isSiege = ['cannon','rocket','tesla','siege'].includes(b.unitType);
+      b.spawnTimer = isSiege ? 20 : 15;
     }
   });
 
