@@ -997,6 +997,81 @@ function render() {
       }
       ctx.drawImage(sprite, -drawSize/2, -drawSize/2 - s*0.3, drawSize, drawSize);
       ctx.restore();
+
+      // ===== 叠加腿和武器动画 =====
+      const walkPhase = game.time*10 + u.x*0.15;
+      const footY = u.y + animY + s*0.5; // 脚底位置
+
+      ctx.save();
+      ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
+      if (flip) ctx.scale(-1, 1);
+
+      // 走路：两条腿交替前后迈
+      if (u.animState === 'walk') {
+        const legSwing = Math.sin(walkPhase) * 4;
+        // 左腿
+        ctx.fillStyle = u.type==='ice' ? '#3b4a6b' : '#4a3728';
+        ctx.fillRect(-3 - legSwing, s*0.3, 3.5, 5);
+        // 右腿
+        ctx.fillRect(1 + legSwing, s*0.3, 3.5, 5);
+      } else if (u.animState === 'attack' || u.animState === 'cast') {
+        // 攻击/施法：腿站稳
+        ctx.fillStyle = u.type==='ice' ? '#3b4a6b' : '#4a3728';
+        ctx.fillRect(-3, s*0.3, 3.5, 5);
+        ctx.fillRect(1, s*0.3, 3.5, 5);
+      } else {
+        // 闲置：腿并拢
+        ctx.fillStyle = u.type==='ice' ? '#3b4a6b' : '#4a3728';
+        ctx.fillRect(-2, s*0.3, 3.5, 5);
+        ctx.fillRect(0.5, s*0.3, 3.5, 5);
+      }
+
+      // 武器：paladin挥剑，ice挥魔杖
+      if (u.type === 'paladin') {
+        let swordAngle = -0.3; // 自然垂放
+        if (u.animState === 'attack') {
+          const p = (u._animT||0)/0.25;
+          // 从右上挥到左下（劈砍）
+          swordAngle = -1.2 + Math.sin(p*Math.PI) * 2.0;
+        } else if (u.animState === 'walk') {
+          swordAngle = -0.3 + Math.sin(walkPhase)*0.15; // 走路时轻微摆动
+        }
+        ctx.save();
+        ctx.translate(s*0.4, -s*0.2);
+        ctx.rotate(swordAngle);
+        // 剑刃
+        ctx.fillStyle = '#e0e0e0';
+        ctx.fillRect(0, -1, 12, 2);
+        // 剑柄
+        ctx.fillStyle = '#4a3728';
+        ctx.fillRect(-3, -1.5, 3, 3);
+        ctx.restore();
+      } else if (u.type === 'ice') {
+        // 魔杖
+        let wandAngle = 0.2;
+        if (u.animState === 'cast') {
+          const p = (u._animT||0)/0.25;
+          wandAngle = -0.8 + Math.sin(p*Math.PI) * 1.2; // 前指
+        } else if (u.animState === 'walk') {
+          wandAngle = 0.2 + Math.sin(walkPhase)*0.1;
+        }
+        ctx.save();
+        ctx.translate(s*0.35, -s*0.25);
+        ctx.rotate(wandAngle);
+        // 杖身
+        ctx.fillStyle = '#6b4226';
+        ctx.fillRect(0, -1, 10, 2);
+        // 杖头宝石
+        if (u.animState === 'cast') {
+          ctx.shadowColor = '#5dade2';
+          ctx.shadowBlur = 12;
+        }
+        ctx.fillStyle = '#5dade2';
+        ctx.beginPath(); ctx.arc(11, 0, 2.5, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+
       // 施法粒子
       if (u.animState === 'cast') {
         ctx.fillStyle = u.type==='ice' ? '#aed6f1' : '#f9e79f';
