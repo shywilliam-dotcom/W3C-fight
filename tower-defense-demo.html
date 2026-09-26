@@ -218,7 +218,7 @@ function spawnUnit(b) {
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
     hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
-    atk:Math.round(def.atk*mul*timeMul), atkSpeed:def.atkSpeed,
+    atk:Math.round(def.atk*mul*timeMul*2), atkSpeed:def.atkSpeed/2,  // 攻击加倍，攻速减半
     range:def.range*rangeMul, speed:def.speed, atkTimer:0,
     crit:0, dodge:0, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
@@ -394,7 +394,7 @@ function update(dt) {
   // 双方AI补兵+升级（由外部脚本控制，这里不内置）
 
   // 出兵（间隔随时间缩短，每60秒-15%）
-  const baseInterval = 3.5;
+  const baseInterval = 7;  // 出兵速度减半
   const speedMul = Math.pow(0.85, Math.floor(game.time/60)); // 每60秒快15%
   game.barracks.forEach(b => {
     if (!b.alive) return;
