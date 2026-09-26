@@ -198,10 +198,10 @@ function initGame() {
     game.barracks.push({ x:BARRACK_SLOTS[1], lane, side:'my', unitType:'archer', level:1,
       hp:2000, maxHp:2000, spawnTimer:1.0+lane*0.3, alive:true, armorType:'fort' });
     // 敌方初始兵营（对称）
-    game.barracks.push({ x:EN_BARRACK_POS[0], lane, side:'enemy', unitType:'melee', level:1,
-      hp:2000, maxHp:2000, spawnTimer:Math.random()*2, alive:true, armorType:'fort' });
-    game.barracks.push({ x:EN_BARRACK_POS[3], lane, side:'enemy', unitType:'archer', level:1,
-      hp:2000, maxHp:2000, spawnTimer:Math.random()*2, alive:true, armorType:'fort' });
+    game.barracks.push({ x:EN_BARRACK_POS[3], lane, side:'enemy', unitType:'melee', level:1,
+      hp:2000, maxHp:2000, spawnTimer:0.5+lane*0.3, alive:true, armorType:'fort' });
+    game.barracks.push({ x:EN_BARRACK_POS[2], lane, side:'enemy', unitType:'archer', level:1,
+      hp:2000, maxHp:2000, spawnTimer:1.0+lane*0.3, alive:true, armorType:'fort' });
   }
   document.getElementById('game-over').style.display = 'none';
 }
