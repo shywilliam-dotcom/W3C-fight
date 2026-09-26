@@ -142,7 +142,7 @@ const UNIT_TYPES = {
 
   // 法师升级（大招=暴风雪）
   arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
-    skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.30}, desc:'10%变羊+群体护盾30%血（初期强）' },
+    skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.60}, desc:'10%变羊+群体护盾60%血（初期强）' },
   ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
     skill1:{k:'iceBlock',v:1}, skill2:{k:'shieldAlly',v:0.15}, desc:'冰箱+33%易伤+友方护盾减伤15%（中期强）' },
   fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'blizzard',
@@ -237,6 +237,7 @@ function spawnUnit(b) {
     currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
     shieldWall:0, shieldCD:0, shield:0,
     shieldAlly:0, shieldAllyCD:0, dmgReduce:0,
+    golemCD:0,
     ultimate: lv>=6 ? def.ult : null,
     st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 }
   };
@@ -313,15 +314,6 @@ function doAttack(att, tgt, def) {
     if (att.stun>0 && Math.random()<att.stun) tgt.st.stun=1.5;
     // 冰法易伤debuff
     if (att.vulnerable>0 && Math.random()<att.vulnerable) tgt.st.vulnerable=3;
-    // 召唤石傀儡
-    if (att.summonGolem>0 && Math.random()<att.summonGolem) {
-      game.units.push({
-        x:att.x, y:att.y, lane:att.lane, side:att.side, type:'golem',
-        dir:att.dir, level:1, atkType:'normal', armorType:'heavy',
-        hp:450, maxHp:450, atk:12, atkSpeed:1.0, range:40, speed:55, atkTimer:0,
-        dmgReduce:0.5, st:{}
-      });
-    }
   }
   if (att.splash && Math.random()<att.splash) {
     game.units.forEach(o => {
@@ -500,6 +492,19 @@ function update(dt) {
     }
     // 换目标计时
     if (u.targetSwitchTimer>0) u.targetSwitchTimer-=dt;
+    // 奥法召唤傀儡：CD15秒，生命585
+    if (u.type==='arcane') {
+      if (u.golemCD>0) u.golemCD-=dt;
+      else {
+        game.units.push({
+          x:u.x, y:u.y, lane:u.lane, side:u.side, type:'golem',
+          dir:u.dir, level:1, atkType:'normal', armorType:'heavy',
+          hp:585, maxHp:585, atk:12, atkSpeed:1.0, range:40, speed:55, atkTimer:0,
+          dmgReduce:0.5, st:{}
+        });
+        u.golemCD = 15;
+      }
+    }
     // 奥法群体护盾：CD15秒，给周围5个单位加30%血护盾
     if (u.shieldWall>0) {
       if (u.shieldCD>0) u.shieldCD-=dt;
