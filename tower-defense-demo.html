@@ -950,18 +950,33 @@ function render() {
     const spriteKey = typeToSprite[u.type];
     const sprite = spriteKey ? spriteImgs[spriteKey] : null;
 
+    // 动画帧计时：attack/cast持续0.25秒后自动回walk
+    if (u.animState==='attack' || u.animState==='cast') {
+      u._animT = (u._animT||0) + dt;
+      if (u._animT > 0.25) { u.animState='walk'; u._animT=0; }
+    }
     // 动画偏移
-    let animY = 0, animScale = 1;
+    let animY = 0, animScale = 1, animRot = 0, animX = 0;
     if (u.animState === 'walk') {
-      animY = Math.sin(game.time*10 + u.x*0.1) * 2;
+      // 走路：上下弹跳 + 左右摇摆
+      const phase = game.time*12 + u.x*0.15;
+      animY = Math.abs(Math.sin(phase)) * -2.5;  // 双脚交替弹跳
+      animRot = Math.sin(phase) * 0.08;           // 身体左右倾
     } else if (u.animState === 'attack') {
-      animScale = 1.15;
-      animY = -2;
-    } else if (u.animState === 'cast') {
+      // 攻击：向前冲刺 + 前倾
+      const p = (u._animT||0)/0.25;
+      animX = Math.sin(p*Math.PI) * 6;           // 前冲6px
+      animY = Math.sin(p*Math.PI) * -2;
+      animRot = -0.15;                            // 前倾
       animScale = 1.1;
-      animY = -1;
+    } else if (u.animState === 'cast') {
+      // 施法：后仰 + 发光脉动
+      const p = (u._animT||0)/0.25;
+      animY = -2 + Math.sin(p*Math.PI)*-3;
+      animRot = 0.1;                              // 后仰
+      animScale = 1.05;
     } else {
-      animY = Math.sin(game.time*3 + u.x*0.05) * 1; // 闲置呼吸
+      animY = Math.sin(game.time*3 + u.x*0.05) * 1.5; // 呼吸
     }
 
     if (sprite && sprite.complete && sprite.naturalWidth > 0) {
@@ -969,27 +984,57 @@ function render() {
       const drawSize = s * 2.5 * animScale;
       const flip = u.side==='enemy'; // 敌方镜像
       ctx.save();
-      ctx.translate(u.x, u.y + animY);
+      ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
       if (flip) ctx.scale(-1, 1);
-      // 冰法发光效果
-      if (u.type === 'ice' && (u.animState === 'cast' || u.atkTimer > 0.8)) {
-        ctx.shadowColor = '#5dade2';
-        ctx.shadowBlur = 15;
+      ctx.rotate(animRot);
+      // 施法发光效果
+      if (u.animState === 'cast') {
+        ctx.shadowColor = u.type==='ice' ? '#5dade2' : '#f39c12';
+        ctx.shadowBlur = 20;
+      } else if (u.animState === 'attack') {
+        ctx.shadowColor = '#ffeb3b';
+        ctx.shadowBlur = 8;
       }
       ctx.drawImage(sprite, -drawSize/2, -drawSize/2 - s*0.3, drawSize, drawSize);
       ctx.restore();
+      // 施法粒子
+      if (u.animState === 'cast') {
+        ctx.fillStyle = u.type==='ice' ? '#aed6f1' : '#f9e79f';
+        for (let i=0;i<5;i++){
+          const a = game.time*4 + i*1.25;
+          const px = u.x + Math.cos(a)*12;
+          const py = u.y + Math.sin(a)*8 - 4;
+          ctx.beginPath(); ctx.arc(px,py,1.5,0,Math.PI*2); ctx.fill();
+        }
+      }
     } else {
-      // 原来的几何图形
+      // 原来的几何图形（加动画偏移）
+      const dx = u.x + animX, dy = u.y + animY;
       let c = u.side==='my'?def.color:shade(def.color,-30);
       if (u.st.iceBlock>0) c='#00FFFF';
       if (u.st.polymorphed>0) c='#FFD700';
       ctx.fillStyle=c; ctx.strokeStyle=u.side==='my'?'#fff':'#ff0'; ctx.lineWidth=1;
+      ctx.save();
+      ctx.translate(dx, dy);
+      ctx.rotate(animRot);
+      ctx.scale(animScale, animScale);
       ctx.beginPath();
-      if(def.shape==='circle') ctx.arc(u.x,u.y,s,0,Math.PI*2);
-      else if(def.shape==='triangle'){ctx.moveTo(u.x,u.y-s);ctx.lineTo(u.x-s,u.y+s);ctx.lineTo(u.x+s,u.y+s);ctx.closePath();}
-      else if(def.shape==='diamond'){ctx.moveTo(u.x,u.y-s);ctx.lineTo(u.x+s,u.y);ctx.lineTo(u.x,u.y+s);ctx.lineTo(u.x-s,u.y);ctx.closePath();}
-      else ctx.rect(u.x-s,u.y-s,s*2,s*2);
+      if(def.shape==='circle') ctx.arc(0,0,s,0,Math.PI*2);
+      else if(def.shape==='triangle'){ctx.moveTo(0,-s);ctx.lineTo(-s,s);ctx.lineTo(s,s);ctx.closePath();}
+      else if(def.shape==='diamond'){ctx.moveTo(0,-s);ctx.lineTo(s,0);ctx.lineTo(0,s);ctx.lineTo(-s,0);ctx.closePath();}
+      else ctx.rect(-s,-s,s*2,s*2);
       ctx.fill(); ctx.stroke();
+      ctx.restore();
+      // 施法粒子
+      if (u.animState === 'cast') {
+        ctx.fillStyle = '#f9e79f';
+        for (let i=0;i<5;i++){
+          const a = game.time*4 + i*1.25;
+          const px = u.x + Math.cos(a)*12;
+          const py = u.y + Math.sin(a)*8 - 4;
+          ctx.beginPath(); ctx.arc(px,py,1.5,0,Math.PI*2); ctx.fill();
+        }
+      }
     }
     // 血条
     const pct=u.hp/u.maxHp;
