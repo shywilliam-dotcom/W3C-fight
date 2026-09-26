@@ -219,13 +219,15 @@ function spawnUnit(b) {
   const lv = b.level || 1;
   const mul = 1 + (lv-1)*0.15;  // 每级+15%血攻
   const rangeMul = 1 + (lv-1)*0.05;
+  // 后期rush：300秒后新出兵攻击每60秒+25%
+  const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.25;
   const u = {
     x:b.x, y:LANE_Y[b.lane], lane:b.lane, side:b.side, type:b.unitType,
     dir: b.side==='my'?1:-1, level:lv,
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
     hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
-    atk:def.atk*mul, atkSpeed:def.atkSpeed,
+    atk:Math.round(def.atk*mul*timeMul), atkSpeed:def.atkSpeed,
     range:def.range*rangeMul, speed:def.speed, atkTimer:0,
     crit:0, dodge:0, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
