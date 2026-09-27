@@ -90,17 +90,7 @@
 </div>
 
 <script>
-window.onerror = function(msg, src, line, col) {
-  var d = document.createElement('div');
-  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;z-index:99999;padding:10px;font-size:14px;white-space:pre-wrap';
-  d.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ')';
-  document.body.appendChild(d);
-};
-window.onerror = function(msg, src, line, col) {
-  document.title = 'ERR:'+msg+'@L'+line;
-  document.body.innerHTML = '<div style="color:red;font-size:20px;padding:20px;">'+msg+'<br>Line:'+line+':'+col+'</div>';
-};
-// ============ 布局 =====
+// ============ 布局 ============
 const LANE_Y = [180, 360, 540];
 const LANE_NAMES = ['上路','中路','下路'];
 const MY_BASE_X = 50;
@@ -1162,7 +1152,21 @@ function render() {
       animY = Math.sin(game.time*3 + u.x*0.05) * 1.5; // 呼吸
     }
 
-    if (true) {
+    const pKey = typeToPortrait[u.type];
+    const pImg = pKey ? portraitImgs[pKey] : null;
+    if (pImg && pImg.complete && pImg.naturalWidth > 0) {
+      // 用立绘图片绘制
+      ctx.save();
+      ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
+      if (flip) ctx.scale(-1, 1);
+      ctx.rotate(animRot);
+      const drawSize = 22 * animScale;
+      if (u.ultActive > 0) {
+        ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 15;
+      }
+      ctx.drawImage(pImg, -drawSize/2, -drawSize/2 - 2, drawSize, drawSize);
+      ctx.restore();
+    } else if (true) {
       // ===== Canvas精细分部件绘制 =====
       const walkPhase = game.time*10 + u.x*0.15;
       const sc = 1.8;
