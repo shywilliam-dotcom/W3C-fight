@@ -242,10 +242,29 @@ for (const k in PORTRAITS) {
   portraitImgs[k] = new Image();
   portraitImgs[k].src = PORTRAITS[k];
 }
+// 外部URL立绘（新补的兵种）
+const EXTERNAL_PORTRAITS = {
+  melee:'https://aka.doubaocdn.com/s/DRbsl9wTBp',
+  archer:'https://aka.doubaocdn.com/s/rdGXzBUhs9',
+  musketeer:'https://aka.doubaocdn.com/s/QbNMu4F7m1',
+  ranger:'https://aka.doubaocdn.com/s/4cU0w75UsO',
+  crossbow:'https://aka.doubaocdn.com/s/E5MdNHzZ8b',
+  cannon:'https://aka.doubaocdn.com/s/EyWUgl2VU4',
+  siege:'https://aka.doubaocdn.com/s/TOW1x0In51',
+  rocket:'https://aka.doubaocdn.com/s/okFwx0EcSq',
+  tesla:'https://aka.doubaocdn.com/s/cdOSUqpgej'
+};
+for (const k in EXTERNAL_PORTRAITS) {
+  portraitImgs[k] = new Image();
+  portraitImgs[k].src = EXTERNAL_PORTRAITS[k];
+}
 // 兵种到立绘的映射
 const typeToPortrait = {
   paladin:'paladin', barbarian:'barbarian', fighter:'fighter',
-  ice:'ice', mage:'mage', arcane:'arcane', darkfire:'darkfire'
+  ice:'ice', mage:'mage', arcane:'arcane', darkfire:'darkfire',
+  melee:'melee', archer:'archer', musketeer:'musketeer',
+  ranger:'ranger', crossbow:'crossbow', cannon:'cannon',
+  siege:'siege', rocket:'rocket', tesla:'tesla'
 };
 for (const t in spriteData) {
   const img = new Image();
