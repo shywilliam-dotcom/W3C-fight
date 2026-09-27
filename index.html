@@ -1171,6 +1171,48 @@ function render() {
       animY = Math.sin(game.time*3 + u.x*0.05) * 1.5; // 呼吸
     }
 
+    // ===== 优先贴立绘 =====
+    {
+      const pKey = typeToPortrait[u.type];
+      const pImg = pKey ? portraitImgs[pKey] : null;
+      if (pImg && pImg.complete && pImg.naturalWidth > 0) {
+        // 去背景：把深色背景变透明（只处理一次，存到_processed变量）
+        if (!pImg._processed) {
+          try {
+            const tmp = document.createElement('canvas');
+            tmp.width = pImg.naturalWidth; tmp.height = pImg.naturalHeight;
+            const tctx = tmp.getContext('2d');
+            tctx.drawImage(pImg, 0, 0);
+            const data = tctx.getImageData(0, 0, tmp.width, tmp.height);
+            const d = data.data;
+            for (let i = 0; i < d.length; i += 4) {
+              const r = d[i], g = d[i+1], b = d[i+2];
+              // 深色背景（RGB都<50且饱和度低）变透明
+              if (r < 50 && g < 50 && b < 50 && Math.abs(r-g)<15 && Math.abs(g-b)<15) {
+                d[i+3] = 0;
+              }
+            }
+            tctx.putImageData(data, 0, 0);
+            pImg.src = tmp.toDataURL();
+            pImg._processed = true;
+          } catch(e) { pImg._processed = true; }
+        }
+        const sc = 2.2;
+        const iw = 22 * sc, ih = 28 * sc;
+        ctx.drawImage(pImg, -iw/2, -ih + 4, iw, ih);
+        // 血条
+        if (u.hp < u.maxHp) {
+          const bw = 24;
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.fillRect(-bw/2, -ih + 2, bw, 3);
+          ctx.fillStyle = u.hp/u.maxHp > 0.5 ? '#4caf50' : u.hp/u.maxHp > 0.25 ? '#ff9800' : '#f44336';
+          ctx.fillRect(-bw/2, -ih + 2, bw * (u.hp/u.maxHp), 3);
+        }
+        ctx.restore();
+        continue;
+      }
+    }
+
     // ===== Canvas分部件绘制（带走路/攻击/施法动画） =====
     {
       const walkPhase = game.time*10 + u.x*0.15;
