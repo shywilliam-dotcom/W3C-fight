@@ -1565,20 +1565,20 @@ canvas.addEventListener('click', e => {
     let idx = 0;
     let by = 70;
     for (const cat of CODEX) {
-      by += 24;
+      by += 26;
       for (let i=0; i<cat.names.length; i++) {
         const ni = idx;
         const col = i % 2;
         const row = Math.floor(i / 2);
-        const bw = 240, bh = 38;
-        const bx = lx + col * (bw + 10);
-        const by2 = by + row * (bh + 6);
+        const bw = 288, bh = 46;
+        const bx = lx + col * (bw + 12);
+        const by2 = by + row * (bh + 8);
         if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
           codexSel = ni; render(); return;
         }
         idx++;
       }
-      by += 2 * 44 + 10;
+      by += 2 * 54 + 12;
     }
     // 其他位置不退出
     return;
@@ -1747,16 +1747,16 @@ function drawCodex() {
   let by = 70;
   for (const cat of CODEX) {
     // 分类标题
-    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 15px sans-serif';
+    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 17px sans-serif';
     ctx.fillText(cat.cat, lx, by);
-    by += 24;
+    by += 26;
     for (let i=0; i<cat.names.length; i++) {
       const ni = idx;
       const col = i % 2;
       const row = Math.floor(i / 2);
-      const bw = 240, bh = 38;
-      const bx = lx + col * (bw + 10);
-      const by2 = by + row * (bh + 6);
+      const bw = 288, bh = 46;
+      const bx = lx + col * (bw + 12);
+      const by2 = by + row * (bh + 8);
       if (codexSel === ni) {
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(bx, by2, bw, bh);
@@ -1766,11 +1766,11 @@ function drawCodex() {
         ctx.fillRect(bx, by2, bw, bh);
         ctx.fillStyle = '#ddd';
       }
-      ctx.font = '15px sans-serif';
-      ctx.fillText(cat.names[i], bx+10, by2+24);
+      ctx.font = '17px sans-serif';
+      ctx.fillText(cat.names[i], bx+12, by2+29);
       idx++;
     }
-    by += 2 * 44 + 10;
+    by += 2 * 54 + 12;
   }
 
   // 右半区：详情
