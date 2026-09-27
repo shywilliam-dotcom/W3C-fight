@@ -91,6 +91,12 @@
 
 <script>
 window.onerror = function(msg, src, line, col) {
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;z-index:99999;padding:10px;font-size:14px;white-space:pre-wrap';
+  d.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ')';
+  document.body.appendChild(d);
+};
+window.onerror = function(msg, src, line, col) {
   document.title = 'ERR:'+msg+'@L'+line;
   document.body.innerHTML = '<div style="color:red;font-size:20px;padding:20px;">'+msg+'<br>Line:'+line+':'+col+'</div>';
 };
