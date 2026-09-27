@@ -606,13 +606,17 @@ function update(dt) {
     game.buffSiegeMaster = ['siege','rocket','tesla'].every(t => myTypes.has(t));
   }
 
-  // AI升级：每5秒随机升级一个兵营
+  // AI升级：每5秒随机升级一个兵营（需要扣钱）
   game.aiTimer = (game.aiTimer||5) - dt;
   if (game.aiTimer <= 0) {
     game.aiTimer = 5;
     game.barracks.forEach(b => {
       if (b.alive && Math.random()<0.3) {
-        b.level = Math.min(10, (b.level||1)+1);
+        const cost = (b.level||1)*100;
+        if (game.gold >= cost) {
+          game.gold -= cost;
+          b.level = Math.min(10, (b.level||1)+1);
+        }
       }
     });
   }
