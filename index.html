@@ -188,7 +188,7 @@ const UNIT_TYPES = {
   // 弓手升级（大招=穿透箭）
   musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:150, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'pierceShot',
     skill1:{k:'instantKill',v:0.08}, skill2:{k:'splash',v:0.25}, desc:'8%即死+25%溅射 | 大招穿透射击:直线400内5个单位CD35s（中期强）' },
-  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:200, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
+  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:210, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
     skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭+超远射程 | 大招箭雨CD40s（初期强）' },
   crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:145, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
     skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, desc:'20%连锁连击(最多5次)+无视护甲（后期强）' },
@@ -207,7 +207,7 @@ const UNIT_TYPES = {
   tesla:    { name:'特斯拉', shape:'square', size:11, hp:180, atk:25, atkSpeed:0.3, range:190, speed:50, cost:494, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'stunBlast',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标每单位15%概率晕1秒+电圈50范围20/s | 大招:下3次攻击必晕2秒并丢失目标CD40s（后期强）' },
   siege:    { name:'攻城炮', shape:'square', size:13, hp:252, atk:25, atkSpeed:0.35, range:180, speed:50, cost:494, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'airSlug',
-    skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射 | 大招:下4次攻击200%伤害+击飞+丢失目标CD40s（早期强）' }
+    skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射 | 大招:下2次攻击200%伤害+击飞+丢失目标CD40s（早期强）' }
 };
 
 const UPGRADE_PATHS = {
