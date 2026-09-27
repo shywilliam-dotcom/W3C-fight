@@ -1115,6 +1115,7 @@ function render() {
     const s = def.size;
     const spriteKey = typeToSprite[u.type];
     const sprite = spriteKey ? spriteImgs[spriteKey] : null;
+    const flip = u.side==='enemy';
 
     // 动画偏移
     let animY = 0, animScale = 1, animRot = 0, animX = 0;
@@ -1143,7 +1144,6 @@ function render() {
     if (sprite && sprite.complete && sprite.naturalWidth > 0) {
       // 用图片绘制身体
       const drawSize = s * 2.2 * animScale;
-      const flip = u.side==='enemy';
       ctx.save();
       ctx.translate(u.x + (flip?-animX:animX), u.y + animY - 4);
       if (flip) ctx.scale(-1, 1);
