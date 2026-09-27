@@ -240,6 +240,7 @@ const PORTRAITS = {"ice": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAAC
 const portraitImgs = {};
 for (const k in PORTRAITS) {
   portraitImgs[k] = new Image();
+  portraitImgs[k].onload = () => { portraitImgs[k]._ready = true; };
   portraitImgs[k].src = PORTRAITS[k];
 }
 // 外部URL立绘（新补的兵种）
@@ -256,6 +257,8 @@ const EXTERNAL_PORTRAITS = {
 };
 for (const k in EXTERNAL_PORTRAITS) {
   portraitImgs[k] = new Image();
+  portraitImgs[k].crossOrigin = 'anonymous';
+  portraitImgs[k].onload = () => { portraitImgs[k]._ready = true; };
   portraitImgs[k].src = EXTERNAL_PORTRAITS[k];
 }
 // 兵种到立绘的映射
@@ -1175,33 +1178,13 @@ function render() {
     {
       const pKey = typeToPortrait[u.type];
       const pImg = pKey ? portraitImgs[pKey] : null;
-      if (pImg && pImg.complete && pImg.naturalWidth > 0) {
-        // 去背景：把深色背景变透明（只处理一次）
-        if (!pImg._processed) {
-          try {
-            const tmp = document.createElement('canvas');
-            tmp.width = pImg.naturalWidth; tmp.height = pImg.naturalHeight;
-            const tctx = tmp.getContext('2d');
-            tctx.drawImage(pImg, 0, 0);
-            const data = tctx.getImageData(0, 0, tmp.width, tmp.height);
-            const d = data.data;
-            for (let i = 0; i < d.length; i += 4) {
-              const r = d[i], g = d[i+1], b = d[i+2];
-              if (r < 50 && g < 50 && b < 50 && Math.abs(r-g)<15 && Math.abs(g-b)<15) {
-                d[i+3] = 0;
-              }
-            }
-            tctx.putImageData(data, 0, 0);
-            pImg.src = tmp.toDataURL();
-            pImg._processed = true;
-          } catch(e) { pImg._processed = true; }
-        }
+      if (pImg && pImg.complete && pImg.naturalWidth > 0 && pImg._ready) {
         ctx.save();
         ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
         if (flip) ctx.scale(-1, 1);
         ctx.rotate(animRot);
         ctx.scale(animScale, animScale);
-        const sc = 2.2;
+        const sc = 2.0;
         const iw = 22 * sc, ih = 28 * sc;
         ctx.drawImage(pImg, -iw/2, -ih + 4, iw, ih);
         // 血条
