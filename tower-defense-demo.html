@@ -1141,108 +1141,168 @@ function render() {
       animY = Math.sin(game.time*3 + u.x*0.05) * 1.5; // 呼吸
     }
 
-    if (sprite && sprite.complete && sprite.naturalWidth > 0) {
-      // 用图片绘制身体
-      const drawSize = s * 2.2 * animScale;
-      ctx.save();
-      ctx.translate(u.x + (flip?-animX:animX), u.y + animY - 4);
-      if (flip) ctx.scale(-1, 1);
-      ctx.rotate(animRot);
-      if (u.animState === 'cast') {
-        ctx.shadowColor = u.type==='ice' ? '#5dade2' : (u.type==='darkfire'?'#ff6347':'#f39c12');
-        ctx.shadowBlur = 15;
-      }
-      ctx.drawImage(sprite, -drawSize/2, -drawSize/2, drawSize, drawSize);
-      ctx.restore();
-
-      // ===== 动态叠加：腿走路 + 法杖挥舞 =====
+    if (true) {
+      // ===== Canvas分部件绘制 =====
       const walkPhase = game.time*10 + u.x*0.15;
-      ctx.save();
-      ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
-      if (flip) ctx.scale(-1, 1);
-
-      // 腿（走路摆动）
-      const legC = '#2a2a2a';
-      if (u.animState === 'walk') {
-        const sw = Math.sin(walkPhase) * 3;
-        ctx.fillStyle = legC;
-        ctx.fillRect(-3.5 - sw, 6, 2.5, 5);
-        ctx.fillRect(1 + sw, 6, 2.5, 5);
-      } else {
-        ctx.fillStyle = legC;
-        ctx.fillRect(-3, 6, 2.5, 5);
-        ctx.fillRect(0.5, 6, 2.5, 5);
-      }
-
-      // 法杖（法师系，施法时挥舞）
-      if (['ice','darkfire','mage','arcane'].includes(u.type)) {
-        const gemC = {ice:'#5dade2', darkfire:'#ff6347', mage:'#f7dc6f', arcane:'#bb8fce'}[u.type];
-        let ang = 0.4;
-        if (u.animState === 'cast') {
-          const p = (u._animT||0)/0.25;
-          ang = -0.9 + Math.sin(p*Math.PI) * 1.4;
-        } else if (u.animState === 'walk') {
-          ang = 0.4 + Math.sin(walkPhase)*0.1;
-        }
-        ctx.save();
-        ctx.translate(5, -2);
-        ctx.rotate(ang);
-        ctx.fillStyle = '#6b4226';
-        ctx.fillRect(0, -1, 12, 2);
-        if (u.animState === 'cast') {
-          ctx.shadowColor = gemC;
-          ctx.shadowBlur = 15;
-        }
-        ctx.fillStyle = gemC;
-        ctx.beginPath(); ctx.arc(13, 0, 3, 0, Math.PI*2); ctx.fill();
-        ctx.restore();
-      }
-      // 剑（骑士系，攻击时挥舞）
-      else if (['paladin','barbarian','fighter'].includes(u.type)) {
-        let ang = -0.3;
-        if (u.animState === 'attack') {
-          const p = (u._animT||0)/0.25;
-          ang = -1.2 + Math.sin(p*Math.PI) * 2.0;
-        } else if (u.animState === 'walk') {
-          ang = -0.3 + Math.sin(walkPhase)*0.12;
-        }
-        ctx.save();
-        ctx.translate(5, -2);
-        ctx.rotate(ang);
-        ctx.fillStyle = '#e0e0e0';
-        ctx.fillRect(0, -1, 14, 2);
-        ctx.fillStyle = '#4a3728';
-        ctx.fillRect(-3, -1.5, 3, 3);
-        ctx.restore();
-      }
-
-      ctx.restore();
-    } else {
-      let c = u.side==='my'?def.color:shade(def.color,-30);
-      if (u.st.iceBlock>0) c='#00FFFF';
-      if (u.st.polymorphed>0) c='#FFD700';
-      ctx.fillStyle=c; ctx.strokeStyle=u.side==='my'?'#fff':'#ff0'; ctx.lineWidth=1;
       ctx.save();
       ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
       if (flip) ctx.scale(-1, 1);
       ctx.rotate(animRot);
       ctx.scale(animScale, animScale);
-      if (def.shape==='circle'){ctx.beginPath();ctx.arc(0,0,s/2,0,Math.PI*2);ctx.fill();ctx.stroke();}
-      else if (def.shape==='triangle'){ctx.beginPath();ctx.moveTo(0,-s/2);ctx.lineTo(s/2,s/2);ctx.lineTo(-s/2,s/2);ctx.closePath();ctx.fill();ctx.stroke();}
-      else {ctx.fillRect(-s/2,-s/2,s,s);ctx.strokeRect(-s/2,-s/2,s,s);}
-      ctx.restore();
-    }
 
-    // 施法粒子（所有单位）
-    if (u.animState === 'cast') {
-      const particleColor = {ice:'#aed6f1', darkfire:'#ffb347', arcane:'#d7bde2', mage:'#e8daef'}[u.type] || '#f9e79f';
-      ctx.fillStyle = particleColor;
-      for (let i=0;i<5;i++){
-        const a = game.time*4 + i*1.25;
-        const px = u.x + Math.cos(a)*12;
-        const py = u.y + Math.sin(a)*8 - 4;
-        ctx.beginPath(); ctx.arc(px,py,1.5,0,Math.PI*2); ctx.fill();
+      const t = u.type;
+      const p = (u._animT||0)/0.25;
+
+      // 腿
+      const legColors = {
+        mage:'#5a4a3a', ice:'#3b4a6b', arcane:'#4a2d6b', fire:'#2a0a0a', darkfire:'#1a1a1a',
+        paladin:'#5a5a5a', barbarian:'#8B4513', fighter:'#222222',
+        archer:'#4a3728', longbow:'#4a3728', crossbow:'#4a3728',
+        cannon:'#333', rocket:'#333', tesla:'#333', siege:'#333'
+      };
+      ctx.fillStyle = legColors[t] || '#444';
+      if (u.animState === 'walk') {
+        const sw = Math.sin(walkPhase) * 3;
+        ctx.fillRect(-3.5 - sw, 5, 2.5, 5);
+        ctx.fillRect(1 + sw, 5, 2.5, 5);
+      } else {
+        ctx.fillRect(-3, 5, 2.5, 5);
+        ctx.fillRect(0.5, 5, 2.5, 5);
       }
+
+      if (['mage','ice','arcane','fire','darkfire'].includes(t)) {
+        const robeC = {mage:'#A0826D', ice:'#6FA8DC', arcane:'#B57EDC', fire:'#5D1020', darkfire:'#3A0A10'}[t];
+        const hatC = {ice:'#4A90D9', arcane:'#9B59B6', fire:'#E74C3C', darkfire:'#8B0000', mage:'#7B5B3A'}[t];
+        const gemC = {ice:'#85C1E9', arcane:'#D2B4DE', fire:'#FF6B6B', darkfire:'#FF4444', mage:'#F7DC6F'}[t];
+        const bodyC = u.side==='my' ? robeC : shade(robeC,-30);
+        ctx.fillStyle = bodyC;
+        ctx.beginPath();
+        ctx.moveTo(-5, -4); ctx.lineTo(5, -4); ctx.lineTo(6, 6); ctx.lineTo(-6, 6);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#FDBCB4';
+        ctx.beginPath(); ctx.arc(0, -6, 3.5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = hatC;
+        ctx.beginPath();
+        ctx.moveTo(0, -14); ctx.lineTo(-4.5, -5); ctx.lineTo(4.5, -5);
+        ctx.closePath(); ctx.fill();
+        ctx.fillRect(-5, -6, 10, 1.5);
+        if (u.ultActive > 0) {
+          ctx.strokeStyle = gemC; ctx.lineWidth = 2;
+          ctx.shadowColor = gemC; ctx.shadowBlur = 10;
+          ctx.beginPath(); ctx.arc(0, 0, 12 + Math.sin(game.time*8)*2, 0, Math.PI*2); ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = '#6B4226'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(5, -3); ctx.lineTo(8, -14); ctx.stroke();
+          ctx.fillStyle = gemC;
+          ctx.beginPath(); ctx.arc(8, -15, 3.5, 0, Math.PI*2); ctx.fill();
+        } else {
+          let ang = 0.3;
+          if (u.animState === 'cast') ang = -1.0 + Math.sin(p*Math.PI) * 1.5;
+          else if (u.animState === 'walk') ang = 0.3 + Math.sin(walkPhase)*0.08;
+          ctx.save();
+          ctx.translate(4, -2);
+          ctx.rotate(ang);
+          ctx.strokeStyle = '#6B4226'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(10, 0); ctx.stroke();
+          if (u.animState === 'cast') { ctx.shadowColor = gemC; ctx.shadowBlur = 12; }
+          ctx.fillStyle = gemC;
+          ctx.beginPath(); ctx.arc(11, 0, 3, 0, Math.PI*2); ctx.fill();
+          ctx.restore();
+        }
+      }
+      else if (t === 'paladin') {
+        const armorC = u.side==='my' ? '#C0C0C0' : '#808080';
+        ctx.fillStyle = armorC;
+        ctx.fillRect(-5, -5, 10, 11);
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(-5, -5, 10, 2);
+        ctx.fillStyle = armorC;
+        ctx.beginPath(); ctx.arc(0, -8, 3.5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(-1.5, -10, 3, 3);
+        ctx.fillStyle = '#4169E1';
+        ctx.beginPath(); ctx.ellipse(-6, -1, 3, 5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath(); ctx.arc(-6, -1, 1.5, 0, Math.PI*2); ctx.fill();
+        let ang = -0.4;
+        if (u.animState === 'attack') ang = -1.5 + Math.sin(p*Math.PI) * 2.2;
+        else if (u.animState === 'walk') ang = -0.4 + Math.sin(walkPhase)*0.1;
+        ctx.save();
+        ctx.translate(5, -2); ctx.rotate(ang);
+        ctx.fillStyle = '#E0E0E0'; ctx.fillRect(0, -1, 14, 2);
+        ctx.fillStyle = '#4a3728'; ctx.fillRect(-3, -1.5, 3, 3);
+        ctx.restore();
+        if (u.ultActive > 0) {
+          ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 15;
+          ctx.fillStyle = '#FFD700';
+          ctx.beginPath(); ctx.ellipse(-6, -8, 4, 6, 0, 0, Math.PI*2); ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      }
+      else if (t === 'barbarian') {
+        ctx.fillStyle = u.side==='my' ? '#FDBCB4' : '#B08060';
+        ctx.fillRect(-4, -5, 8, 11);
+        ctx.beginPath(); ctx.arc(0, -8, 3.5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath(); ctx.arc(0, -9, 3.5, Math.PI, 0); ctx.fill();
+        let ang = 0.8;
+        if (u.animState === 'attack') ang = -2.0 + Math.sin(p*Math.PI) * 2.5;
+        else if (u.ultActive > 0) ang = game.time * 10;
+        ctx.save();
+        ctx.translate(4, 0); ctx.rotate(ang);
+        ctx.strokeStyle = '#6B4226'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(12, 0); ctx.stroke();
+        ctx.fillStyle = '#888'; ctx.fillRect(10, -4, 4, 8);
+        ctx.restore();
+        if (u.ultActive > 0) {
+          ctx.strokeStyle = '#FFA500'; ctx.lineWidth = 2;
+          ctx.shadowColor = '#FFA500'; ctx.shadowBlur = 10;
+          for (let i=0;i<3;i++){
+            const a = game.time*6 + i*2.1;
+            ctx.beginPath(); ctx.arc(0, 0, 8+i*3, a, a+2); ctx.stroke();
+          }
+          ctx.shadowBlur = 0;
+        }
+      }
+      else if (t === 'fighter') {
+        ctx.fillStyle = '#222';
+        ctx.fillRect(-4, 2, 8, 4);
+        ctx.fillStyle = u.side==='my' ? '#FDBCB4' : '#B08060';
+        ctx.fillRect(-4, -5, 8, 7);
+        ctx.beginPath(); ctx.arc(0, -8, 3.5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#FFF';
+        if (u.animState === 'attack') {
+          const punch = Math.sin(game.time*8) > 0 ? 1 : -1;
+          ctx.fillRect(punch>0 ? 4 : -6, -3, 4, 2);
+          ctx.fillRect(punch>0 ? -6 : 4, -3, 3, 2);
+        } else {
+          ctx.fillRect(4, -3, 3, 2);
+          ctx.fillRect(-7, -3, 3, 2);
+        }
+        if (u.ultActive > 0) {
+          ctx.fillStyle = '#FFF';
+          ctx.fillRect(3, -12, 3, 8);
+          ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 8;
+          ctx.fillStyle = '#FFD700';
+          ctx.beginPath(); ctx.arc(4.5, -13, 2.5, 0, Math.PI*2); ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+        if (u.st.dodge) {
+          ctx.fillStyle = '#FFD700';
+          ctx.font = 'bold 8px Arial';
+          ctx.fillText('MISS', -6, -14);
+        }
+      }
+      else {
+        let c = u.side==='my'?def.color:shade(def.color,-30);
+        if (u.st.iceBlock>0) c='#00FFFF';
+        if (u.st.polymorphed>0) c='#FFD700';
+        ctx.fillStyle=c;
+        if (def.shape==='circle'){ctx.beginPath();ctx.arc(0,0,s/2,0,Math.PI*2);ctx.fill();}
+        else if (def.shape==='triangle'){ctx.beginPath();ctx.moveTo(0,-s/2);ctx.lineTo(s/2,s/2);ctx.lineTo(-s/2,s/2);ctx.closePath();ctx.fill();}
+        else {ctx.fillRect(-s/2,-s/2,s,s);}
+      }
+      ctx.restore();
     }
     // 血条
     const pct=u.hp/u.maxHp;
