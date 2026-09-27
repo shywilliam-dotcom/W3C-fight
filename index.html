@@ -36,7 +36,8 @@
   #gold-display { color: #ffd700; font-weight: bold; font-size: 18px; }
   canvas {
     background: #0f0f23; border: 1px solid #0f3460; border-top: none; border-bottom: none;
-    cursor: pointer; width: 100%; max-width: 1200px; height: auto; display: block;
+    cursor: pointer; width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 100px);
+    display: block; margin: 0 auto;
   }
   #control-panel {
     width: 100%; max-width: 1200px; background: #16213e; padding: 10px 16px;
@@ -320,7 +321,8 @@ function spawnUnit(b) {
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
     hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
-    atk:Math.round(def.atk*mul*timeMul*2), atkSpeed:def.atkSpeed/2,  // 攻击加倍，攻速减半    range:def.range*rangeMul, speed:def.speed, atkTimer:0,
+    atk:Math.round(def.atk*mul*timeMul*2), atkSpeed:def.atkSpeed/2, // 攻击加倍，攻速减半
+    range:def.range*rangeMul, speed:def.speed, atkTimer:0,
     crit:0, dodge:0, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
     doubleStrike:0, multiTarget:0, splashRange:0,
@@ -929,7 +931,7 @@ function update(dt) {
   document.getElementById('time-display').textContent = m+':'+String(s).padStart(2,'0');
   document.getElementById('my-towers').textContent = game.towers.filter(t=>t.side==='my'&&t.alive).length;
   document.getElementById('enemy-towers').textContent = game.towers.filter(t=>t.side==='enemy'&&t.alive).length;
-  document.getElementById('unit-count').textContent = game.units.length;
+  document.getElementById('unit-count').textContent = game.units.length + '(战' + game.units.filter(u=>u.type!=='skeleton'&&u.type!=='golem').length + '/召' + game.units.filter(u=>u.type==='skeleton'||u.type==='golem').length + ')';
 }
 
 function endGame(win) {
