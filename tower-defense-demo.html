@@ -1570,7 +1570,7 @@ canvas.addEventListener('click', e => {
         const ni = idx;
         const col = i % 2;
         const row = Math.floor(i / 2);
-        const bw = 288, bh = 46;
+        const bw = 96, bh = 51;
         const bx = lx + col * (bw + 12);
         const by2 = by + row * (bh + 8);
         if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
@@ -1578,7 +1578,7 @@ canvas.addEventListener('click', e => {
         }
         idx++;
       }
-      by += 2 * 54 + 12;
+      by += 2 * 59 + 12;
     }
     // 其他位置不退出
     return;
@@ -1794,7 +1794,7 @@ function drawCodex() {
       const ni = idx;
       const col = i % 2;
       const row = Math.floor(i / 2);
-      const bw = 288, bh = 46;
+      const bw = 96, bh = 51;
       const bx = lx + col * (bw + 12);
       const by2 = by + row * (bh + 8);
       if (codexSel === ni) {
@@ -1806,11 +1806,11 @@ function drawCodex() {
         ctx.fillRect(bx, by2, bw, bh);
         ctx.fillStyle = '#ddd';
       }
-      ctx.font = '17px sans-serif';
-      ctx.fillText(cat.names[i], bx+12, by2+29);
+      ctx.font = '13px sans-serif';
+      ctx.fillText(cat.names[i], bx+6, by2+30);
       idx++;
     }
-    by += 2 * 54 + 12;
+    by += 2 * 59 + 12;
   }
 
   // 右半区：详情
