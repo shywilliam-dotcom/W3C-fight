@@ -1152,22 +1152,8 @@ function render() {
       animY = Math.sin(game.time*3 + u.x*0.05) * 1.5; // 呼吸
     }
 
-    const pKey = typeToPortrait[u.type];
-    const pImg = pKey ? portraitImgs[pKey] : null;
-    if (pImg && pImg.complete && pImg.naturalWidth > 0) {
-      // 用立绘图片绘制
-      ctx.save();
-      ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
-      if (flip) ctx.scale(-1, 1);
-      ctx.rotate(animRot);
-      const drawSize = 22 * animScale;
-      if (u.ultActive > 0) {
-        ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 15;
-      }
-      ctx.drawImage(pImg, -drawSize/2, -drawSize/2 - 2, drawSize, drawSize);
-      ctx.restore();
-    } else if (true) {
-      // ===== Canvas精细分部件绘制 =====
+    // ===== Canvas分部件绘制（带走路/攻击/施法动画） =====
+    {
       const walkPhase = game.time*10 + u.x*0.15;
       const sc = 1.8;
       ctx.save();
