@@ -9,22 +9,22 @@
     background: #1a1a2e; color: #eee;
     font-family: 'Microsoft YaHei', sans-serif;
     display: flex; flex-direction: column; align-items: center;
-    min-height: 100vh; padding: 10px;
+    min-height: 100vh; padding: 5px; margin: 0;
   }
   #hud {
-    width: 1200px; display: flex; justify-content: space-between; align-items: center;
-    background: #16213e; padding: 10px 20px; border-radius: 8px 8px 0 0;
-    border: 1px solid #0f3460;
+    width: 100%; max-width: 1200px; display: flex; justify-content: space-between; align-items: center;
+    background: #16213e; padding: 8px 16px; border-radius: 8px 8px 0 0;
+    border: 1px solid #0f3460; box-sizing: border-box;
   }
-  #gold-display { color: #ffd700; font-weight: bold; font-size: 20px; }
+  #gold-display { color: #ffd700; font-weight: bold; font-size: 18px; }
   canvas {
     background: #0f0f23; border: 1px solid #0f3460; border-top: none; border-bottom: none;
-    cursor: pointer;
+    cursor: pointer; width: 100%; max-width: 1200px; height: auto; display: block;
   }
   #control-panel {
-    width: 1200px; background: #16213e; padding: 12px 20px;
+    width: 100%; max-width: 1200px; background: #16213e; padding: 10px 16px;
     border-radius: 0 0 8px 8px; border: 1px solid #0f3460;
-    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; box-sizing: border-box;
   }
   .btn {
     padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer;
@@ -61,7 +61,7 @@
 <div id="control-panel">
   <button class="btn btn-speed" id="speed-btn">1x</button>
   <button class="btn btn-restart" onclick="restartGame()">重开</button>
-  <button class="btn btn-restart" onclick="startSimulation(20)" style="background:#0f0;color:#000;">模拟20局</button>
+  <button class="btn btn-restart" onclick="startSimulation(1)" style="background:#0f0;color:#000;">模拟1局</button>
   <span id="info">点空兵营槽位建造，点兵营升级，点单位看状态</span>
 </div>
 
@@ -1534,8 +1534,8 @@ function startSimulation(rounds) {
     r++;
     
     initGame();
-    game.speed = 1;
     
+    // 给双方兵营随机升级路线
     game.barracks.forEach(b => {
       if (UPGRADES[b.unitType]) {
         b.unitType = UPGRADES[b.unitType][Math.floor(Math.random()*3)];
@@ -1543,6 +1543,36 @@ function startSimulation(rounds) {
       }
     });
     
+    if (rounds === 1) {
+      // 观战模式：不手动update，让主循环正常跑
+      simRunning = false; // 让主循环继续update
+      game._watchMode = true;
+      // 游戏结束后自动统计
+      const checkEnd = setInterval(() => {
+        if (game.gameOver) {
+          clearInterval(checkEnd);
+          const myBase = game.towers.find(t => t.isBase && t.side==='my');
+          const enBase = game.towers.find(t => t.isBase && t.side==='enemy');
+          let winner = 'draw';
+          if (myBase.alive && !enBase.alive) winner = 'my';
+          else if (!myBase.alive && enBase.alive) winner = 'enemy';
+          console.log('观战结束，胜者:', winner, '用时:', game.time);
+          game.barracks.forEach(b => {
+            if (b.side === winner && b.alive) typeCount[b.unitType] = (typeCount[b.unitType]||0) + 1;
+          });
+          let html = '<div style="position:fixed;top:10px;left:10px;background:#000;color:#0f0;padding:15px;z-index:99999;font-size:14px;white-space:pre;border:2px solid #0f0;">';
+          html += '=== 观战结束 ===\n胜者: ' + winner + '\n用时: ' + game.time.toFixed(1) + '秒\n\n胜者兵营兵种:\n';
+          game.barracks.forEach(b => {
+            if (b.side === winner && b.alive) html += '  ' + b.unitType + ' Lv' + b.level + '\n';
+          });
+          html += '<button onclick="this.parentElement.remove()" style="margin-top:10px;padding:5px 20px;">关闭</button></div>';
+          document.body.insertAdjacentHTML('beforeend', html);
+        }
+      }, 1000);
+      return;
+    }
+    
+    // 快速模式：手动update
     let simTime = 0;
     function tick() {
       if (game.gameOver || simTime >= 600) {
