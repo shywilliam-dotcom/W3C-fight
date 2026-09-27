@@ -853,17 +853,6 @@ function update(dt) {
     } else {
       u.x += u.speed*u.dir*dt;
       u.animState = 'walk';
-      // 碰撞体积：同阵营同路单位保持最小距离（召唤物无碰撞，自由穿过）
-      game.units.forEach(o => {
-        if (o===u || o.side!==u.side || o.lane!==u.lane || o.hp<=0) return;
-        if (u.type==='golem' || u.type==='skeleton' || o.type==='golem' || o.type==='skeleton') return;
-        const d = u.x - o.x;
-        const minD = 10;
-        if (Math.abs(d) < minD && Math.abs(o.y-u.y) < 20) {
-          if (d > 0) u.x = o.x + minD;
-          else u.x = o.x - minD;
-        }
-      });
       // 接近基地时三路汇合：y向基地中线靠拢
       if (u.side==='my' && u.x>950) {
         u.y += (360-u.y)*0.03;
@@ -1100,8 +1089,14 @@ function render() {
     ctx.fillStyle = b.side==='my'?'#2196F3':'#F44336';
     ctx.fillRect(b.x-9, y-24, 18, 16);
     ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-9, y-24, 18, 16);
-    ctx.fillStyle=def.color;
-    ctx.beginPath(); ctx.arc(b.x, y-16, 4, 0, Math.PI*2); ctx.fill();
+    // 兵种图标
+    const iconMap = {melee:'👊', barbarian:'👊', paladin:'👊', fighter:'👊',
+      archer:'🏹', musketeer:'🏹', ranger:'🏹', crossbow:'🏹',
+      mage:'🧙‍♂️', ice:'🧙‍♂️', arcane:'🧙‍♂️', fire:'🧙‍♂️', darkfire:'🧙‍♂️',
+      cannon:'💣', rocket:'💣', tesla:'💣', siege:'💣'};
+    ctx.font = '12px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(iconMap[b.unitType]||'❓', b.x, y-12);
+    ctx.textAlign='start';
     // 血量条
     if (b.hp < b.maxHp) {
       ctx.fillStyle='#333'; ctx.fillRect(b.x-11, y-26, 22, 3);
