@@ -1551,6 +1551,11 @@ canvas.addEventListener('click', e => {
 
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
+    // 右上角关闭按钮
+    if (cx >= 1130 && cx <= 1170 && cy >= 15 && cy <= 45) {
+      codexOpen = false; render(); return;
+    }
+    // 左侧按钮
     const lx = 30;
     let idx = 0;
     let by = 70;
@@ -1567,7 +1572,8 @@ canvas.addEventListener('click', e => {
       }
       by += 6;
     }
-    codexOpen = false; render(); return;
+    // 其他位置不退出
+    return;
   }
 
   if (game.gameOver) return;
@@ -1719,8 +1725,12 @@ function drawCodex() {
   // 标题
   ctx.fillStyle = '#FFD700'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('📖 兵种图鉴', 600, 35);
-  ctx.fillStyle = '#888'; ctx.font = '12px sans-serif';
-  ctx.fillText('点空白处关闭', 600, 55);
+  ctx.textAlign = 'start';
+  // 右上角关闭按钮
+  ctx.fillStyle = '#e94560';
+  ctx.fillRect(1130, 15, 40, 30);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('✕', 1150, 36);
   ctx.textAlign = 'start';
 
   // 左半区：4类16个按钮
