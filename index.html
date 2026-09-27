@@ -1551,17 +1551,17 @@ canvas.addEventListener('click', e => {
 
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
-    const pw = 900, ph = 600;
+    const pw = 1140, ph = 660;
     const px = (1200-pw)/2, py = (720-ph)/2;
     if (cx < px || cx > px+pw || cy < py || cy > py+ph) {
       codexOpen = false; render(); return;
     }
-    const lx = px+20, ly = py+75;
+    const lx = px+25, ly = py+80;
     let idx = 0;
     for (const cat of CODEX) {
       for (let i=0; i<cat.names.length; i++) {
-        const ny = ly + idx*38 + 30;
-        if (cx >= lx-10 && cx <= lx+210 && cy >= ny-18 && cy <= ny+18) {
+        const ny = ly + idx*40 + 42;
+        if (cx >= lx-10 && cx <= lx+240 && cy >= ny-20 && cy <= ny+16) {
           codexSel = idx; render(); return;
         }
         idx++;
@@ -1718,43 +1718,43 @@ function drawCodex() {
   // 遮罩
   ctx.fillStyle = 'rgba(0,0,0,0.85)';
   ctx.fillRect(0, 0, 1200, 720);
-  // 面板
-  const pw = 900, ph = 600;
+  // 面板 - 放大填满
+  const pw = 1140, ph = 660;
   const px = (1200-pw)/2, py = (720-ph)/2;
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(px, py, pw, ph);
   ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
   ctx.strokeRect(px, py, pw, ph);
   // 标题
-  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('📖 兵种图鉴', px+pw/2, py+35);
-  ctx.fillStyle = '#888'; ctx.font = '12px sans-serif';
-  ctx.fillText('点击左侧兵种查看详情，点空白处关闭', px+pw/2, py+55);
+  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('📖 兵种图鉴', px+pw/2, py+40);
+  ctx.fillStyle = '#888'; ctx.font = '13px sans-serif';
+  ctx.fillText('点击左侧兵种查看详情，点空白处关闭', px+pw/2, py+62);
   ctx.textAlign = 'start';
 
-  // 左侧列表
-  const lx = px+20, ly = py+75;
+  // 左侧列表 - 加宽
+  const lx = px+25, ly = py+80;
   let idx = 0;
   for (const cat of CODEX) {
-    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 14px sans-serif';
-    ctx.fillText(cat.cat, lx, ly + idx*38 + 18);
+    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 15px sans-serif';
+    ctx.fillText(cat.cat, lx, ly + idx*40 + 20);
     for (let i=0; i<cat.names.length; i++) {
       const ni = idx;
-      const ny = ly + idx*38 + 38;
+      const ny = ly + idx*40 + 42;
       if (codexSel === ni) {
         ctx.fillStyle = '#3a3a5e';
-        ctx.fillRect(lx-10, ny-18, 220, 32);
+        ctx.fillRect(lx-10, ny-20, 250, 36);
       }
       ctx.fillStyle = codexSel===ni ? '#FFD700' : '#ccc';
-      ctx.font = '14px sans-serif';
-      ctx.fillText('  ' + cat.names[i], lx, ny+5);
+      ctx.font = '15px sans-serif';
+      ctx.fillText('  ' + cat.names[i], lx, ny+6);
       idx++;
     }
     idx += 1;
   }
 
-  // 右侧详情
-  const rx = px+220, ry = py+75;
+  // 右侧详情 - 放大填满
+  const rx = px+300, ry = py+80;
   let ci = 0;
   let selCat = null, selName = null, selDesc = null, selType = null;
   for (const cat of CODEX) {
@@ -1767,92 +1767,58 @@ function drawCodex() {
     ci += 1;
   }
   if (selName) {
-    // 立绘
+    // 立绘 - 放大
     const pKey = typeToPortrait[selType];
     const pImg = pKey ? portraitImgs[pKey] : null;
     ctx.fillStyle = '#0d0d1a';
-    ctx.fillRect(rx, ry, 200, 250);
+    ctx.fillRect(rx, ry, 280, 340);
     if (pImg && pImg.complete && pImg.naturalWidth > 0) {
-      ctx.drawImage(pImg, rx+10, ry+10, 180, 230);
+      ctx.drawImage(pImg, rx+15, ry+15, 250, 310);
     } else {
       ctx.fillStyle = '#666';
-      ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('立绘待补', rx+100, ry+125);
+      ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('立绘待补', rx+140, ry+175);
       ctx.textAlign = 'start';
     }
-    // 名字
-    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 20px sans-serif';
-    ctx.fillText(selName, rx+220, ry+30);
-    ctx.fillStyle = '#9b59b6'; ctx.font = '13px sans-serif';
-    ctx.fillText(`【${selCat}系】`, rx+220, ry+52);
-    // 描述
-    ctx.fillStyle = '#aaa'; ctx.font = '13px sans-serif';
-    ctx.fillText(selDesc, rx+220, ry+75);
+    // 右侧文字区
+    const tx = rx+310;
+    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 24px sans-serif';
+    ctx.fillText(selName, tx, ry+35);
+    ctx.fillStyle = '#9b59b6'; ctx.font = '15px sans-serif';
+    ctx.fillText(`【${selCat}系】`, tx, ry+62);
+    ctx.fillStyle = '#aaa'; ctx.font = '14px sans-serif';
+    ctx.fillText(selDesc, tx, ry+90);
     // 技能
     const catData = CODEX.find(c => c.types.includes(selType));
     if (catData) {
       const si = catData.types.indexOf(selType);
-      ctx.fillStyle = '#4CAF50'; ctx.font = '12px sans-serif';
-      ctx.fillText('技能:', rx+220, ry+110);
-      ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif';
-      // 分行显示
+      ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 15px sans-serif';
+      ctx.fillText('技能:', tx, ry+125);
       const sk = catData.skills[si] || '';
       const lines = sk.split('+');
-      let sy = ry+128;
-      for (const l of lines.slice(0,6)) {
-        ctx.fillText('• ' + l.trim(), rx+220, sy);
-        sy += 16;
+      let sy = ry+148;
+      ctx.font = '13px sans-serif';
+      for (const l of lines.slice(0,8)) {
+        ctx.fillStyle = '#ccc';
+        ctx.fillText('• ' + l.trim(), tx, sy);
+        sy += 19;
       }
     }
     // 属性
     const def = UNIT_TYPES[selType];
     if (def) {
-      ctx.fillStyle = '#fff'; ctx.font = '13px sans-serif';
-      ctx.fillText(`血量: ${def.hp}  攻击: ${def.atk}`, rx+220, ry+230);
-      ctx.fillText(`攻速: ${def.atkSpeed}  射程: ${def.range}`, rx+220, ry+248);
-      ctx.fillText(`移速: ${def.speed}  价格: ${def.cost}`, rx+220, ry+266);
-      ctx.fillText(`攻击: ${def.atkType}  护甲: ${def.armorType}`, rx+220, ry+284);
+      ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif';
+      ctx.fillText(`血量: ${def.hp}  攻击: ${def.atk}`, tx, ry+290);
+      ctx.fillText(`攻速: ${def.atkSpeed}  射程: ${def.range}`, tx, ry+312);
+      ctx.fillText(`移速: ${def.speed}  价格: ${def.cost}`, tx, ry+334);
+      ctx.fillText(`攻击: ${def.atkType}  护甲: ${def.armorType}`, tx, ry+356);
       if (def.ult) {
-        ctx.fillStyle = '#e94560'; ctx.font = 'bold 13px sans-serif';
-        ctx.fillText(`大招: ${def.ult}`, rx+220, ry+310);
+        ctx.fillStyle = '#e94560'; ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(`大招: ${def.ult}`, tx, ry+385);
       }
     }
   }
 }
-
-// 图鉴点击
-canvas.addEventListener('click', e => {
-  if (!codexOpen) return;
-  const rect = canvas.getBoundingClientRect();
-  const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
-  let cx, cy;
-  if (window.innerWidth < window.innerHeight) {
-    cx = dy / rect.height * 1200;
-    cy = (rect.width - dx) / rect.width * 720;
-  } else {
-    cx = dx / rect.width * 1200;
-    cy = dy / rect.height * 720;
-  }
-  // 面板区域
-  const pw = 900, ph = 600;
-  const px = (1200-pw)/2, py = (720-ph)/2;
-  if (cx < px || cx > px+pw || cy < py || cy > py+ph) {
-    codexOpen = false; draw(); return;
-  }
-  // 左侧列表点击
-  const lx = px+20, ly = py+75;
-  let idx = 0;
-  for (const cat of CODEX) {
-    for (let i=0; i<cat.names.length; i++) {
-      const ny = ly + idx*32 + 30;
-      if (cx >= lx-5 && cx <= lx+175 && cy >= ny-12 && cy <= ny+10) {
-        codexSel = idx; draw(); return;
-      }
-      idx++;
-    }
-    idx += 1;
-  }
-});
 
 function restartGame() { initGame(); }
 
