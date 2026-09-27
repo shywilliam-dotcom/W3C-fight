@@ -179,7 +179,7 @@ const UNIT_TYPES = {
 
   // 近战升级（大招=旋风斩）
   barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:320, atk:18, atkSpeed:0.9, range:40, speed:60, cost:90, color:'#8B4513', atkType:'normal', armorType:'heavy', ult:'whirlwind',
-    skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, desc:'群伤2目标+斩杀5%血 | 大招旋风斩:每秒120%攻击范围伤害持续3秒CD60s（早期强）' },
+    skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, skill3:{k:'parryArcher',v:0.15}, desc:'群伤2目标+斩杀5%血+15%招架弓手攻击 | 大招旋风斩:每秒120%攻击范围伤害持续3秒CD60s（早期强）' },
   paladin:  { name:'圣骑士', shape:'circle', size:11, hp:220, atk:12, atkSpeed:1.0, range:40, speed:60, cost:90, color:'#FFD700', atkType:'normal', armorType:'heavy', ult:'holyUlt',
     skill1:{k:'holyHeal',v:1}, skill2:{k:'dmgReduce',v:0.30}, desc:'低血回血25%CD15s+30%减伤 | 大招回血100%CD60s（中期强）' },
   fighter:  { name:'格斗家', shape:'circle', size:10, hp:250, atk:20, atkSpeed:1.3, range:40, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'dodgeUlt',
