@@ -197,7 +197,7 @@ const UNIT_TYPES = {
   arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'medium', ult:'arcaneBlink',
     skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.40}, desc:'10%变羊(目标不可攻击3秒四处游走)+群体护盾40%血（初期强）' },
   ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzardNova',
-    skill1:{k:'shieldAlly',v:0.15}, skill2:{k:'vulnerable',v:0.33}, desc:'友方减伤护盾+受击近战减速+33%概率易伤（中期强）' },
+    skill1:{k:'shieldAlly',v:0.15}, skill2:{k:'vulnerable',v:0.33}, desc:'友方冰霜护盾减伤15%+近战攻击者减速20%攻速降20%+33%概率易伤（中期强）' },
   fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'fireBlast',
     skill1:{k:'summonSkeleton',v:5}, skill2:{k:'burnStack',v:1}, desc:'每5秒召唤骷髅+dot叠加（后期强）' },
 
@@ -1712,7 +1712,7 @@ const CODEX = [
    desc:['基础远程，轻甲','中期强势，即死秒杀','早期强势，射程远定身','后期强势，连击多重']},
   {cat:'法师', types:['mage','ice','arcane','darkfire'],
    names:['法师','冰巫法','奥战法','暗火法'],
-   skills:['纯平A无大招，属性比专精高','大招暴风雪:180范围80伤害+冰冻3秒+减速30%+易伤 | 被动:友方减伤护盾+受击近战减速+33%概率易伤','大招濒死传送回基地回血20%CD60s | 被动:10%变羊(不可攻击3秒游走)+群体护盾40%血','大招500%伤害CD20s | 被动:每5秒召唤骷髅+dot叠加'],
+   skills:['纯平A无大招，属性比专精高','大招暴风雪:180范围80伤害+冰冻3秒+减速30%+易伤 | 被动:友方冰霜护盾减伤15%+近战攻击者减速20%攻速降20%+33%概率易伤','大招濒死传送回基地回血20%CD60s | 被动:10%变羊(不可攻击3秒游走)+群体护盾40%血','大招500%伤害CD20s | 被动:灼烧dot叠加+每5秒召唤骷髅'],
    desc:['基础施法，无甲，无大招','中期强势，范围控制减益','早期强势，变羊护盾辅助','后期强势，DOT召唤']},
   {cat:'攻城', types:['cannon','siege','rocket','tesla'],
    names:['攻城车','攻城炮','火箭炮','特斯拉'],
