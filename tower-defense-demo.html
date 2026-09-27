@@ -1485,9 +1485,9 @@ canvas.addEventListener('click', e => {
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
   let cx, cy;
   if (window.innerWidth < window.innerHeight) {
-    // 竖屏旋转90度：坐标反转
-    cx = (rect.height - dy) / rect.height * 1200;
-    cy = dx / rect.width * 720;
+    // 竖屏旋转90度：坐标映射
+    cx = dy / rect.height * 1200;
+    cy = (rect.width - dx) / rect.width * 720;
   } else {
     cx = dx / rect.width * 1200;
     cy = dy / rect.height * 720;
