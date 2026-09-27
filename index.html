@@ -78,6 +78,7 @@
   <button class="btn btn-speed" id="speed-btn">1x</button>
   <button class="btn btn-restart" onclick="restartGame()">重开</button>
   <button class="btn btn-restart" onclick="startSimulation(1)" style="background:#0f0;color:#000;">模拟1局</button>
+  <button class="btn btn-restart" onclick="showCodex()" style="background:#9b59b6;color:#fff;">📖图鉴</button>
   <span id="info">点空兵营槽位建造，点兵营升级，点单位看状态</span>
 </div>
 
@@ -1521,6 +1522,9 @@ function render() {
     ctx.fillText('⚔ 击杀敌方小兵可获得金币收益！⚔', 600, 130);
     ctx.textAlign='start';
   }
+
+  // 图鉴覆盖层
+  drawCodex();
 }
 
 function shade(c,p) {
@@ -1659,6 +1663,155 @@ document.getElementById('speed-btn').addEventListener('click', () => {
   game.speed = game.speed===1?2:game.speed===2?3:1;
   document.getElementById('speed-btn').textContent = game.speed+'x';
 });
+
+// ===== 图鉴 =====
+let codexOpen = false, codexSel = 0;
+const CODEX = [
+  {cat:'近战', types:['sword','barbarian','paladin','fighter'],
+   names:['刀盾手','野蛮人','圣骑士','格斗家'],
+   desc:['基础近战单位，持盾防御','群伤高血量，旋转旋风','高防御回血，举盾金光','闪避暴击，左右拳攻击']},
+  {cat:'弓手', types:['archer','gunslinger','ranger','crossbow'],
+   names:['弓手','火枪手','游侠','弩手'],
+   desc:['基础远程单位','即死概率+范围攻击','射程远+定身毒伤','连击+多重射击']},
+  {cat:'法师', types:['mage','ice','arcane','darkfire'],
+   names:['法师','冰巫法','奥战法','暗火法'],
+   desc:['基础施法单位','冰盾+易伤debuff','变羊+护盾+召唤傀儡','持续灼烧+召唤骷髅']},
+  {cat:'攻城', types:['cannon','siege','rocket','tesla'],
+   names:['攻城车','攻城炮','火箭炮','特斯拉'],
+   desc:['基础攻城单位','高血量城甲工程车','范围溅射+灼烧','连锁闪电+电圈眩晕']}
+];
+
+function showCodex() {
+  codexOpen = true;
+  codexSel = 0;
+  draw();
+}
+
+function drawCodex() {
+  if (!codexOpen) return;
+  // 遮罩
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, 0, 1200, 720);
+  // 面板
+  const pw = 900, ph = 600;
+  const px = (1200-pw)/2, py = (720-ph)/2;
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(px, py, pw, ph);
+  ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
+  ctx.strokeRect(px, py, pw, ph);
+  // 标题
+  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('📖 兵种图鉴', px+pw/2, py+35);
+  ctx.fillStyle = '#888'; ctx.font = '12px sans-serif';
+  ctx.fillText('点击左侧兵种查看详情，点空白处关闭', px+pw/2, py+55);
+  ctx.textAlign = 'start';
+
+  // 左侧列表
+  const lx = px+20, ly = py+75;
+  let idx = 0;
+  for (const cat of CODEX) {
+    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(cat.cat, lx, ly + idx*32 + 15);
+    for (let i=0; i<cat.names.length; i++) {
+      const ni = idx;
+      const ny = ly + idx*32 + 30;
+      if (codexSel === ni) {
+        ctx.fillStyle = '#3a3a5e';
+        ctx.fillRect(lx-5, ny-12, 180, 22);
+      }
+      ctx.fillStyle = codexSel===ni ? '#FFD700' : '#ccc';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('  ' + cat.names[i], lx, ny);
+      idx++;
+    }
+    idx += 1;
+  }
+
+  // 右侧详情
+  const rx = px+220, ry = py+75;
+  let ci = 0;
+  let selCat = null, selName = null, selDesc = null, selType = null;
+  for (const cat of CODEX) {
+    for (let i=0; i<cat.names.length; i++) {
+      if (codexSel === ci) {
+        selCat = cat.cat; selName = cat.names[i]; selDesc = cat.desc[i]; selType = cat.types[i];
+      }
+      ci++;
+    }
+    ci += 1;
+  }
+  if (selName) {
+    // 立绘
+    const pKey = typeToPortrait[selType];
+    const pImg = pKey ? portraitImgs[pKey] : null;
+    ctx.fillStyle = '#0d0d1a';
+    ctx.fillRect(rx, ry, 200, 250);
+    if (pImg && pImg.complete && pImg.naturalWidth > 0) {
+      ctx.drawImage(pImg, rx+10, ry+10, 180, 230);
+    } else {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('立绘待补', rx+100, ry+125);
+      ctx.textAlign = 'start';
+    }
+    // 名字
+    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(selName, rx+220, ry+30);
+    ctx.fillStyle = '#9b59b6'; ctx.font = '13px sans-serif';
+    ctx.fillText(`【${selCat}系】`, rx+220, ry+52);
+    // 描述
+    ctx.fillStyle = '#aaa'; ctx.font = '13px sans-serif';
+    ctx.fillText(selDesc, rx+220, ry+75);
+    // 属性
+    const def = UNIT_TYPES[selType];
+    if (def) {
+      ctx.fillStyle = '#fff'; ctx.font = '13px sans-serif';
+      ctx.fillText(`血量: ${def.hp}  攻击: ${def.atk}`, rx+220, ry+105);
+      ctx.fillText(`攻速: ${def.atkSpeed}  射程: ${def.range}`, rx+220, ry+125);
+      ctx.fillText(`移速: ${def.speed}  价格: ${def.cost}`, rx+220, ry+145);
+      ctx.fillText(`攻击类型: ${def.atkType}  护甲类型: ${def.armorType}`, rx+220, ry+165);
+      if (def.ult) {
+        ctx.fillStyle = '#e94560'; ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(`大招: ${def.ult}`, rx+220, ry+195);
+      }
+    }
+  }
+}
+
+// 图鉴点击
+canvas.addEventListener('click', e => {
+  if (!codexOpen) return;
+  const rect = canvas.getBoundingClientRect();
+  const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
+  let cx, cy;
+  if (window.innerWidth < window.innerHeight) {
+    cx = dy / rect.height * 1200;
+    cy = (rect.width - dx) / rect.width * 720;
+  } else {
+    cx = dx / rect.width * 1200;
+    cy = dy / rect.height * 720;
+  }
+  // 面板区域
+  const pw = 900, ph = 600;
+  const px = (1200-pw)/2, py = (720-ph)/2;
+  if (cx < px || cx > px+pw || cy < py || cy > py+ph) {
+    codexOpen = false; draw(); return;
+  }
+  // 左侧列表点击
+  const lx = px+20, ly = py+75;
+  let idx = 0;
+  for (const cat of CODEX) {
+    for (let i=0; i<cat.names.length; i++) {
+      const ny = ly + idx*32 + 30;
+      if (cx >= lx-5 && cx <= lx+175 && cy >= ny-12 && cy <= ny+10) {
+        codexSel = idx; draw(); return;
+      }
+      idx++;
+    }
+    idx += 1;
+  }
+});
+
 function restartGame() { initGame(); }
 
 // ============ 自动模拟 ============
