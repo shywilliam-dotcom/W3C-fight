@@ -1551,22 +1551,21 @@ canvas.addEventListener('click', e => {
 
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
-    // 点空白关闭（整个canvas都可以点关闭，除了按钮区）
     const lx = 30;
     let idx = 0;
-    let by = 75;
+    let by = 70;
     for (const cat of CODEX) {
-      by += 28;
+      by += 22;
       for (let i=0; i<cat.names.length; i++) {
         const ni = idx;
-        const bw = 240, bh = 34;
-        if (cx >= lx && cx <= lx+bw && cy >= by-bh+6 && cy <= by+6) {
+        const bw = 230, bh = 28;
+        if (cx >= lx && cx <= lx+bw && cy >= by-bh+4 && cy <= by+4) {
           codexSel = ni; render(); return;
         }
-        by += bh+4;
+        by += bh+3;
         idx++;
       }
-      by += 10;
+      by += 6;
     }
     codexOpen = false; render(); return;
   }
@@ -1689,7 +1688,7 @@ document.getElementById('speed-btn').addEventListener('click', () => {
 // ===== 图鉴 =====
 let codexOpen = false, codexSel = 0;
 const CODEX = [
-  {cat:'近战', types:['sword','barbarian','paladin','fighter'],
+  {cat:'近战', types:['melee','barbarian','paladin','fighter'],
    names:['刀盾手','野蛮人','圣骑士','格斗家'],
    skills:['持盾防御基础近战','群伤+斩杀(血<5%)+旋转旋风大招','回血25%CD15s+举盾金光大招','闪避+暴击+瞬影步冲锋+闪避反击+大招一拳'],
    desc:['基础近战，重甲，近距离作战','早期强势，高血量群伤','中期强势，防御回血','后期强势，闪避暴击']},
@@ -1727,30 +1726,30 @@ function drawCodex() {
   // 左半区：4类16个按钮
   const lx = 30;
   let idx = 0;
-  let by = 75;
+  let by = 70;
   for (const cat of CODEX) {
     // 分类标题
-    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 14px sans-serif';
     ctx.fillText(cat.cat, lx, by);
-    by += 28;
+    by += 22;
     for (let i=0; i<cat.names.length; i++) {
       const ni = idx;
-      const bw = 240, bh = 34;
+      const bw = 230, bh = 28;
       if (codexSel === ni) {
         ctx.fillStyle = '#FFD700';
-        ctx.fillRect(lx, by-bh+6, bw, bh);
+        ctx.fillRect(lx, by-bh+4, bw, bh);
         ctx.fillStyle = '#000';
       } else {
         ctx.fillStyle = '#2a2a4a';
-        ctx.fillRect(lx, by-bh+6, bw, bh);
+        ctx.fillRect(lx, by-bh+4, bw, bh);
         ctx.fillStyle = '#ddd';
       }
-      ctx.font = '15px sans-serif';
-      ctx.fillText('  ' + cat.names[i], lx+8, by-8);
-      by += bh+4;
+      ctx.font = '14px sans-serif';
+      ctx.fillText('  ' + cat.names[i], lx+6, by-4);
+      by += bh+3;
       idx++;
     }
-    by += 10;
+    by += 6;
   }
 
   // 右半区：详情
