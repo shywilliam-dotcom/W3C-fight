@@ -1443,30 +1443,103 @@ function render() {
   if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
-    const pw = 300, ph = 100;
+    const pw = 340, ph = 140;
     const px = (1200-pw)/2, py = 720-ph-10;
-    ctx.fillStyle='rgba(0,0,0,0.9)';
+    ctx.fillStyle='rgba(0,0,0,0.92)';
     ctx.fillRect(px, py, pw, ph);
     ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
     ctx.strokeRect(px, py, pw, ph);
+
+    // 左侧大头像区域
+    const ax = px+10, ay = py+10, aw = 90, ah = 120;
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(ax, ay, aw, ah);
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+    ctx.strokeRect(ax, ay, aw, ah);
+
+    // 画精细大头像
+    ctx.save();
+    ctx.translate(ax+aw/2, ay+ah/2+10);
+    ctx.scale(3.5, 3.5);
+    const t = u.type;
+    if (['mage','ice','arcane','fire','darkfire'].includes(t)) {
+      const robeC = {mage:'#A0826D', ice:'#5D8BD9', arcane:'#9B59B6', fire:'#8B1A1A', darkfire:'#5C0A0A'}[t];
+      const hatC = {ice:'#3A7BC8', arcane:'#7D3C98', fire:'#C0392B', darkfire:'#6B0000', mage:'#6B4226'}[t];
+      const gemC = {ice:'#85C1E9', arcane:'#D2B4DE', fire:'#FF6B6B', darkfire:'#FF3333', mage:'#F4D03F'}[t];
+      ctx.fillStyle = robeC;
+      ctx.beginPath();
+      ctx.moveTo(-5.5, -3); ctx.lineTo(5.5, -3); ctx.lineTo(7, 8); ctx.lineTo(-7, 8);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#FDBCB4';
+      ctx.beginPath(); ctx.arc(0, -6.5, 3.8, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = hatC;
+      ctx.beginPath();
+      ctx.moveTo(0, -16); ctx.lineTo(-5, -6); ctx.lineTo(5, -6);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, -6, 6.5, 1.5, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#6B4226'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(4, -2); ctx.lineTo(14, -2); ctx.stroke();
+      ctx.fillStyle = gemC;
+      ctx.shadowColor = gemC; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(15, -2, 3.5, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (t === 'paladin') {
+      ctx.fillStyle = '#C8D0D8';
+      ctx.fillRect(-5, -5, 10, 13);
+      ctx.fillStyle = '#D4AC0D';
+      ctx.fillRect(-5, -5, 10, 1.5);
+      ctx.beginPath(); ctx.arc(0, -8, 4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#D4AC0D'; ctx.fillRect(-1, -12, 2, 3);
+      ctx.fillStyle = '#2E5C8A';
+      ctx.beginPath(); ctx.ellipse(-6.5, 0, 3.5, 6, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#E8E8E8';
+      ctx.beginPath(); ctx.moveTo(5,-2); ctx.lineTo(19,-1.5); ctx.lineTo(19,0.5); ctx.lineTo(5,1); ctx.closePath(); ctx.fill();
+    } else if (t === 'barbarian') {
+      ctx.fillStyle = '#E8B89A';
+      ctx.fillRect(-4.5, -5, 9, 13);
+      ctx.beginPath(); ctx.arc(0, -8, 4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#6B3410';
+      ctx.beginPath(); ctx.arc(0, -9.5, 4, Math.PI*0.8, Math.PI*2.2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, -6, 2.5, 2, 0, 0, Math.PI); ctx.fill();
+      ctx.strokeStyle = '#5D3A1A'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(5,0); ctx.lineTo(19,0); ctx.stroke();
+      ctx.fillStyle = '#9AA0A6';
+      ctx.beginPath(); ctx.moveTo(17,-5); ctx.lineTo(21,-3); ctx.lineTo(21,3); ctx.lineTo(17,5); ctx.closePath(); ctx.fill();
+    } else if (t === 'fighter') {
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(-4, 2, 8, 6);
+      ctx.fillStyle = '#E8B89A';
+      ctx.fillRect(-4, -5, 8, 7);
+      ctx.beginPath(); ctx.arc(0, -8, 3.8, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath(); ctx.arc(0, -9.5, 3.8, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#FFF';
+      ctx.fillRect(4, -3, 3.5, 2);
+      ctx.fillRect(-7.5, -3, 3.5, 2);
+    } else {
+      ctx.fillStyle = def.color;
+      ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+
+    // 右侧属性文字
+    const tx = px + aw + 25;
     ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
-    ctx.fillText(`${def.name} · Lv.${u.level} · ${u.name}`, px+10, py+20);
+    ctx.fillText(`${def.name} · Lv.${u.level}`, tx, py+22);
+    ctx.fillStyle='#aaa'; ctx.font='11px sans-serif';
+    ctx.fillText(`姓名: ${u.name||'未命名'}`, tx, py+38);
     ctx.fillStyle='#fff'; ctx.font='11px sans-serif';
-    ctx.fillText(`HP: ${Math.round(u.hp)}/${u.maxHp}  ATK: ${Math.round(u.atk)}  攻速: ${u.atkSpeed.toFixed(2)}`, px+10, py+40);
-    ctx.fillText(`射程: ${Math.round(u.range)}  移速: ${u.speed}  攻击类型: ${u.atkType}  护甲: ${u.armorType}`, px+10, py+58);
-    // 技能
+    ctx.fillText(`HP: ${Math.round(u.hp)}/${u.maxHp}  ATK: ${Math.round(u.atk)}`, tx, py+56);
+    ctx.fillText(`攻速: ${u.atkSpeed.toFixed(2)}  射程: ${Math.round(u.range)}`, tx, py+72);
+    ctx.fillText(`移速: ${u.speed}  攻击: ${u.atkType}  护甲: ${u.armorType}`, tx, py+88);
     let skillText = '';
     if (u.dodge) skillText += `闪避${Math.round(u.dodge*100)}% `;
     if (u.crit) skillText += `暴击${Math.round(u.crit*100)}% `;
-    if (u.poison) skillText += `毒${Math.round(u.poison*100)}% `;
     if (u.doubleStrike) skillText += `连击${Math.round(u.doubleStrike*100)}% `;
     if (u.instantKill) skillText += `即死${Math.round(u.instantKill*100)}% `;
-    if (u.polymorpth) skillText += `变羊${Math.round(u.polymorpth*100)}% `;
-    if (u.aoe) skillText += `AOE `;
-    if (u.armorPierce) skillText += `穿甲 `;
-    ctx.fillStyle='#4CAF50'; ctx.fillText(`技能: ${skillText||'无'}`, px+10, py+76);
+    ctx.fillStyle='#4CAF50'; ctx.fillText(`被动: ${skillText||'无'}`, tx, py+106);
     if (u.ultimate) {
-      ctx.fillStyle='#e94560'; ctx.fillText(`大招: ${u.ultimate}`, px+10, py+92);
+      ctx.fillStyle='#e94560'; ctx.fillText(`大招: ${u.ultimate}`, tx, py+122);
     }
   }
 
