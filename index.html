@@ -241,8 +241,7 @@ for (const t in spriteData) {
   img.src = spriteData[t];
   spriteImgs[t] = img;
 }
-const typeToSprite = { paladin:'paladin', barbarian:'paladin', fighter:'paladin',
-  ice:'ice', mage:'mage', arcane:'arcane', fire:'darkfire' };
+const typeToSprite = { paladin:'paladin', barbarian:'paladin', fighter:'paladin' };
 
 function initGame() {
   game = { gold:500, time:0, speed:1, selectedType:null,
@@ -1278,6 +1277,37 @@ function render() {
     } else {
       // 原来的几何图形（加动画偏移）
       const dx = u.x + animX, dy = u.y + animY;
+      // 法师专用简单造型：尖帽子+袍子+法杖
+      const mageTypes = ['mage','ice','arcane','fire','darkfire'];
+      if (mageTypes.includes(u.type)) {
+        const mageColors = {mage:'#8B7355', ice:'#5D7B9D', arcane:'#9B59B6', fire:'#4A1420', darkfire:'#4A1420'};
+        const robeC = mageColors[u.type] || '#8B7355';
+        const hatC = u.type==='ice' ? '#4A90D9' : u.type==='arcane' ? '#8E44AD' : u.type==='fire'||u.type==='darkfire' ? '#C0392B' : '#6B5340';
+        ctx.save();
+        ctx.translate(dx, dy);
+        ctx.rotate(animRot);
+        ctx.scale(animScale, animScale);
+        // 袍子（梯形）
+        ctx.fillStyle = u.side==='my' ? robeC : shade(robeC,-30);
+        ctx.beginPath();
+        ctx.moveTo(-6, -2); ctx.lineTo(6, -2); ctx.lineTo(8, 10); ctx.lineTo(-8, 10);
+        ctx.closePath(); ctx.fill();
+        // 尖帽子（三角形）
+        ctx.fillStyle = u.side==='my' ? hatC : shade(hatC,-30);
+        ctx.beginPath();
+        ctx.moveTo(0, -14); ctx.lineTo(-7, -2); ctx.lineTo(7, -2);
+        ctx.closePath(); ctx.fill();
+        // 帽子尖（小球）
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath(); ctx.arc(0, -14, 1.5, 0, Math.PI*2); ctx.fill();
+        // 法杖
+        ctx.strokeStyle = '#6B4226'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(8, -2); ctx.lineTo(10, -12); ctx.stroke();
+        // 法杖顶端球
+        ctx.fillStyle = u.type==='ice' ? '#5DADE2' : u.type==='arcane' ? '#9B59B6' : u.type==='fire'||u.type==='darkfire' ? '#E74C3C' : '#F39C12';
+        ctx.beginPath(); ctx.arc(10, -13, 2.5, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      } else {
       let c = u.side==='my'?def.color:shade(def.color,-30);
       if (u.st.iceBlock>0) c='#00FFFF';
       if (u.st.polymorphed>0) c='#FFD700';
@@ -1293,6 +1323,7 @@ function render() {
       else ctx.rect(-s,-s,s*2,s*2);
       ctx.fill(); ctx.stroke();
       ctx.restore();
+      }
       // 施法粒子
       if (u.animState === 'cast') {
         ctx.fillStyle = '#f9e79f';
