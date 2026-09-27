@@ -9,13 +9,11 @@
   body {
     color: #eee;
     font-family: 'Microsoft YaHei', sans-serif;
-    display: flex; align-items: center; justify-content: center;
     width: 100vw; height: 100vh;
   }
   #game-container {
     width: 100vw; height: 100vh;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    position: relative;
   }
   /* 竖屏时旋转90度 */
   @media screen and (orientation: portrait) {
@@ -29,20 +27,19 @@
     }
   }
   #hud {
-    width: 100%; max-width: 1200px; display: flex; justify-content: space-between; align-items: center;
-    background: #16213e; padding: 8px 16px; border-radius: 8px 8px 0 0;
+    display: flex; justify-content: space-between; align-items: center;
+    background: #16213e; padding: 6px 12px;
     border: 1px solid #0f3460; box-sizing: border-box; flex-shrink: 0;
   }
-  #gold-display { color: #ffd700; font-weight: bold; font-size: 18px; }
+  #gold-display { color: #ffd700; font-weight: bold; font-size: 16px; }
   canvas {
     background: #0f0f23; border: 1px solid #0f3460; border-top: none; border-bottom: none;
-    cursor: pointer; width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 100px);
-    display: block; margin: 0 auto;
+    cursor: pointer; display: block;
   }
   #control-panel {
-    width: 100%; max-width: 1200px; background: #16213e; padding: 10px 16px;
-    border-radius: 0 0 8px 8px; border: 1px solid #0f3460;
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; box-sizing: border-box; flex-shrink: 0;
+    background: #16213e; padding: 6px 12px;
+    border: 1px solid #0f3460;
+    display: flex; gap: 6px; align-items: center; flex-wrap: wrap; box-sizing: border-box; flex-shrink: 0;
   }
   .btn {
     padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer;
@@ -1630,6 +1627,29 @@ function startSimulation(rounds) {
   }
   runNext();
 }
+
+// ============ 自适应尺寸 ============
+function resizeCanvas() {
+  const cw = window.innerWidth, ch = window.innerHeight;
+  const isPortrait = cw < ch;
+  // 竖屏旋转后，可用宽高互换
+  const availW = isPortrait ? ch : cw;
+  const availH = isPortrait ? cw : ch;
+  // HUD和control-panel约70px
+  const hudH = 32, panelH = 38;
+  const gameH = availH - hudH - panelH;
+  // 保持1200:720比例
+  let w = availW, h = w * 720 / 1200;
+  if (h > gameH) { h = gameH; w = h * 1200 / 720; }
+  const canvas = document.getElementById('gameCanvas');
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  document.getElementById('hud').style.width = w + 'px';
+  document.getElementById('control-panel').style.width = w + 'px';
+}
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+resizeCanvas();
 
 // ============ 主循环 ============
 let lastT=0;
