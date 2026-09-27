@@ -1176,7 +1176,7 @@ function render() {
       const pKey = typeToPortrait[u.type];
       const pImg = pKey ? portraitImgs[pKey] : null;
       if (pImg && pImg.complete && pImg.naturalWidth > 0) {
-        // 去背景：把深色背景变透明（只处理一次，存到_processed变量）
+        // 去背景：把深色背景变透明（只处理一次）
         if (!pImg._processed) {
           try {
             const tmp = document.createElement('canvas');
@@ -1187,7 +1187,6 @@ function render() {
             const d = data.data;
             for (let i = 0; i < d.length; i += 4) {
               const r = d[i], g = d[i+1], b = d[i+2];
-              // 深色背景（RGB都<50且饱和度低）变透明
               if (r < 50 && g < 50 && b < 50 && Math.abs(r-g)<15 && Math.abs(g-b)<15) {
                 d[i+3] = 0;
               }
@@ -1197,6 +1196,11 @@ function render() {
             pImg._processed = true;
           } catch(e) { pImg._processed = true; }
         }
+        ctx.save();
+        ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
+        if (flip) ctx.scale(-1, 1);
+        ctx.rotate(animRot);
+        ctx.scale(animScale, animScale);
         const sc = 2.2;
         const iw = 22 * sc, ih = 28 * sc;
         ctx.drawImage(pImg, -iw/2, -ih + 4, iw, ih);
