@@ -296,8 +296,7 @@ function spawnUnit(b) {
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
     hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
-    atk:Math.round(def.atk*mul*timeMul*2), atkSpeed:def.atkSpeed/2,  // 攻击加倍，攻速减半
-    range:def.range*rangeMul, speed:def.speed, atkTimer:0,
+    atk:Math.round(def.atk*mul*timeMul*2), atkSpeed:def.atkSpeed/2,  // 攻击加倍，攻速减半    range:def.range*rangeMul, speed:def.speed, atkTimer:0,
     crit:0, dodge:0, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
     doubleStrike:0, multiTarget:0, splashRange:0,
@@ -348,12 +347,19 @@ function spawnUnit(b) {
   });
   // 格斗家专属：闪避随等级大幅成长（后期型）
   if (b.unitType==='fighter') u.dodge += (lv-1)*0.05;
+  // 羁绊：法师3种齐全 → 全体血量+15%
+  if (b.side==='my' && game.buffMageMaster) {
+    u.maxHp = Math.round(u.maxHp*1.15);
+    u.hp = u.maxHp;
+  }
   game.units.push(u);
 }
 
 // ============ 战斗 ============
 function doAttack(att, tgt, def) {
   let dmg = att.atk;
+  // 羁绊：四基础兵种齐全 → 全体攻击+15%
+  if (att.side==='my' && game.buffFullRoster) dmg *= 1.15;
   if (att.crit && Math.random()<att.crit) dmg*=2;
   if (att.holyStrike && Math.random()<att.holyStrike) dmg*=1.5;
   if (att.instantKill && Math.random()<att.instantKill && tgt.type!==undefined) {
@@ -532,6 +538,10 @@ function applyDmg(att, tgt, dmg, def) {
       fd -= absorbed;
     }
     tgt.hp -= fd;
+    // 羁绊：刀盾3种齐全 → 全体反弹10%直接伤害
+    if (tgt.side==='my' && game.buffMeleeMaster && att.hp>0 && fd>0) {
+      att.hp -= fd * 0.1;
+    }
     // 冰法被动：攻击冰法的单位攻速降低20%，持续3秒
     if (tgt.type==='ice' && att.st) att.st.slow = 3;
     // 小兵杀小兵给5%造价金币（塔杀不算，前60秒无赏金）
@@ -566,6 +576,32 @@ function update(dt) {
   game.goldAcc += income()*dt;
   if (game.goldAcc>=1) { let g=Math.floor(game.goldAcc); game.gold+=g; game.goldAcc-=g; }
 
+  // 羁绊检测（每秒更新一次）
+  game.buffTimer = (game.buffTimer||0) - dt;
+  if (game.buffTimer <= 0) {
+    game.buffTimer = 1;
+    // 统计我方存活兵种
+    const myTypes = new Set();
+    game.units.forEach(u => { if (u.side==='my' && u.hp>0) myTypes.add(u.type); });
+    game.barracks.forEach(b => { if (b.side==='my' && b.alive) myTypes.add(b.unitType); });
+    // 羁绊1：四基础兵种齐全 → 全体攻击+15%
+    game.buffFullRoster = ['melee','archer','mage','cannon'].every(t => myTypes.has(t));
+    // 羁绊2：刀盾3种升级齐全 → 全体反弹10%直接伤害
+    game.buffMeleeMaster = ['barbarian','paladin','fighter'].every(t => myTypes.has(t));
+    // 羁绊3：弓手3种齐全 → 全体攻速+10%
+    game.buffArcherMaster = ['musketeer','ranger','crossbow'].every(t => myTypes.has(t));
+    // 羁绊4：法师3种齐全 → 全体血量+15%
+    game.buffMageMaster = ['arcane','ice','fire'].every(t => myTypes.has(t));
+    // 羁绊5：工程车3种齐全 → 出兵间隔-2秒
+    game.buffSiegeMaster = ['siege','rocket','tesla'].every(t => myTypes.has(t));
+    // 羁绊3：弓手3种齐全 → 全体10%攻速
+    game.buffArcherMaster = ['musketeer','ranger','crossbow'].every(t => myTypes.has(t));
+    // 羁绊4：法师3种齐全 → 全体15%血量
+    game.buffMageMaster = ['arcane','ice','fire'].every(t => myTypes.has(t));
+    // 羁绊5：工程车3种齐全 → 全体15%攻速
+    game.buffSiegeMaster = ['siege','rocket','tesla'].every(t => myTypes.has(t));
+  }
+
   // AI升级：每5秒随机升级一个兵营
   game.aiTimer = (game.aiTimer||5) - dt;
   if (game.aiTimer <= 0) {
@@ -584,7 +620,10 @@ function update(dt) {
     if (b.spawnTimer<=0) {
       spawnUnit(b);
       const isSiege = ['cannon','rocket','tesla','siege'].includes(b.unitType);
-      b.spawnTimer = isSiege ? 20 : 15;
+      let interval = isSiege ? 20 : 15;
+      // 羁绊：工程车3种齐全 → 出兵间隔-2秒
+      if (b.side==='my' && game.buffSiegeMaster) interval -= 2;
+      b.spawnTimer = interval;
     }
   });
 
@@ -727,6 +766,8 @@ function update(dt) {
     if (u.st.vulnerable>0) atkSpd *= 0.8;
     // 冰法被动减速：攻速降低20%
     if (u.st.slow>0) atkSpd *= 0.8;
+    // 羁绊：弓手3种齐全 → 全体攻速+10%
+    if (u.side==='my' && game.buffArcherMaster) atkSpd *= 1.1;
 
     // 找目标
     let bestT=null, bestD=Infinity;
