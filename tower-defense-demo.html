@@ -1358,10 +1358,16 @@ function render() {
     }
   });
 
-  // 弹道
+  // 弹道 - 大光球带光晕
   game.projectiles.forEach(p => {
     const cx=p.x+(p.tx-p.x)*p.p, cy=p.y+(p.ty-p.y)*p.p;
-    ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fill();
+    ctx.shadowColor = p.color; ctx.shadowBlur = 12;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    // 内白芯
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI*2); ctx.fill();
   });
 
   // 建造菜单
@@ -1555,22 +1561,25 @@ canvas.addEventListener('click', e => {
     if (cx >= 1130 && cx <= 1170 && cy >= 15 && cy <= 45) {
       codexOpen = false; render(); return;
     }
-    // 左侧按钮
+    // 左侧按钮 2x2网格
     const lx = 30;
     let idx = 0;
     let by = 70;
     for (const cat of CODEX) {
-      by += 22;
+      by += 24;
       for (let i=0; i<cat.names.length; i++) {
         const ni = idx;
-        const bw = 230, bh = 28;
-        if (cx >= lx && cx <= lx+bw && cy >= by-bh+4 && cy <= by+4) {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const bw = 240, bh = 38;
+        const bx = lx + col * (bw + 10);
+        const by2 = by + row * (bh + 6);
+        if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
           codexSel = ni; render(); return;
         }
-        by += bh+3;
         idx++;
       }
-      by += 6;
+      by += 2 * 44 + 10;
     }
     // 其他位置不退出
     return;
@@ -1733,33 +1742,36 @@ function drawCodex() {
   ctx.fillText('✕', 1150, 36);
   ctx.textAlign = 'start';
 
-  // 左半区：4类16个按钮
+  // 左半区：4类，每类2x2网格按钮
   const lx = 30;
   let idx = 0;
   let by = 70;
   for (const cat of CODEX) {
     // 分类标题
-    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 15px sans-serif';
     ctx.fillText(cat.cat, lx, by);
-    by += 22;
+    by += 24;
     for (let i=0; i<cat.names.length; i++) {
       const ni = idx;
-      const bw = 230, bh = 28;
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const bw = 240, bh = 38;
+      const bx = lx + col * (bw + 10);
+      const by2 = by + row * (bh + 6);
       if (codexSel === ni) {
         ctx.fillStyle = '#FFD700';
-        ctx.fillRect(lx, by-bh+4, bw, bh);
+        ctx.fillRect(bx, by2, bw, bh);
         ctx.fillStyle = '#000';
       } else {
         ctx.fillStyle = '#2a2a4a';
-        ctx.fillRect(lx, by-bh+4, bw, bh);
+        ctx.fillRect(bx, by2, bw, bh);
         ctx.fillStyle = '#ddd';
       }
-      ctx.font = '14px sans-serif';
-      ctx.fillText('  ' + cat.names[i], lx+6, by-4);
-      by += bh+3;
+      ctx.font = '15px sans-serif';
+      ctx.fillText(cat.names[i], bx+10, by2+24);
       idx++;
     }
-    by += 6;
+    by += 2 * 44 + 10;
   }
 
   // 右半区：详情
