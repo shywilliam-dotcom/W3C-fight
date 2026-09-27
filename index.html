@@ -1159,110 +1159,56 @@ function render() {
       ctx.drawImage(sprite, -drawSize/2, -drawSize/2 - s*0.3, drawSize, drawSize);
       ctx.restore();
 
-      // ===== 叠加腿和武器动画 =====
-      const walkPhase = game.time*10 + u.x*0.15;
-      const footY = u.y + animY + s*0.5; // 脚底位置
+      // ===== 叠加法杖光球（法师系）=====
+      if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
+        if (flip) ctx.scale(-1, 1);
 
-      ctx.save();
-      ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
-      if (flip) ctx.scale(-1, 1);
+        // 法师系：在右侧画法杖+光球
+        if (u.type === 'ice' || u.type === 'darkfire' || u.type === 'mage' || u.type === 'arcane') {
+          const gemColor = {ice:'#5dade2', darkfire:'#ff6347', mage:'#f7dc6f', arcane:'#bb8fce'}[u.type] || '#c9a0dc';
+          let wandAngle = 0.3;
+          if (u.animState === 'cast') {
+            const p = (u._animT||0)/0.25;
+            wandAngle = -0.6 + Math.sin(p*Math.PI) * 1.0;
+          } else if (u.animState === 'walk') {
+            wandAngle = 0.3 + Math.sin(walkPhase)*0.08;
+          }
+          ctx.save();
+          ctx.translate(s*0.5, -s*0.3);
+          ctx.rotate(wandAngle);
+          ctx.fillStyle = '#6b4226';
+          ctx.fillRect(0, -1, 12, 2);
+          if (u.animState === 'cast') {
+            ctx.shadowColor = gemColor;
+            ctx.shadowBlur = 15;
+          }
+          ctx.fillStyle = gemColor;
+          ctx.beginPath(); ctx.arc(13, 0, 3, 0, Math.PI*2); ctx.fill();
+          ctx.restore();
+        }
+        // 骑士系：右侧画剑
+        else if (u.type === 'paladin' || u.type === 'barbarian' || u.type === 'fighter') {
+          let swordAngle = -0.3;
+          if (u.animState === 'attack') {
+            const p = (u._animT||0)/0.25;
+            swordAngle = -1.0 + Math.sin(p*Math.PI) * 1.8;
+          } else if (u.animState === 'walk') {
+            swordAngle = -0.3 + Math.sin(walkPhase)*0.12;
+          }
+          ctx.save();
+          ctx.translate(s*0.4, -s*0.2);
+          ctx.rotate(swordAngle);
+          ctx.fillStyle = '#e0e0e0';
+          ctx.fillRect(0, -1, 14, 2);
+          ctx.fillStyle = '#4a3728';
+          ctx.fillRect(-3, -1.5, 3, 3);
+          ctx.restore();
+        }
 
-      // 腿颜色按兵种
-      const legColor = {ice:'#3b4a6b', darkfire:'#1a1a1a', arcane:'#4a2d6b', mage:'#5a4a3a', paladin:'#5a5a5a'}[u.type] || '#4a3728';
-      // 走路：两条腿交替前后迈
-      if (u.animState === 'walk') {
-        const legSwing = Math.sin(walkPhase) * 4;
-        ctx.fillStyle = legColor;
-        ctx.fillRect(-3 - legSwing, s*0.3, 3.5, 5);
-        ctx.fillRect(1 + legSwing, s*0.3, 3.5, 5);
-      } else if (u.animState === 'attack' || u.animState === 'cast') {
-        ctx.fillStyle = legColor;
-        ctx.fillRect(-3, s*0.3, 3.5, 5);
-        ctx.fillRect(1, s*0.3, 3.5, 5);
-      } else {
-        ctx.fillStyle = legColor;
-        ctx.fillRect(-2, s*0.3, 3.5, 5);
-        ctx.fillRect(0.5, s*0.3, 3.5, 5);
-      }
-
-      // ===== 武器动画 =====
-      if (u.type === 'paladin') {
-        // 圣骑士挥剑
-        let swordAngle = -0.3;
-        if (u.animState === 'attack') {
-          const p = (u._animT||0)/0.25;
-          swordAngle = -1.2 + Math.sin(p*Math.PI) * 2.0;
-        } else if (u.animState === 'walk') {
-          swordAngle = -0.3 + Math.sin(walkPhase)*0.15;
-        }
-        ctx.save();
-        ctx.translate(s*0.4, -s*0.2);
-        ctx.rotate(swordAngle);
-        ctx.fillStyle = '#e0e0e0';
-        ctx.fillRect(0, -1, 12, 2);
-        ctx.fillStyle = '#4a3728';
-        ctx.fillRect(-3, -1.5, 3, 3);
-        ctx.restore();
-      } else if (u.type === 'ice' || u.type === 'darkfire' || u.type === 'mage') {
-        // 法师系挥法杖
-        const gemColor = {ice:'#5dade2', darkfire:'#ff6347', mage:'#c9a0dc'}[u.type] || '#c9a0dc';
-        let wandAngle = 0.2;
-        if (u.animState === 'cast') {
-          const p = (u._animT||0)/0.25;
-          wandAngle = -0.8 + Math.sin(p*Math.PI) * 1.2;
-        } else if (u.animState === 'walk') {
-          wandAngle = 0.2 + Math.sin(walkPhase)*0.1;
-        }
-        ctx.save();
-        ctx.translate(s*0.35, -s*0.25);
-        ctx.rotate(wandAngle);
-        ctx.fillStyle = '#6b4226';
-        ctx.fillRect(0, -1, 10, 2);
-        if (u.animState === 'cast') {
-          ctx.shadowColor = gemColor;
-          ctx.shadowBlur = 12;
-        }
-        ctx.fillStyle = gemColor;
-        ctx.beginPath(); ctx.arc(11, 0, 2.5, 0, Math.PI*2); ctx.fill();
-        ctx.restore();
-      } else if (u.type === 'arcane') {
-        // 奥战法：一手剑一手法杖
-        let swordAngle = -0.3;
-        let wandAngle = 0.3;
-        if (u.animState === 'attack') {
-          const p = (u._animT||0)/0.25;
-          swordAngle = -1.2 + Math.sin(p*Math.PI) * 2.0;
-        } else if (u.animState === 'cast') {
-          const p = (u._animT||0)/0.25;
-          wandAngle = -0.8 + Math.sin(p*Math.PI) * 1.2;
-        } else if (u.animState === 'walk') {
-          swordAngle = -0.3 + Math.sin(walkPhase)*0.1;
-          wandAngle = 0.3 + Math.sin(walkPhase)*0.08;
-        }
-        // 剑（右手）
-        ctx.save();
-        ctx.translate(-s*0.35, -s*0.2);
-        ctx.rotate(swordAngle);
-        ctx.fillStyle = '#e0e0e0';
-        ctx.fillRect(0, -0.8, 10, 1.6);
-        ctx.fillStyle = '#4a3728';
-        ctx.fillRect(-2.5, -1.2, 2.5, 2.4);
-        ctx.restore();
-        // 法杖（左手）
-        ctx.save();
-        ctx.translate(s*0.35, -s*0.25);
-        ctx.rotate(wandAngle);
-        ctx.fillStyle = '#6b4226';
-        ctx.fillRect(0, -1, 9, 2);
-        if (u.animState === 'cast') {
-          ctx.shadowColor = '#9b59b6';
-          ctx.shadowBlur = 12;
-        }
-        ctx.fillStyle = '#9b59b6';
-        ctx.beginPath(); ctx.arc(10, 0, 2.5, 0, Math.PI*2); ctx.fill();
         ctx.restore();
       }
-      ctx.restore();
 
       // 施法粒子
       if (u.animState === 'cast') {
