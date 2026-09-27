@@ -1574,8 +1574,8 @@ canvas.addEventListener('click', e => {
     let idx = 0;
     for (const cat of CODEX) {
       for (let i=0; i<cat.names.length; i++) {
-        const ny = ly + idx*32 + 30;
-        if (cx >= lx-5 && cx <= lx+175 && cy >= ny-12 && cy <= ny+10) {
+        const ny = ly + idx*38 + 30;
+        if (cx >= lx-10 && cx <= lx+210 && cy >= ny-18 && cy <= ny+18) {
           codexSel = idx; render(); return;
         }
         idx++;
@@ -1750,18 +1750,18 @@ function drawCodex() {
   const lx = px+20, ly = py+75;
   let idx = 0;
   for (const cat of CODEX) {
-    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 13px sans-serif';
-    ctx.fillText(cat.cat, lx, ly + idx*32 + 15);
+    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(cat.cat, lx, ly + idx*38 + 18);
     for (let i=0; i<cat.names.length; i++) {
       const ni = idx;
-      const ny = ly + idx*32 + 30;
+      const ny = ly + idx*38 + 38;
       if (codexSel === ni) {
         ctx.fillStyle = '#3a3a5e';
-        ctx.fillRect(lx-5, ny-12, 180, 22);
+        ctx.fillRect(lx-10, ny-18, 220, 32);
       }
       ctx.fillStyle = codexSel===ni ? '#FFD700' : '#ccc';
-      ctx.font = '12px sans-serif';
-      ctx.fillText('  ' + cat.names[i], lx, ny);
+      ctx.font = '14px sans-serif';
+      ctx.fillText('  ' + cat.names[i], lx, ny+5);
       idx++;
     }
     idx += 1;
