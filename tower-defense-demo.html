@@ -1538,7 +1538,6 @@ function shade(c,p) {
 
 // ============ 交互 ============
 canvas.addEventListener('click', e => {
-  if (game.gameOver) return;
   const rect = canvas.getBoundingClientRect();
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
   let cx, cy;
@@ -1550,6 +1549,30 @@ canvas.addEventListener('click', e => {
     cx = dx / rect.width * 1200;
     cy = dy / rect.height * 720;
   }
+
+  // ===== 图鉴模式优先处理 =====
+  if (codexOpen) {
+    const pw = 900, ph = 600;
+    const px = (1200-pw)/2, py = (720-ph)/2;
+    if (cx < px || cx > px+pw || cy < py || cy > py+ph) {
+      codexOpen = false; draw(); return;
+    }
+    const lx = px+20, ly = py+75;
+    let idx = 0;
+    for (const cat of CODEX) {
+      for (let i=0; i<cat.names.length; i++) {
+        const ny = ly + idx*32 + 30;
+        if (cx >= lx-5 && cx <= lx+175 && cy >= ny-12 && cy <= ny+10) {
+          codexSel = idx; draw(); return;
+        }
+        idx++;
+      }
+      idx += 1;
+    }
+    return;
+  }
+
+  if (game.gameOver) return;
 
   // Buff点击提示
   if (cy < 50) {
@@ -1798,40 +1821,6 @@ function drawCodex() {
   }
 }
 
-// 图鉴点击
-canvas.addEventListener('click', e => {
-  if (!codexOpen) return;
-  const rect = canvas.getBoundingClientRect();
-  const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
-  let cx, cy;
-  if (window.innerWidth < window.innerHeight) {
-    cx = dy / rect.height * 1200;
-    cy = (rect.width - dx) / rect.width * 720;
-  } else {
-    cx = dx / rect.width * 1200;
-    cy = dy / rect.height * 720;
-  }
-  // 面板区域
-  const pw = 900, ph = 600;
-  const px = (1200-pw)/2, py = (720-ph)/2;
-  if (cx < px || cx > px+pw || cy < py || cy > py+ph) {
-    codexOpen = false; draw(); return;
-  }
-  // 左侧列表点击
-  const lx = px+20, ly = py+75;
-  let idx = 0;
-  for (const cat of CODEX) {
-    for (let i=0; i<cat.names.length; i++) {
-      const ny = ly + idx*32 + 30;
-      if (cx >= lx-5 && cx <= lx+175 && cy >= ny-12 && cy <= ny+10) {
-        codexSel = idx; draw(); return;
-      }
-      idx++;
-    }
-    idx += 1;
-  }
-});
-
 function restartGame() { initGame(); }
 
 // ============ 自动模拟 ============
@@ -1946,12 +1935,13 @@ function resizeCanvas() {
   // 竖屏旋转后，可用宽高互换
   const availW = isPortrait ? ch : cw;
   const availH = isPortrait ? cw : ch;
-  // HUD和control-panel约70px
   const hudH = 32, panelH = 38;
   const gameH = availH - hudH - panelH;
-  // 保持1200:720比例
+  // 直接占满可用宽度，高度按比例；若超高则按高度反推宽度
   let w = availW, h = w * 720 / 1200;
   if (h > gameH) { h = gameH; w = h * 1200 / 720; }
+  // 保证至少撑满宽度
+  if (w < availW) { w = availW; h = w * 720 / 1200; }
   const canvas = document.getElementById('gameCanvas');
   canvas.style.width = w + 'px';
   canvas.style.height = h + 'px';
