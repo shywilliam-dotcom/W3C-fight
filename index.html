@@ -1496,12 +1496,87 @@ document.getElementById('speed-btn').addEventListener('click', () => {
 });
 function restartGame() { initGame(); }
 
+// ============ 自动模拟 ============
+let simRunning = false;
+const UPGRADES = {
+  melee: ['barbarian','paladin','fighter'],
+  archer: ['musketeer','ranger','crossbow'],
+  mage: ['arcane','ice','fire'],
+  cannon: ['siege','rocket','tesla']
+};
+
+function startSimulation(rounds) {
+  simRunning = true;
+  const typeCount = {};
+  let myWins = 0, enWins = 0, draws = 0;
+  let totalTime = 0;
+  let r = 0;
+  
+  function runNext() {
+    if (r >= rounds) {
+      simRunning = false;
+      let html = '<div style="position:fixed;top:10px;left:10px;background:#000;color:#0f0;padding:15px;z-index:99999;font-size:14px;white-space:pre;border:2px solid #0f0;">';
+      html += '=== 模拟结果（' + rounds + '局）===\n';
+      html += '我方胜:' + myWins + ' 敌方胜:' + enWins + ' 平局:' + draws + '\n';
+      html += '平均用时:' + (totalTime/rounds).toFixed(1) + '秒\n\n';
+      html += '兵种使用率（胜者兵营）:\n';
+      Object.entries(typeCount).sort((a,b)=>b[1]-a[1]).forEach(([t,c]) => {
+        html += '  ' + t + ': ' + c + '次\n';
+      });
+      html += '<button onclick="this.parentElement.remove()" style="margin-top:10px;padding:5px 20px;">关闭</button></div>';
+      document.body.insertAdjacentHTML('beforeend', html);
+      return;
+    }
+    r++;
+    
+    initGame();
+    game.speed = 1;
+    
+    game.barracks.forEach(b => {
+      if (UPGRADES[b.unitType]) {
+        b.unitType = UPGRADES[b.unitType][Math.floor(Math.random()*3)];
+        b.level = Math.floor(Math.random()*5)+1;
+      }
+    });
+    
+    let simTime = 0;
+    function tick() {
+      if (game.gameOver || simTime >= 600) {
+        const myBase = game.towers.find(t => t.isBase && t.side==='my');
+        const enBase = game.towers.find(t => t.isBase && t.side==='enemy');
+        let winner = 'draw';
+        if (myBase.alive && !enBase.alive) winner = 'my';
+        else if (!myBase.alive && enBase.alive) winner = 'enemy';
+        if (winner === 'my') myWins++;
+        else if (winner === 'enemy') enWins++;
+        else draws++;
+        totalTime += game.time;
+        if (winner !== 'draw') {
+          game.barracks.forEach(b => {
+            if (b.side === winner && b.alive) typeCount[b.unitType] = (typeCount[b.unitType]||0) + 1;
+          });
+        }
+        setTimeout(runNext, 10);
+        return;
+      }
+      for (let i = 0; i < 20; i++) {
+        update(0.5);
+        simTime += 0.5;
+        if (game.gameOver) break;
+      }
+      setTimeout(tick, 0);
+    }
+    tick();
+  }
+  runNext();
+}
+
 // ============ 主循环 ============
 let lastT=0;
 function loop(t) {
   const dt = Math.min((t-lastT)/1000, 0.1)*game.speed;
   lastT = t;
-  update(dt);
+  if (!simRunning) update(dt);
   render();
   requestAnimationFrame(loop);
 }
