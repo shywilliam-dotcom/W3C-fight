@@ -169,13 +169,13 @@ const ATK_MUL = {
 // ult: whirlwind(近战系) / piercing(弓手系) / blizzard(法师系) / barrage(攻城系)
 const UNIT_TYPES = {
   melee:    { name:'刀盾手', shape:'circle', size:10, hp:300, atk:10, atkSpeed:1.0, range:40, speed:60, cost:60, color:'#4CAF50', atkType:'normal', armorType:'heavy', ult:null,
-    skill1:{k:'dmgReduce',v:0.10}, skill2:{k:'crit',v:0.10}, desc:'10%减伤+10%暴击' },
+    skill1:{k:'dmgReduce',v:0.10}, skill2:{k:'doubleStrike',v:0.15}, desc:'10%减伤+15%概率攻击2次' },
   archer:   { name:'弓手', shape:'triangle', size:9, hp:120, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:null,
-    skill1:{k:'poison',v:0.20}, skill2:{k:'crit',v:0.10}, desc:'20%毒箭+10%暴击' },
+    skill1:{k:'poison',v:0.20}, skill2:{k:'backJump',v:200}, desc:'20%毒箭+敌人近身时后跳200并定身目标' },
   mage:     { name:'法师', shape:'diamond', size:9, hp:120, atk:16, atkSpeed:0.7, range:120, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:null,
     skill1:{k:'healAlly',v:0.03}, skill2:null, desc:'纯平A+攻击时100%给附近血量最低友方回3%血' },
   cannon:   { name:'攻城车', shape:'square', size:11, hp:350, atk:22, atkSpeed:0.35, range:170, speed:50, cost:220, color:'#F44336', atkType:'siege', armorType:'fort', ult:null,
-    skill1:{k:'splashRange',v:40}, skill2:{k:'buildingDamage',v:1.5}, desc:'溅射+对塔1.5倍' },
+    skill1:{k:'splashRange',v:40}, skill2:{k:'knockback',v:0.10}, desc:'溅射+10%概率击退主要目标' },
 
   // 近战升级（大招=旋风斩）
   barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:320, atk:18, atkSpeed:0.9, range:40, speed:60, cost:90, color:'#8B4513', atkType:'normal', armorType:'heavy', ult:'whirlwind',
