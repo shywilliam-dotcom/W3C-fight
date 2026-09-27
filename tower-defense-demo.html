@@ -172,8 +172,8 @@ const UNIT_TYPES = {
     skill1:{k:'dmgReduce',v:0.10}, skill2:{k:'crit',v:0.10}, desc:'10%减伤+10%暴击' },
   archer:   { name:'弓手', shape:'triangle', size:9, hp:120, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:'piercing',
     skill1:{k:'poison',v:0.20}, skill2:{k:'crit',v:0.10}, desc:'20%毒箭+10%暴击' },
-  mage:     { name:'法师', shape:'diamond', size:9, hp:100, atk:12, atkSpeed:0.6, range:120, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'blizzard',
-    skill1:{k:'burn',v:1}, skill2:{k:'crit',v:0.10}, desc:'灼烧+10%暴击' },
+  mage:     { name:'法师', shape:'diamond', size:9, hp:120, atk:16, atkSpeed:0.7, range:120, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:null,
+    skill1:null, skill2:null, desc:'基础法师，纯平A，属性比专精法师高' },
   cannon:   { name:'攻城车', shape:'square', size:11, hp:350, atk:22, atkSpeed:0.35, range:170, speed:50, cost:220, color:'#F44336', atkType:'siege', armorType:'fort', ult:'barrage',
     skill1:{k:'splashRange',v:40}, skill2:{k:'buildingDamage',v:1.5}, desc:'溅射+对塔1.5倍' },
 
@@ -195,9 +195,9 @@ const UNIT_TYPES = {
 
   // 法师升级（大招=暴风雪）
   arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:130, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'medium', ult:'arcaneBlink',
-    skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.40}, desc:'10%变羊+群体护盾40%血（初期强）' },
-  ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzard',
-    skill1:{k:'iceBlock',v:1}, skill2:{k:'shieldAlly',v:0.15}, desc:'冰箱+33%易伤+友方护盾减伤15%（中期强）' },
+    skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.40}, desc:'10%变羊(目标不可攻击3秒四处游走)+群体护盾40%血（初期强）' },
+  ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:110, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzardNova',
+    skill1:{k:'shieldAlly',v:0.15}, skill2:{k:'vulnerable',v:0.33}, desc:'友方减伤护盾+受击近战减速+33%概率易伤（中期强）' },
   fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:120, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'fireBlast',
     skill1:{k:'summonSkeleton',v:5}, skill2:{k:'burnStack',v:1}, desc:'每5秒召唤骷髅+dot叠加（后期强）' },
 
@@ -1712,8 +1712,8 @@ const CODEX = [
    desc:['基础远程，轻甲','中期强势，即死秒杀','早期强势，射程远定身','后期强势，连击多重']},
   {cat:'法师', types:['mage','ice','arcane','darkfire'],
    names:['法师','冰巫法','奥战法','暗火法'],
-   skills:['基础施法单位','冰盾免疫+20%易伤+20%攻速减+护盾','变羊传送+群体护盾+召唤傀儡+濒死传送','持续灼烧+召唤骷髅+500%大招'],
-   desc:['基础施法，无甲','中期强势，控制减益','早期强势，召唤辅助','后期强势，DOT召唤']},
+   skills:['纯平A无大招，属性比专精高','大招暴风雪:180范围80伤害+冰冻3秒+减速30%+易伤 | 被动:友方减伤护盾+受击近战减速+33%概率易伤','大招濒死传送回基地回血20%CD60s | 被动:10%变羊(不可攻击3秒游走)+群体护盾40%血','大招500%伤害CD20s | 被动:每5秒召唤骷髅+dot叠加'],
+   desc:['基础施法，无甲，无大招','中期强势，范围控制减益','早期强势，变羊护盾辅助','后期强势，DOT召唤']},
   {cat:'攻城', types:['cannon','siege','rocket','tesla'],
    names:['攻城车','攻城炮','火箭炮','特斯拉'],
    skills:['基础攻城单位，城甲','高血量攻城，死亡爆炸','范围溅射+灼烧+死亡爆炸','连锁眩晕+电圈20/s+死亡爆炸'],
