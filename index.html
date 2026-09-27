@@ -61,6 +61,7 @@
 <div id="control-panel">
   <button class="btn btn-speed" id="speed-btn">1x</button>
   <button class="btn btn-restart" onclick="restartGame()">重开</button>
+  <button class="btn btn-restart" onclick="startSimulation(20)" style="background:#0f0;color:#000;">模拟20局</button>
   <span id="info">点空兵营槽位建造，点兵营升级，点单位看状态</span>
 </div>
 
@@ -282,6 +283,9 @@ function income() {
 
 // ============ 出兵 ============
 function spawnUnit(b) {
+  // 每方最多30个战斗单位（不含召唤物）
+  const myCount = game.units.filter(u => u.side===b.side && u.type!=='skeleton' && u.type!=='golem').length;
+  if (myCount >= 30) return;
   const def = UNIT_TYPES[b.unitType];
   const lv = b.level || 1;
   const mul = Math.pow(1.15, lv-1);  // 每级+15%血攻（指数成长）
