@@ -1434,9 +1434,16 @@ function shade(c,p) {
 canvas.addEventListener('click', e => {
   if (game.gameOver) return;
   const rect = canvas.getBoundingClientRect();
-  const sx = 1200/rect.width, sy = 720/rect.height;
-  const cx = (e.clientX-rect.left)*sx;
-  const cy = (e.clientY-rect.top)*sy;
+  const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
+  let cx, cy;
+  if (window.innerWidth < window.innerHeight) {
+    // 竖屏旋转90度：坐标反转
+    cx = (rect.height - dy) / rect.height * 1200;
+    cy = dx / rect.width * 720;
+  } else {
+    cx = dx / rect.width * 1200;
+    cy = dy / rect.height * 720;
+  }
 
   // 建造菜单点击
   if (game.buildMenu) {
