@@ -179,7 +179,7 @@ const UNIT_TYPES = {
 
   // 近战升级（大招=旋风斩）
   barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:320, atk:18, atkSpeed:0.9, range:40, speed:60, cost:90, color:'#8B4513', atkType:'normal', armorType:'heavy', ult:'whirlwind',
-    skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, skill3:{k:'parryArcher',v:0.15}, desc:'群伤2目标+斩杀5%血+15%招架弓手攻击 | 大招旋风斩:每秒120%攻击范围伤害持续3秒CD60s（早期强）' },
+    skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, skill3:{k:'parryArcher',v:0.15}, desc:'群伤2目标+斩杀5%血+15%招架弓手+斩杀后回10%血攻+10% | 大招旋风斩:每秒120%攻击范围伤害持续3秒CD60s（早期强）' },
   paladin:  { name:'圣骑士', shape:'circle', size:11, hp:220, atk:12, atkSpeed:1.0, range:40, speed:60, cost:90, color:'#FFD700', atkType:'normal', armorType:'heavy', ult:'holyUlt',
     skill1:{k:'holyHeal',v:1}, skill2:{k:'dmgReduce',v:0.30}, desc:'低血回血25%CD15s+30%减伤 | 大招回血100%CD60s（中期强）' },
   fighter:  { name:'格斗家', shape:'circle', size:10, hp:250, atk:20, atkSpeed:1.3, range:40, speed:80, cost:90, color:'#FF6B9D', atkType:'normal', armorType:'medium', ult:'dodgeUlt',
@@ -206,7 +206,7 @@ const UNIT_TYPES = {
     skill1:{k:'splashRange',v:150}, skill2:{k:'splash',v:0.25}, desc:'大范围溅射150+25%溅射伤害 | 大招:3个随机目标各攻击1次(单目标打3次)CD40s（中期强）' },
   tesla:    { name:'特斯拉', shape:'square', size:11, hp:180, atk:25, atkSpeed:0.3, range:190, speed:50, cost:494, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'stunBlast',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标每单位15%概率晕1秒+电圈50范围20/s | 大招:下3次攻击必晕2秒并丢失目标CD40s（后期强）' },
-  siege:    { name:'攻城炮', shape:'square', size:13, hp:252, atk:25, atkSpeed:0.35, range:180, speed:50, cost:494, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'airSlug',
+  siege:    { name:'攻城炮', shape:'square', size:13, hp:252, atk:25, atkSpeed:0.35, range:170, speed:50, cost:494, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'airSlug',
     skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射 | 大招:下2次攻击200%伤害+击飞+丢失目标CD40s（早期强）' }
 };
 
