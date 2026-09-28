@@ -1639,25 +1639,19 @@ function render() {
     }
   }
 
-  // 常驻信息栏（底部中间）
-  ctx.fillStyle='rgba(0,0,0,0.5)';
+  // 统一信息栏（底部贴边）
+  ctx.fillStyle='rgba(0,0,0,0.85)';
   ctx.fillRect(50, 660, 900, 60);
   ctx.strokeStyle='#555'; ctx.lineWidth=1;
   ctx.strokeRect(50, 660, 900, 60);
-  ctx.fillStyle='#888'; ctx.font='12px sans-serif';
-  ctx.fillText('点选单位/塔查看详情', 80, 695);
 
   // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
     const t = game.selectedTower;
-    ctx.fillStyle='rgba(0,0,0,0.85)';
-    ctx.fillRect(300, 630, 600, 70);
-    ctx.strokeStyle=t.side==='my'?'#4FC3F7':'#EF5350'; ctx.lineWidth=2;
-    ctx.strokeRect(300, 630, 600, 70);
     ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
-    ctx.fillText(t.isBase?'基地':'防御塔', 220, 645);
+    ctx.fillText(t.isBase?'基地':'防御塔', 80, 685);
     ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
-    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}  攻击: ${t.atk}  射程: ${t.range}`, 220, 675);
+    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}  攻击: ${t.atk}  射程: ${t.range}`, 200, 685);
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
