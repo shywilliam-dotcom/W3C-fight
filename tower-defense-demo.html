@@ -975,13 +975,9 @@ function update(dt) {
         if (Math.abs(chaseT.y - u.y) > 5) u.y += (chaseT.y - u.y)*0.05;
       } else {
         u.x += u.speed*u.dir*dt;
-        if (u.side==='my' && u.x>950) {
-          u.y += (360-u.y)*0.03;
-          u.lane = Math.round((u.y-180)/180);
-          if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
-        }
-        if (u.side==='enemy' && u.x<250) {
-          u.y += (360-u.y)*0.03;
+        // 进入中间广场范围，三路打通，y向中心靠拢
+        if (Math.abs(u.x-600) < 100) {
+          u.y += (360-u.y)*0.04;
           u.lane = Math.round((u.y-180)/180);
           if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
         }
@@ -1108,27 +1104,32 @@ function render() {
   }
   ctx.textAlign='start';
 
-  // 路：三路在基地处汇合（橄榄球形状）
-  ctx.lineWidth = 100;
+  // 路：三路在中间圆形广场汇合
+  const plazaX = 600, plazaY = 360, plazaR = 80;
+  ctx.lineWidth = 80;
   ctx.lineCap = 'round';
   LANE_Y.forEach((y,i) => {
-    // 我方路：从基地(50,300)弯到三路位置
+    // 我方路：从基地到中间广场
     ctx.strokeStyle = '#1e1e4a';
     ctx.beginPath();
     ctx.moveTo(50, 360);
     ctx.quadraticCurveTo(200, y, 380, y);
+    ctx.lineTo(plazaX, plazaY + (y-360)*0.3);
     ctx.stroke();
-    // 中间直道
+    // 敌方路：从广场到敌方基地
     ctx.beginPath();
-    ctx.moveTo(380, y);
-    ctx.lineTo(820, y);
-    ctx.stroke();
-    // 敌方路：弯到敌方基地
-    ctx.beginPath();
-    ctx.moveTo(820, y);
+    ctx.moveTo(plazaX, plazaY + (y-360)*0.3);
     ctx.quadraticCurveTo(1000, y, 1150, 360);
     ctx.stroke();
   });
+  // 中间圆形广场
+  ctx.fillStyle = '#252555';
+  ctx.beginPath();
+  ctx.arc(plazaX, plazaY, plazaR, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#0f3460';
+  ctx.lineWidth = 3;
+  ctx.stroke();
   // 路边框
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#0f3460';
@@ -1136,7 +1137,7 @@ function render() {
     ctx.beginPath();
     ctx.moveTo(50, 360);
     ctx.quadraticCurveTo(200, y, 380, y);
-    ctx.lineTo(820, y);
+    ctx.lineTo(plazaX, plazaY + (y-360)*0.3);
     ctx.quadraticCurveTo(1000, y, 1150, 360);
     ctx.stroke();
   });
