@@ -1655,15 +1655,15 @@ function render() {
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
-    const pw = 340, ph = 140;
-    const px = (1200-pw)/2, py = 720-ph-10;
+    const pw = 900, ph = 60;
+    const px = 50, py = 660;
     ctx.fillStyle='rgba(0,0,0,0.92)';
     ctx.fillRect(px, py, pw, ph);
     ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
     ctx.strokeRect(px, py, pw, ph);
 
     // 左侧大头像区域
-    const ax = px+10, ay = py+10, aw = 90, ah = 120;
+    const ax = px+5, ay = py+5, aw = 50, ah = 50;
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(ax, ay, aw, ah);
     ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
@@ -1686,7 +1686,7 @@ function render() {
     // 右侧属性文字
     const tx = px + aw + 25;
     ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
-    ctx.fillText(`${def.name} · Lv.${u.level}`, tx, py+22);
+    ctx.fillText(`${def.name} · Lv.${u.level}`, tx, py+20);
     ctx.fillStyle='#aaa'; ctx.font='11px sans-serif';
     ctx.fillText(`姓名: ${u.name||'未命名'}`, tx, py+38);
     ctx.fillStyle='#fff'; ctx.font='11px sans-serif';
