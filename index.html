@@ -319,12 +319,12 @@ function initGame() {
     const isMid = lane===1;
     const tRange = 220;
     // 我方：上边2个(y-40)，下边1个(y+40)，x成三角形
-    [[500,-40],[560,-40],[530,40]].forEach(([tx,dy]) => {
+    [[230,-40],[290,-40],[260,40]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'my', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
     // 敌方镜像
-    [[700,-40],[640,-40],[670,40]].forEach(([tx,dy]) => {
+    [[970,-40],[910,-40],[940,40]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'enemy', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
