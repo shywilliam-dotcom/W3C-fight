@@ -98,13 +98,13 @@ const EN_BASE_X = 1150;
 
 // 兵营槽位（田字格，密集在基地前方）
 const BARRACK_SLOTS = [
-  // 每路2×2小田字格，3路共12个（间距拉大不重叠）
-  {x:120, lane:0, dy:-20}, {x:160, lane:0, dy:-20},
-  {x:120, lane:0, dy:20},  {x:160, lane:0, dy:20},
-  {x:120, lane:1, dy:-20}, {x:160, lane:1, dy:-20},
-  {x:120, lane:1, dy:20},  {x:160, lane:1, dy:20},
-  {x:120, lane:2, dy:-20}, {x:160, lane:2, dy:-20},
-  {x:120, lane:2, dy:20},  {x:160, lane:2, dy:20}
+  // 每路2×2田字格，3路共12个（间距加大不重叠）
+  {x:90, lane:0, dy:-35}, {x:180, lane:0, dy:-35},
+  {x:90, lane:0, dy:35},  {x:180, lane:0, dy:35},
+  {x:90, lane:1, dy:-35}, {x:180, lane:1, dy:-35},
+  {x:90, lane:1, dy:35},  {x:180, lane:1, dy:35},
+  {x:90, lane:2, dy:-35}, {x:180, lane:2, dy:-35},
+  {x:90, lane:2, dy:35},  {x:180, lane:2, dy:35}
 ];
 // 我方塔（每路3座，后退留出战斗空间）
 const MY_TOWER_X = [180, 230, 280];
@@ -1226,8 +1226,8 @@ function render() {
       return;
     }
     ctx.fillStyle = b.side==='my'?'#2196F3':'#F44336';
-    ctx.fillRect(b.x-14, y-30, 28, 22);
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-14, y-30, 28, 22);
+    ctx.fillRect(b.x-28, y-50, 56, 44);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-28, y-50, 56, 44);
     // 兵种图标
     const iconMap = {melee:'👊', barbarian:'👊', paladin:'👊', fighter:'👊',
       archer:'🏹', musketeer:'🏹', ranger:'🏹', crossbow:'🏹',
@@ -1885,7 +1885,7 @@ canvas.addEventListener('click', e => {
   // 找兵营槽位（优先检测，避免被兵挡住）
   for (const slot of BARRACK_SLOTS) {
     const sy = LANE_Y[slot.lane] + (slot.dy||0);
-    if (Math.abs(cx-slot.x)<28 && Math.abs(cy-sy)<28) {
+    if (Math.abs(cx-slot.x)<40 && Math.abs(cy-sy)<40) {
       const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
       if (ex) {
         game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
