@@ -168,45 +168,45 @@ const ATK_MUL = {
 // 每个兵种：skill1 + skill2（随等级+10%/级），ult（6级大招）
 // ult: whirlwind(近战系) / piercing(弓手系) / blizzard(法师系) / barrage(攻城系)
 const UNIT_TYPES = {
-  melee:    { name:'刀盾手', shape:'circle', size:10, hp:300, atk:10, atkSpeed:1.0, range:15, speed:60, cost:60, color:'#4CAF50', atkType:'melee', armorType:'heavy', ult:null,
+  melee:    { name:'刀盾手', shape:'circle', size:10, hp:600, atk:10, atkSpeed:1.0, range:15, speed:60, cost:60, color:'#4CAF50', atkType:'melee', armorType:'heavy', ult:null,
     skill1:{k:'dmgReduce',v:0.10}, skill2:{k:'doubleStrike',v:0.15}, desc:'10%减伤+15%概率攻击2次' },
-  archer:   { name:'弓手', shape:'triangle', size:9, hp:120, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:null,
+  archer:   { name:'弓手', shape:'triangle', size:9, hp:240, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:null,
     skill1:{k:'poison',v:0.20}, skill2:{k:'backJump',v:200}, desc:'20%毒箭+敌人近身时后跳200并定身目标' },
-  mage:     { name:'法师', shape:'diamond', size:9, hp:120, atk:16, atkSpeed:0.7, range:135, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:null,
+  mage:     { name:'法师', shape:'diamond', size:9, hp:280, atk:16, atkSpeed:0.7, range:135, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:null,
     skill1:{k:'healAlly',v:0.03}, skill2:null, desc:'纯平A+攻击时100%给附近血量最低友方回3%血' },
-  cannon:   { name:'攻城车', shape:'square', size:11, hp:350, atk:22, atkSpeed:0.35, range:170, speed:50, cost:220, color:'#F44336', atkType:'siege', armorType:'fort', ult:null,
+  cannon:   { name:'攻城车', shape:'square', size:11, hp:600, atk:22, atkSpeed:0.35, range:170, speed:50, cost:220, color:'#F44336', atkType:'siege', armorType:'fort', ult:null,
     skill1:{k:'splashRange',v:40}, skill2:{k:'knockback',v:0.10}, desc:'溅射+10%概率击退主要目标' },
 
   // 近战升级（大招=旋风斩）
-  barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:320, atk:18, atkSpeed:0.9, range:15, speed:60, cost:90, color:'#8B4513', atkType:'melee', armorType:'heavy', ult:'whirlwind',
+  barbarian:{ name:'斧头野蛮人', shape:'circle', size:13, hp:500, atk:18, atkSpeed:0.9, range:15, speed:60, cost:90, color:'#8B4513', atkType:'melee', armorType:'heavy', ult:'whirlwind',
     skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, skill3:{k:'parryArcher',v:0.30}, desc:'群伤2目标+斩杀5%血+30%招架弓手+斩杀后回10%血攻+10% | 大招旋风斩:每秒120%攻击范围伤害持续3秒CD60s（早期强）' },
-  paladin:  { name:'圣骑士', shape:'circle', size:11, hp:220, atk:12, atkSpeed:1.0, range:15, speed:60, cost:90, color:'#FFD700', atkType:'melee', armorType:'heavy', ult:'holyUlt',
+  paladin:  { name:'圣骑士', shape:'circle', size:11, hp:400, atk:12, atkSpeed:1.0, range:15, speed:60, cost:90, color:'#FFD700', atkType:'melee', armorType:'heavy', ult:'holyUlt',
     skill1:{k:'holyHeal',v:1}, skill2:{k:'dmgReduce',v:0.30}, skill3:{k:'strikeStun',v:0.10}, desc:'低血回血25%CD15s+30%减伤+10%攻击晕1秒 | 大招回血100%CD60s（中期强）' },
-  fighter:  { name:'格斗家', shape:'circle', size:10, hp:250, atk:20, atkSpeed:1.3, range:15, speed:80, cost:90, color:'#FF6B9D', atkType:'melee', armorType:'medium', ult:'dodgeUlt',
+  fighter:  { name:'格斗家', shape:'circle', size:10, hp:400, atk:20, atkSpeed:1.3, range:15, speed:80, cost:90, color:'#FF6B9D', atkType:'melee', armorType:'medium', ult:'dodgeUlt',
     skill1:{k:'dodge',v:0.15}, skill2:{k:'charge',v:200}, desc:'15%闪避+瞬影步冲锋CD5s | 大招躲闪后无敌2秒+周围120范围100%伤害CD25s（后期强）' },
 
   // 弓手升级（大招=穿透箭）
-  musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:0.9, range:150, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'pierceShot',
+  musketeer:{ name:'火枪手', shape:'triangle', size:9, hp:200, atk:10, atkSpeed:0.9, range:150, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'pierceShot',
     skill1:{k:'instantKill',v:0.08}, skill2:{k:'splash',v:0.25}, desc:'8%即死+25%溅射 | 大招穿透射击:直线400内5个单位CD35s（中期强）' },
-  ranger:   { name:'游侠', shape:'triangle', size:9, hp:60, atk:11, atkSpeed:1.0, range:220, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
+  ranger:   { name:'游侠', shape:'triangle', size:9, hp:220, atk:11, atkSpeed:1.0, range:220, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
     skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭+超远射程 | 大招箭雨CD40s（初期强）' },
-  crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:60, atk:10, atkSpeed:1.1, range:145, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
+  crossbow: { name:'破甲弩手', shape:'triangle', size:9, hp:200, atk:10, atkSpeed:1.1, range:145, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
     skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, desc:'20%连锁连击(最多5次)+无视护甲（后期强）' },
 
   // 法师升级（大招=暴风雪）
-  arcane:   { name:'奥法', shape:'diamond', size:9, hp:55, atk:18, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'medium', ult:'arcaneBlink',
+  arcane:   { name:'奥法', shape:'diamond', size:9, hp:200, atk:18, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'medium', ult:'arcaneBlink',
     skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.40}, desc:'10%变羊(目标不可攻击3秒四处游走)+群体护盾40%血（初期强）' },
-  ice:      { name:'冰法', shape:'diamond', size:10, hp:80, atk:10, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzardNova',
+  ice:      { name:'冰法', shape:'diamond', size:10, hp:250, atk:10, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzardNova',
     skill1:{k:'shieldAlly',v:0.15}, skill2:{k:'vulnerable',v:0.33}, desc:'友方冰霜护盾减伤15%+近战攻击者减速20%攻速降20%+33%概率易伤（中期强）' },
-  fire:     { name:'暗火法', shape:'diamond', size:9, hp:55, atk:15, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'fireBlast',
+  fire:     { name:'暗火法', shape:'diamond', size:9, hp:200, atk:15, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'fireBlast',
     skill1:{k:'summonSkeleton',v:5}, skill2:{k:'burnStack',v:1}, desc:'每5秒召唤骷髅+dot叠加（后期强）' },
 
   // 攻城车升级（大招=弹幕）
-  rocket:   { name:'火箭炮', shape:'square', size:11, hp:180, atk:25, atkSpeed:0.3, range:220, speed:50, cost:494, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'tripleShot',
+  rocket:   { name:'火箭炮', shape:'square', size:11, hp:350, atk:25, atkSpeed:0.3, range:220, speed:50, cost:494, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'tripleShot',
     skill1:{k:'splashRange',v:150}, skill2:{k:'splash',v:0.25}, desc:'大范围溅射150+25%溅射伤害 | 大招:3个随机目标各攻击1次(单目标打3次)CD40s（中期强）' },
   tesla:    { name:'特斯拉', shape:'square', size:11, hp:180, atk:25, atkSpeed:0.3, range:190, speed:50, cost:494, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'stunBlast',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标每单位15%概率晕1秒+电圈50范围20/s | 大招:下3次攻击必晕2秒并丢失目标CD40s（后期强）' },
-  siege:    { name:'攻城炮', shape:'square', size:13, hp:252, atk:25, atkSpeed:0.35, range:170, speed:50, cost:494, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'airSlug',
+  siege:    { name:'攻城炮', shape:'square', size:13, hp:400, atk:25, atkSpeed:0.35, range:170, speed:50, cost:494, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'airSlug',
     skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射 | 大招:下2次攻击200%伤害+击飞+丢失目标CD40s（早期强）' }
 };
 
