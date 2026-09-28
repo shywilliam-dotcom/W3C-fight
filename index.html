@@ -1805,7 +1805,33 @@ canvas.addEventListener('click', e => {
   if (codexOpen) {
     // 右上角关闭按钮
     if (cx >= 1130 && cx <= 1170 && cy >= 15 && cy <= 45) {
-      codexOpen = false; render(); return;
+      codexOpen = false; duelMode = false; duelPick = 0; render(); return;
+    }
+    // 1v1按钮
+    if (cx >= 1000 && cx <= 1120 && cy >= 15 && cy <= 45) {
+      duelMode = !duelMode; duelPick = 0; duelA = null; duelB = null; duelResult = null;
+      render(); return;
+    }
+    if (duelMode) {
+      // 选第一个兵种
+      let ci = 0;
+      for (const cat of CODEX) {
+        for (let i=0; i<cat.names.length; i++) {
+          const ni = ci;
+          const col = i % 2;
+          const row = Math.floor(i / 2);
+          const bw = 96, bh = 51;
+          const bx = 30 + col * (bw + 16);
+          const by2 = 70 + row * (bh + 12);
+          if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
+            if (duelPick === 0) { duelA = cat.types[i]; duelPick = 1; }
+            else { duelB = cat.types[i]; duelResult = runDuel(duelA, duelB); duelPick = 2; }
+            render(); return;
+          }
+          ci++;
+        }
+      }
+      return;
     }
     // 左侧按钮 2x2网格
     const lx = 30;
@@ -1962,6 +1988,48 @@ document.getElementById('speed-btn').addEventListener('click', () => {
 
 // ===== 图鉴 =====
 let codexOpen = false, codexSel = 0;
+let duelMode = false, duelPick = 0, duelA = null, duelB = null, duelResult = null;
+
+function runDuel(typeA, typeB) {
+  const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
+  if (!defA || !defB) return;
+  // 创建两个单位
+  const mk = (def, side) => ({
+    type: def.name, hp: def.hp, maxHp: def.hp, atk: def.atk,
+    atkSpeed: def.atkSpeed, range: def.range, speed: def.speed,
+    atkType: def.atkType, armorType: def.armorType, side: side,
+    cd: 0, x: 0, y: 0
+  });
+  let a = mk(defA, 'my'), b = mk(defB, 'enemy');
+  // 攻防相克
+  const dmgMul = (atkType, armorType) => {
+    if (atkType === 'chaos') return 1.0;
+    const table = {normal:{unarmored:1.0,light:1.0,medium:1.0,heavy:1.0,fort:0.5},
+                   pierce:{unarmored:1.0,light:1.5,medium:0.75,heavy:0.5,fort:0.35},
+                   magic:{unarmored:1.25,light:0.75,medium:0.75,heavy:1.25,fort:1.0},
+                   siege:{unarmored:1.0,light:1.0,medium:1.0,heavy:1.0,fort:1.5}};
+    return (table[atkType] && table[atkType][armorType]) || 1.0;
+  };
+  let time = 0;
+  while (time < 60 && a.hp > 0 && b.hp > 0) {
+    const dt = 0.1;
+    time += dt;
+    a.cd -= dt; b.cd -= dt;
+    if (a.cd <= 0) {
+      const dmg = a.atk * dmgMul(a.atkType, b.armorType);
+      b.hp -= dmg;
+      a.cd = a.atkSpeed;
+    }
+    if (b.cd <= 0) {
+      const dmg = b.atk * dmgMul(b.atkType, a.armorType);
+      a.hp -= dmg;
+      b.cd = b.atkSpeed;
+    }
+  }
+  if (a.hp <= 0 && b.hp <= 0) return {winner:'平局', time:time};
+  if (a.hp <= 0) return {winner:defB.name, time:time, aHp:Math.max(0,a.hp), bHp:b.hp};
+  return {winner:defA.name, time:time, aHp:a.hp, bHp:Math.max(0,b.hp)};
+}
 const CODEX = [
   {cat:'近战', types:['melee','barbarian','paladin','fighter'],
    names:['刀盾手','斧头野蛮人','圣骑士','格斗家'],
@@ -2031,6 +2099,37 @@ function drawCodex() {
   if (!codexOpen) return;
   ctx.fillStyle = 'rgba(0,0,0,0.9)';
   ctx.fillRect(0, 0, 1200, 720);
+  if (duelMode) {
+    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '对战结果', 600, 35);
+    ctx.textAlign='start';
+    if (duelResult) {
+      ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(`胜者: ${duelResult.winner}`, 500, 100);
+      ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif';
+      ctx.fillText(`用时: ${duelResult.time.toFixed(1)}秒`, 500, 130);
+      if (duelResult.aHp !== undefined) ctx.fillText(`A剩余血量: ${Math.round(duelResult.aHp)}`, 500, 155);
+      if (duelResult.bHp !== undefined) ctx.fillText(`B剩余血量: ${Math.round(duelResult.bHp)}`, 500, 180);
+      ctx.fillStyle = '#e67e22'; ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('点击任意兵种重新对战', 500, 220);
+    }
+    // 画兵种列表
+    let idx = 0, by = 250;
+    for (const cat of CODEX) {
+      ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 15px sans-serif';
+      ctx.fillText(cat.cat, 30, by); by += 24;
+      for (let i=0; i<cat.names.length; i++) {
+        const col = i % 2, row = Math.floor(i/2);
+        const bw=96, bh=40, bx=30+col*(bw+16), by2=by+row*(bh+8);
+        ctx.fillStyle = '#3a3a5a'; ctx.fillRect(bx, by2, bw, bh);
+        ctx.fillStyle = '#ddd'; ctx.font='13px sans-serif';
+        ctx.fillText(cat.names[i], bx+6, by2+25);
+        idx++;
+      }
+      by += 2*48 + 10;
+    }
+    return;
+  }
   // 标题
   ctx.fillStyle = '#FFD700'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('📖 兵种图鉴', 600, 35);
@@ -2041,6 +2140,11 @@ function drawCodex() {
   ctx.fillStyle = '#fff'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('✕', 1150, 36);
   ctx.textAlign = 'start';
+  // 1v1对战按钮
+  ctx.fillStyle = '#e67e22';
+  ctx.fillRect(1000, 15, 120, 30);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
+  ctx.fillText(duelMode ? '返回图鉴' : '⚔️ 1v1对战', 1010, 36);
 
   // 左半区：4类，每类2x2网格按钮
   const lx = 30;
