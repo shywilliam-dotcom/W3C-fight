@@ -671,14 +671,17 @@ function applyDmg(att, tgt, dmg, def) {
     // 暗火法击杀后立刻召唤一个骷髅
     if (tgt.hp <= 0 && att.type==='darkfire' && att.hp>0) {
       const lv = att.level||1;
-      game.units.push({
-        x: att.x - 15*att.dir, y: att.y + (Math.random()-0.5)*20, lane: att.lane, side: att.side,
-        type:'skeleton', dir: att.dir, level: lv, name: '白骨',
-        hp: 50*Math.pow(1.1,lv-1), maxHp: 50*Math.pow(1.1,lv-1),
-        atk: 8*Math.pow(1.1,lv-1), speed: 30, range: 15, atkSpeed: 1.0,
-        atkType:'normal', armorType:'unarmored', atkTimer: 0, firstAttackDone:false,
-        st:{}
-      });
+      const skelCount = game.units.filter(o => o.side===att.side && o.type==='skeleton' && o.master===att).length;
+      if (skelCount < 3) {
+        game.units.push({
+          x: att.x - 15*att.dir, y: att.y + (Math.random()-0.5)*20, lane: att.lane, side: att.side,
+          type:'skeleton', dir: att.dir, level: lv, name: '白骨', master: att,
+          hp: 100*Math.pow(1.15,lv-1), maxHp: 100*Math.pow(1.15,lv-1),
+          atk: 8*Math.pow(1.15,lv-1), speed: 30, range: 15, atkSpeed: 1.0,
+          atkType:'normal', armorType:'unarmored', atkTimer: 0, firstAttackDone:false,
+          st:{}
+        });
+      }
     }
   }
 }
@@ -799,12 +802,14 @@ function update(dt) {
       u.skeletonTimer -= dt;
       if (u.skeletonTimer<=0) {
         u.skeletonTimer = u.summonSkeleton;
+        const skelCount = game.units.filter(o => o.side===u.side && o.type==='skeleton' && o.master===u).length;
+        if (skelCount >= 3) return;
         const skelMul = Math.pow(1.15, (u.level||1)-1);
-        const skelHp = Math.round(50 * skelMul);
+        const skelHp = Math.round(100 * skelMul);
         game.units.push({
           x:u.x - 15*u.dir, y:u.y + (Math.random()-0.5)*20, lane:u.lane, side:u.side, type:'skeleton',
-          dir:u.dir, level:u.level||1, atkType:'normal', armorType:'unarmored',
-          hp:skelHp, maxHp:skelHp, atk:Math.round(4*skelMul), atkSpeed:1.0, range:40, speed:60, atkTimer:0,
+          dir:u.dir, level:u.level||1, atkType:'normal', armorType:'unarmored', master:u,
+          hp:skelHp, maxHp:skelHp, atk:Math.round(4*skelMul), atkSpeed:1.0, range:15, speed:60, atkTimer:0,
           currentTarget:null, targetSwitchTimer:0, firstAttackDone:true, st:{}
         });
       }
@@ -853,12 +858,14 @@ function update(dt) {
     if (u.type==='arcane') {
       if (u.golemCD>0) u.golemCD-=dt;
       else {
+        const golemExists = game.units.some(o => o.side===u.side && o.type==='golem' && o.master===u);
+        if (golemExists) return;
         const golemMul = Math.pow(1.15, (u.level||1)-1);
-        const golemHp = Math.round(180 * golemMul);
+        const golemHp = Math.round(360 * golemMul);
         game.units.push({
           x:u.x - 15*u.dir, y:u.y + (Math.random()-0.5)*20, lane:u.lane, side:u.side, type:'golem',
-          dir:u.dir, level:u.level||1, atkType:'normal', armorType:'heavy',
-          hp:golemHp, maxHp:golemHp, atk:Math.round(12*golemMul), atkSpeed:1.0, range:40, speed:55, atkTimer:0,
+          dir:u.dir, level:u.level||1, atkType:'normal', armorType:'heavy', master:u,
+          hp:golemHp, maxHp:golemHp, atk:Math.round(12*golemMul), atkSpeed:1.0, range:15, speed:55, atkTimer:0,
           dmgReduce:0.5, st:{}
         });
         u.golemCD = 15;
@@ -1003,6 +1010,10 @@ function update(dt) {
       if (u.x<30) u.x=30;
       if (u.x>1170) u.x=1170;
     }
+  });
+  // 召唤者死亡时召唤物也死亡
+  game.units.forEach(u => {
+    if ((u.type==='skeleton'||u.type==='golem') && u.master && u.master.hp<=0) u.hp=0;
   });
   game.units = game.units.filter(u=>u.hp>0);
   // 兵营被摧毁
