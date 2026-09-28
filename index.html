@@ -1649,14 +1649,13 @@ function render() {
   if (game.selectedTower && game.selectedTower.alive) {
     const t = game.selectedTower;
     ctx.fillStyle='rgba(0,0,0,0.85)';
-    ctx.fillRect(50, 100, 200, 500);
+    ctx.fillRect(200, 620, 600, 80);
     ctx.strokeStyle=t.side==='my'?'#4FC3F7':'#EF5350'; ctx.lineWidth=2;
-    ctx.strokeRect(50, 100, 200, 500);
+    ctx.strokeRect(200, 620, 600, 80);
     ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
-    ctx.fillText(t.isBase?'基地':'防御塔', 65, 130);
+    ctx.fillText(t.isBase?'基地':'防御塔', 220, 645);
     ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
-    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}`, 65, 160);
-    ctx.fillText(`攻击: ${t.atk}  射程: ${t.range}`, 65, 185);
+    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}  攻击: ${t.atk}  射程: ${t.range}`, 220, 675);
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
