@@ -1638,7 +1638,15 @@ function render() {
     }
   }
 
-  // 选中单位状态面板（底部中间）
+  // 常驻信息栏（底部中间）
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.fillRect(250, 660, 600, 50);
+  ctx.strokeStyle='#555'; ctx.lineWidth=1;
+  ctx.strokeRect(250, 660, 600, 50);
+  ctx.fillStyle='#888'; ctx.font='12px sans-serif';
+  ctx.fillText('点选单位/塔查看详情', 280, 690);
+
+  // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
     const t = game.selectedTower;
     ctx.fillStyle='rgba(0,0,0,0.85)';
