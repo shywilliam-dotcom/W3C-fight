@@ -313,18 +313,18 @@ function initGame() {
   game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
     atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
-  // 每条路的塔：三角形排列（上边2个，下边1个）
+  // 每条路的塔：正三角形（两上一下，在道路两侧，近战走到路边可打）
   for (let lane=0; lane<3; lane++) {
     const y = LANE_Y[lane];
     const isMid = lane===1;
     const tRange = isMid ? 160 : 100;
-    // 我方：上边2个(x=180,230, y-25)，下边1个(x=280, y+25)
-    [[180,-25],[230,-25],[280,25]].forEach(([tx,dy]) => {
+    // 我方：上边2个(y-40)，下边1个(y+40)，x成三角形
+    [[200,-40],[260,-40],[230,40]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'my', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
-    // 敌方镜像：上边2个(x=1020,970, y-25)，下边1个(x=920, y+25)
-    [[1020,-25],[970,-25],[920,25]].forEach(([tx,dy]) => {
+    // 敌方镜像
+    [[1000,-40],[940,-40],[970,40]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'enemy', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
