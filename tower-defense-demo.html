@@ -1001,12 +1001,6 @@ function update(dt) {
         if (Math.abs(chaseT.y - u.y) > 5) u.y += (chaseT.y - u.y)*0.05;
       } else {
         u.x += u.speed*u.dir*dt;
-        // 进入中间广场范围，三路打通，y向中心靠拢
-        if (Math.abs(u.x-600) < 100) {
-          u.y += (360-u.y)*0.04;
-          u.lane = Math.round((u.y-180)/180);
-          if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
-        }
       }
       u.animState = 'walk';
       if (u.x<30) u.x=30;
