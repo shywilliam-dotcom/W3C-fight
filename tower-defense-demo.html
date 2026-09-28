@@ -263,7 +263,7 @@ function processPortrait(img, key) {
 }
 for (const k in PORTRAITS) {
   portraitImgs[k] = new Image();
-  portraitImgs[k].onload = () => { portraitImgs[k]._ready = true; };
+  portraitImgs[k].onload = () => { processPortrait(portraitImgs[k], k); };
   portraitImgs[k].src = PORTRAITS[k];
 }
 // 外部URL立绘（新补的兵种）
