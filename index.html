@@ -99,12 +99,12 @@ const EN_BASE_X = 1150;
 // 兵营槽位（田字格，密集在基地前方）
 const BARRACK_SLOTS = [
   // 左侧己方12兵营：2列6行
-  {x:25, y:100}, {x:65, y:100},
-  {x:25, y:180}, {x:65, y:180},
-  {x:25, y:260}, {x:65, y:260},
-  {x:25, y:340}, {x:65, y:340},
-  {x:25, y:420}, {x:65, y:420},
-  {x:25, y:500}, {x:65, y:500}
+  {x:10, y:100}, {x:45, y:100},
+  {x:10, y:180}, {x:45, y:180},
+  {x:10, y:260}, {x:45, y:260},
+  {x:10, y:340}, {x:45, y:340},
+  {x:10, y:420}, {x:45, y:420},
+  {x:10, y:500}, {x:45, y:500}
 ];
 // 我方塔（每路3座，后退留出战斗空间）
 const MY_TOWER_X = [180, 230, 280];
@@ -145,12 +145,12 @@ function getUnitName(type) {
 // 敌方兵营（镜像）
 const EN_BARRACK_POS = [
   // 右侧敌方12兵营：2列6行
-  {x:1140, y:100}, {x:1175, y:100},
-  {x:1140, y:180}, {x:1175, y:180},
-  {x:1140, y:260}, {x:1175, y:260},
-  {x:1140, y:340}, {x:1175, y:340},
-  {x:1140, y:420}, {x:1175, y:420},
-  {x:1140, y:500}, {x:1175, y:500}
+  {x:1155, y:100}, {x:1190, y:100},
+  {x:1155, y:180}, {x:1190, y:180},
+  {x:1155, y:260}, {x:1190, y:260},
+  {x:1155, y:340}, {x:1190, y:340},
+  {x:1155, y:420}, {x:1190, y:420},
+  {x:1155, y:500}, {x:1190, y:500}
 ];
 
 // ============ 兵种（魔兽攻防相克） =====// atkType: normal(普通) / pierce(穿刺) / magic(魔法) / siege(攻城)
@@ -1208,7 +1208,7 @@ function render() {
     const y = slot.y || (LANE_Y[slot.lane] + (slot.dy||0));
     const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<5&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-y)<5);
     if (!ex) {
-      ctx.beginPath(); ctx.arc(slot.x, y, 12, 0, Math.PI*2);
+      ctx.beginPath(); ctx.arc(slot.x, y, 16, 0, Math.PI*2);
       if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; }      else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=1.5; }
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = game.selectedType?'#4CAF50':'#4A6FA5';
@@ -1221,13 +1221,13 @@ function render() {
     const y = b.y || (LANE_Y[b.lane] + (b.dy||0));
     if (!b.alive) {
       ctx.fillStyle='#333';
-      ctx.fillRect(b.x-15, y-20, 30, 30);
-      ctx.strokeStyle='#555'; ctx.strokeRect(b.x-15, y-20, 30, 30);
+      ctx.fillRect(b.x-20, y-25, 40, 40);
+      ctx.strokeStyle='#555'; ctx.strokeRect(b.x-20, y-25, 40, 40);
       return;
     }
     ctx.fillStyle = b.side==='my'?'#2196F3':'#F44336';
-    ctx.fillRect(b.x-15, y-20, 30, 30);
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-15, y-20, 30, 30);
+    ctx.fillRect(b.x-20, y-25, 40, 40);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-20, y-25, 40, 40);
     const iconMap = {melee:'👊', barbarian:'👊', paladin:'👊', fighter:'👊',
       archer:'🏹', musketeer:'🏹', ranger:'🏹', crossbow:'🏹',
       mage:'🧙‍♂️', ice:'🧙‍♂️', arcane:'🧙‍♂️', fire:'🧙‍♂️', darkfire:'🧙‍♂️',
@@ -1640,11 +1640,11 @@ function render() {
 
   // 常驻信息栏（底部中间）
   ctx.fillStyle='rgba(0,0,0,0.5)';
-  ctx.fillRect(250, 660, 600, 50);
+  ctx.fillRect(200, 660, 700, 50);
   ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  ctx.strokeRect(250, 660, 600, 50);
+  ctx.strokeRect(200, 660, 700, 50);
   ctx.fillStyle='#888'; ctx.font='12px sans-serif';
-  ctx.fillText('点选单位/塔查看详情', 280, 690);
+  ctx.fillText('点选单位/塔查看详情', 230, 690);
 
   // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
