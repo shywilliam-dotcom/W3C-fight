@@ -36,7 +36,7 @@
     background: #0f0f23; border: 1px solid #0f3460; border-top: none; border-bottom: none;
     cursor: pointer; display: block;
   }
-  #control-panel { position: fixed; bottom: 0; left: 0; right: auto; transform: none; flex-direction: row; justify-content: flex-start; }
+  #control-panel { display: none; }
     background: #16213e; padding: 6px 12px;
     border: 1px solid #0f3460;
     display: flex; gap: 6px; align-items: center; flex-wrap: wrap; box-sizing: border-box; flex-shrink: 0;
@@ -1740,6 +1740,31 @@ function render() {
     ctx.textAlign='start';
   }
   ctx.restore();
+
+  // 右下角按钮
+  const btnY = 640;
+  const btnH = 35;
+  const btnW = 80;
+  const btnX = [950, 1040, 1130];
+  const btnLabels = ['1x', '重开', '模拟'];
+  const btnColors = ['#607D8B', '#F44336', '#4CAF50'];
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = btnColors[i];
+    ctx.fillRect(btnX[i], btnY, btnW, btnH);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+    ctx.strokeRect(btnX[i], btnY, btnW, btnH);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(btnLabels[i], btnX[i] + btnW/2, btnY + 22);
+    ctx.textAlign = 'start';
+  }
+  // 图鉴按钮
+  ctx.fillStyle = '#9C27B0';
+  ctx.fillRect(950, btnY + btnH + 5, btnW*2 + 10, btnH);
+  ctx.strokeStyle = '#fff';
+  ctx.strokeRect(950, btnY + btnH + 5, btnW*2 + 10, btnH);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('📖 图鉴', 950 + (btnW*2+10)/2, btnY + btnH + 27);
+  ctx.textAlign = 'start';
 
   // 图鉴覆盖层
   drawCodex();
