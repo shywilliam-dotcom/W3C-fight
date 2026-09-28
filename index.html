@@ -1641,17 +1641,17 @@ function render() {
 
   // 统一信息栏（底部贴边）
   ctx.fillStyle='rgba(0,0,0,0.85)';
-  ctx.fillRect(50, 660, 900, 60);
+  ctx.fillRect(50, 770, 900, 60);
   ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  ctx.strokeRect(50, 660, 900, 60);
+  ctx.strokeRect(50, 770, 900, 60);
 
   // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
     const t = game.selectedTower;
     ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
-    ctx.fillText(t.isBase?'基地':'防御塔', 80, 685);
+    ctx.fillText(t.isBase?'基地':'防御塔', 80, 795);
     ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
-    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}  攻击: ${t.atk}  射程: ${t.range}`, 200, 685);
+    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}  攻击: ${t.atk}  射程: ${t.range}`, 200, 795);
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
