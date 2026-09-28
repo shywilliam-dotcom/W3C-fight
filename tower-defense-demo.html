@@ -1050,6 +1050,9 @@ function endGame(win) {
 // ============ 渲染 =====
 function render() {
   ctx.clearRect(0,0,1200,720);
+  // 淡色背景
+  ctx.fillStyle = '#2a2a4a';
+  ctx.fillRect(0,0,1200,720);
 
   // ===== Buff图标 =====
   const buffDefs = [
@@ -1110,7 +1113,7 @@ function render() {
   ctx.lineCap = 'round';
   LANE_Y.forEach((y,i) => {
     // 我方路：从基地(50,300)弯到三路位置
-    ctx.strokeStyle = '#16163a';
+    ctx.strokeStyle = '#1e1e4a';
     ctx.beginPath();
     ctx.moveTo(50, 360);
     ctx.quadraticCurveTo(200, y, 380, y);
@@ -1636,6 +1639,9 @@ function render() {
     // 画立绘图片
     const pKey = typeToPortrait[u.type];
     const pImg = pKey ? portraitImgs[pKey] : null;
+    // 图鉴背景
+    ctx.fillStyle = '#3a3a5a';
+    ctx.fillRect(ax+5, ay+5, aw-10, ah-10);
     if (pImg && pImg.complete && pImg.naturalWidth > 0) {
       ctx.drawImage(pImg, ax+5, ay+5, aw-10, ah-10);
     } else {
