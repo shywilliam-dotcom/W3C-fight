@@ -888,18 +888,18 @@ function update(dt) {
     // 羁绊：弓手3种齐全 → 全体攻速+10%
     if (u.side==='my' && game.myBuffs.archerMaster) atkSpd *= 1.1;
 
-    // 找目标
+    // 找目标（勾股定理算真实距离）
     let bestT=null, bestD=Infinity;
     game.units.forEach(o => {
       if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
-      const d = Math.abs(o.x-u.x);
+      const d = Math.hypot(o.x-u.x, o.y-u.y);
       if (d<=u.range && d<bestD) { bestD=d; bestT=o; }
     });
     // 找塔
     game.towers.forEach(t => {
       if (t.lane!==u.lane&&!t.isBase) return;
       if (t.side===u.side||!t.alive) return;
-      const d = Math.abs(t.x-u.x)+(t.isBase?Math.abs(t.y-u.y)*0.5:0);
+      const d = Math.hypot(t.x-u.x, t.y-u.y);
       if (d<=u.range+20 && d<bestD) { bestD=d; bestT=t; }
     });
     // 找兵营：该路所有塔被摧毁后才能打兵营
@@ -979,7 +979,7 @@ function update(dt) {
       game.units.forEach(u => {
         if (!t.isBase && u.lane!==t.lane) return;
         if (u.side===t.side||u.hp<=0||u.st.iceBlock>0) return;
-        const d = Math.abs(u.x-t.x)+Math.abs(u.y-t.y)*0.3;
+        const d = Math.hypot(u.x-t.x, u.y-t.y);
         if (d<=t.range && d<bd) { bd=d; best=u; }
       });
       if (best) { best.hp-=t.atk; t.atkTimer=1.0;
