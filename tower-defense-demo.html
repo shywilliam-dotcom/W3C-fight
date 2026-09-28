@@ -888,20 +888,23 @@ function update(dt) {
     // 羁绊：弓手3种齐全 → 全体攻速+10%
     if (u.side==='my' && game.myBuffs.archerMaster) atkSpd *= 1.1;
 
-    // 找目标（勾股定理算真实距离）
+    // 找目标：优先攻击移动单位，其次塔
     let bestT=null, bestD=Infinity;
+    // 先搜移动单位（优先）
     game.units.forEach(o => {
       if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
       const d = Math.hypot(o.x-u.x, o.y-u.y);
       if (d<=u.range && d<bestD) { bestD=d; bestT=o; }
     });
-    // 找塔
-    game.towers.forEach(t => {
-      if (t.lane!==u.lane&&!t.isBase) return;
-      if (t.side===u.side||!t.alive) return;
-      const d = Math.hypot(t.x-u.x, t.y-u.y);
-      if (d<=u.range+20 && d<bestD) { bestD=d; bestT=t; }
-    });
+    // 没找到移动单位再搜塔
+    if (!bestT) {
+      game.towers.forEach(t => {
+        if (t.lane!==u.lane&&!t.isBase) return;
+        if (t.side===u.side||!t.alive) return;
+        const d = Math.hypot(t.x-u.x, t.y-u.y);
+        if (d<=u.range+20 && d<bestD) { bestD=d; bestT=t; }
+      });
+    }
     // 找兵营：该路所有塔被摧毁后才能打兵营
     if (bestD > u.range+20) {
       const enemySide = u.side==='my'?'enemy':'my';
