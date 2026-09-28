@@ -1797,8 +1797,9 @@ canvas.addEventListener('click', e => {
     cy = dy / rect.height * 720;
   }
 
-  // 反算缩放坐标
-  // 无缩放，直接使用
+  // 兵营用屏幕坐标，战场内容需要反算缩放
+  const fcX = (cx - 180) / 0.7;
+  const fcY = (cy - 80) / 0.7;
 
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
@@ -1928,7 +1929,7 @@ canvas.addEventListener('click', e => {
   let nearUnit = null, nd = Infinity;
   game.units.forEach(u => {
     if (u.hp<=0) return;
-    const d = Math.hypot(cx-u.x, cy-u.y);
+    const d = Math.hypot(fcX-u.x, fcY-u.y);
     if (d < nd && d < 20) { nd = d; nearUnit = u; }
   });
   if (nearUnit) {
@@ -1940,7 +1941,7 @@ canvas.addEventListener('click', e => {
   let nearTower = null, td = Infinity;
   game.towers.forEach(t => {
     if (!t.alive) return;
-    const d = Math.hypot(cx-t.x, cy-t.y);
+    const d = Math.hypot(fcX-t.x, fcY-t.y);
     if (d < td && d < 25) { td = d; nearTower = t; }
   });
   if (nearTower) {
