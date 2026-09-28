@@ -1640,11 +1640,11 @@ function render() {
 
   // 常驻信息栏（底部中间）
   ctx.fillStyle='rgba(0,0,0,0.5)';
-  ctx.fillRect(1080, 0, 120, 720);
+  ctx.fillRect(100, 660, 700, 60);
   ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  ctx.strokeRect(1080, 0, 120, 720);
+  ctx.strokeRect(100, 660, 700, 60);
   ctx.fillStyle='#888'; ctx.font='12px sans-serif';
-  ctx.fillText('点选单位', 1090, 360);
+  ctx.fillText('点选单位/塔查看详情', 130, 695);
 
   // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
