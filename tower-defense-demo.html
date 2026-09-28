@@ -318,13 +318,13 @@ function initGame() {
     const y = LANE_Y[lane];
     const isMid = lane===1;
     const tRange = 220;
-    // 我方：上边2个(y-40)，下边1个(y+40)，x成三角形
-    [[230,-40],[290,-40],[260,40]].forEach(([tx,dy]) => {
+    // 我方：上边2个(y-40)，下边1个(y+40)，间距略大于射程
+    [[150,-40],[380,-40],[265,40]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'my', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
     // 敌方镜像
-    [[970,-40],[910,-40],[940,40]].forEach(([tx,dy]) => {
+    [[1050,-40],[820,-40],[935,40]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'enemy', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
@@ -952,19 +952,31 @@ function update(dt) {
         u.animState = u.atkType==='magic' ? 'cast' : 'attack';
       }
     } else {
-      u.x += u.speed*u.dir*dt;
+      // 附近有敌人时朝敌人靠近，而不是继续往前冲
+      let chaseT = null, chaseD = Infinity;
+      game.units.forEach(o => {
+        if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+        const d = Math.hypot(o.x-u.x, o.y-u.y);
+        if (d < chaseD && d < u.range*4+60) { chaseD = d; chaseT = o; }
+      });
+      if (chaseT && chaseD > u.range) {
+        const dx = chaseT.x - u.x;
+        u.x += u.speed*(dx>0?1:-1)*dt;
+        if (Math.abs(chaseT.y - u.y) > 5) u.y += (chaseT.y - u.y)*0.05;
+      } else {
+        u.x += u.speed*u.dir*dt;
+        if (u.side==='my' && u.x>950) {
+          u.y += (360-u.y)*0.03;
+          u.lane = Math.round((u.y-180)/180);
+          if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
+        }
+        if (u.side==='enemy' && u.x<250) {
+          u.y += (360-u.y)*0.03;
+          u.lane = Math.round((u.y-180)/180);
+          if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
+        }
+      }
       u.animState = 'walk';
-      // 接近基地时三路汇合：y向基地中线靠拢
-      if (u.side==='my' && u.x>950) {
-        u.y += (360-u.y)*0.03;
-        u.lane = Math.round((u.y-180)/180); // 更新所属路
-        if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
-      }
-      if (u.side==='enemy' && u.x<250) {
-        u.y += (360-u.y)*0.03;
-        u.lane = Math.round((u.y-180)/180);
-        if (u.lane<0)u.lane=0; if(u.lane>2)u.lane=2;
-      }
       if (u.x<30) u.x=30;
       if (u.x>1170) u.x=1170;
     }
