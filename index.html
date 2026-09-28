@@ -252,7 +252,7 @@ function processPortrait(img, key) {
       // 白色/浅色背景变透明
       if (r > 220 && g > 220 && b > 220) { d[i+3] = 0; }
       // 深色/灰色背景变透明
-      else if (r < 60 && g < 60 && b < 60 && Math.abs(r-g)<20 && Math.abs(g-b)<20) { d[i+3] = 0; }
+      else if (r < 80 && g < 80 && b < 80 && Math.abs(r-g)<25 && Math.abs(g-b)<25) { d[i+3] = 0; }
     }
     tctx.putImageData(data, 0, 0);
     const url = tmp.toDataURL();
@@ -1206,12 +1206,12 @@ function render() {
         if (flip) ctx.scale(-1, 1);
         ctx.rotate(animRot);
         ctx.scale(animScale, animScale);
-        const sc = 2.0;
-        const iw = 22 * sc, ih = 28 * sc;
+        const sc = 1.4;
+        const iw = 22 * sc, ih = 28 * sc * 0.8;
         ctx.drawImage(pImg, -iw/2, -ih + 4, iw, ih);
         // 血条
         if (u.hp < u.maxHp) {
-          const bw = 24;
+          const bw = 20;
           ctx.fillStyle = 'rgba(0,0,0,0.6)';
           ctx.fillRect(-bw/2, -ih + 2, bw, 3);
           ctx.fillStyle = u.hp/u.maxHp > 0.5 ? '#4caf50' : u.hp/u.maxHp > 0.25 ? '#ff9800' : '#f44336';
