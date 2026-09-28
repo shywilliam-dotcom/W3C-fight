@@ -1805,7 +1805,7 @@ const CODEX = [
    skills:[
      '【无大招】\n被动1【治疗术】：buff，攻击时100%概率给附近血量最低友方回3%最大生命',
      '【大招·暴风雪】主动CD60s占用1次攻击，以目标为中心180范围造成80伤害(随等级提升)，主目标冰冻3秒不可动不可攻击，范围内目标减速30%持续5秒+易伤debuff\n被动1【冰霜护盾】：主动CD3s占用1次攻击，给1个友方加护盾减伤15%，近战攻击者打护盾单位移速降20%攻速降20%\n被动2【易伤】：debuff，攻击时33%概率使目标攻速降20%持续5秒',
-     '【大招·奥术闪现】主动CD60s占用1次攻击，濒死时无敌1秒传送回基地并回20%生命\n被动1【变羊】：debuff，攻击时10%概率使目标变羊不可攻击3秒四处游走\n被动2【群体护盾】：主动CD15s占用1次攻击，周围5个友方获得血上限30%的护盾',
+     '【大招·奥术闪现】主动CD60s占用1次攻击，濒死时无敌1秒传送回基地并回20%生命\n被动1【变羊】：debuff，攻击时10%概率使目标变羊不可攻击3秒四处游走\n被动2【群体护盾】：主动CD15s占用1次攻击，周围5个友方获得血上限40%的护盾\n被动3【召唤傀儡】：召唤CD15秒\n  召唤物：奥术傀儡(近战/重甲)\n  初始生命180/初始攻击12\n  减伤50%\n  成长：随法师等级每级+15%血和攻击(指数)\n  碰撞体积0可自由穿行',
      '【大招·暗炎爆发】主动CD20s占用1次攻击，对目标造成500%伤害\n被动1【灼烧】：debuff，攻击时100%触发灼烧dot，连续攻击同一目标dot叠加，持续3秒\n被动2【召唤骷髅】：召唤CD5秒\n  召唤物：小骷髅(近战)\n  初始生命50/初始攻击4\n  成长：随法师等级每级+15%血和攻击(指数)\n  碰撞体积0可自由穿行'
    ],
    desc:[
@@ -1923,13 +1923,14 @@ function drawCodex() {
       ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 16px sans-serif';
       ctx.fillText('技能', tx, ty+95);
       const sk = catData.skills[si] || '';
-      const lines = sk.split('+');
+      const lines = sk.split('\n');
       let sy = ty+118;
-      ctx.font = '13px sans-serif';
-      for (const l of lines.slice(0,6)) {
-        ctx.fillStyle = '#ccc';
-        ctx.fillText('• ' + l.trim(), tx, sy);
-        sy += 20;
+      ctx.font = '12px sans-serif';
+      for (const l of lines) {
+        if (!l.trim()) { sy += 8; continue; }
+        ctx.fillStyle = l.startsWith('【') ? '#e94560' : '#ccc';
+        ctx.fillText(l.trim(), tx, sy);
+        sy += 18;
       }
     }
     // 属性
