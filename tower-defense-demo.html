@@ -144,12 +144,13 @@ function getUnitName(type) {
 
 // 敌方兵营（镜像）
 const EN_BARRACK_POS = [
-  {x:1150, lane:0, dy:-25}, {x:1180, lane:0, dy:-25},
-  {x:1150, lane:0, dy:25},  {x:1180, lane:0, dy:25},
-  {x:1150, lane:1, dy:-25}, {x:1180, lane:1, dy:-25},
-  {x:1150, lane:1, dy:25},  {x:1180, lane:1, dy:25},
-  {x:1150, lane:2, dy:-25}, {x:1180, lane:2, dy:-25},
-  {x:1150, lane:2, dy:25},  {x:1180, lane:2, dy:25}
+  // 右侧敌方12兵营：2列6行
+  {x:1140, y:100}, {x:1175, y:100},
+  {x:1140, y:180}, {x:1175, y:180},
+  {x:1140, y:260}, {x:1175, y:260},
+  {x:1140, y:340}, {x:1175, y:340},
+  {x:1140, y:420}, {x:1175, y:420},
+  {x:1140, y:500}, {x:1175, y:500}
 ];
 
 // ============ 兵种（魔兽攻防相克） =====// atkType: normal(普通) / pierce(穿刺) / magic(魔法) / siege(攻城)
@@ -398,7 +399,7 @@ function spawnUnit(b) {
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
   const yOff = (Math.random()-0.5)*70; // 每路6单位并行，y偏移±35
   const u = {
-    x:b.side==='my'?60:1140, y:LANE_Y[b.lane]+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
+    x:b.side==='my'?120:1080, y:LANE_Y[b.lane]+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
     name:getUnitName(b.unitType),
     dir: b.side==='my'?1:-1, level:lv,
     atkType: def.atkType || 'normal',
@@ -1204,8 +1205,8 @@ function render() {
 
   // 空兵营槽位
   BARRACK_SLOTS.forEach(slot => {
-    const y = LANE_Y[slot.lane] + (slot.dy||0);
-    const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
+    const y = slot.y || (LANE_Y[slot.lane] + (slot.dy||0));
+    const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<5&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-y)<5);
     if (!ex) {
       ctx.beginPath(); ctx.arc(slot.x, y, 12, 0, Math.PI*2);
       if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; }      else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=1.5; }
@@ -1217,7 +1218,7 @@ function render() {
 
   // 兵营
   game.barracks.forEach(b => {
-    const y = LANE_Y[b.lane] + (b.dy||0);
+    const y = b.y || (LANE_Y[b.lane] + (b.dy||0));
     if (!b.alive) {
       ctx.fillStyle='#333';
       ctx.fillRect(b.x-15, y-20, 30, 30);
@@ -1641,9 +1642,9 @@ function render() {
   if (game.selectedTower && game.selectedTower.alive) {
     const t = game.selectedTower;
     ctx.fillStyle='rgba(0,0,0,0.85)';
-    ctx.fillRect(150, 620, 700, 80);
+    ctx.fillRect(200, 630, 600, 70);
     ctx.strokeStyle=t.side==='my'?'#4FC3F7':'#EF5350'; ctx.lineWidth=2;
-    ctx.strokeRect(150, 620, 700, 80);
+    ctx.strokeRect(200, 630, 600, 70);
     ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
     ctx.fillText(t.isBase?'基地':'防御塔', 220, 645);
     ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
@@ -1833,7 +1834,7 @@ canvas.addEventListener('click', e => {
         if (cx>=h.x && cx<=h.x+h.w && cy>=h.y && cy<=h.y+h.h) {
           if (game.gold>=h.cost) {
             game.gold -= h.cost;
-            game.barracks.push({ x:m.slot.x, lane:m.slot.lane, dy:m.slot.dy||0, side:'my', unitType:h.key, level:1, hp:2000, maxHp:2000, spawnTimer:1, alive:true, armorType:'fort' });
+            game.barracks.push({ x:m.slot.x, y:m.slot.y, lane:m.slot.lane||0, dy:m.slot.dy||0, side:'my', unitType:h.key, level:1, hp:2000, maxHp:2000, spawnTimer:1, alive:true, armorType:'fort' });
           }
           game.buildMenu = null;
           return;
@@ -1876,9 +1877,9 @@ canvas.addEventListener('click', e => {
 
   // 找兵营槽位（优先检测，避免被兵挡住）
   for (const slot of BARRACK_SLOTS) {
-    const sy = LANE_Y[slot.lane] + (slot.dy||0);
-    if (Math.abs(cx-slot.x)<40 && Math.abs(cy-sy)<40) {
-      const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
+    const sy = slot.y || (LANE_Y[slot.lane] + (slot.dy||0));
+    if (Math.abs(cx-slot.x)<30 && Math.abs(cy-sy)<30) {
+      const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<5&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-sy)<5);
       if (ex) {
         game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
       } else {
