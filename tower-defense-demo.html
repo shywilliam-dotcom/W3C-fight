@@ -1657,9 +1657,9 @@ function render() {
   if (game.selectedTower && game.selectedTower.alive) {
     const t = game.selectedTower;
     ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
-    ctx.fillText(t.isBase?'基地':'防御塔', 80, 685);
+    ctx.fillText(t.isBase?'基地':'防御塔', 220, 630);
     ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
-    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}  攻击: ${t.atk}  射程: ${t.range}`, 200, 685);
+    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}  攻击: ${t.atk}  射程: ${t.range}`, 350, 630);
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
