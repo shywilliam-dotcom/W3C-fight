@@ -1640,11 +1640,11 @@ function render() {
 
   // 常驻信息栏（底部中间）
   ctx.fillStyle='rgba(0,0,0,0.5)';
-  ctx.fillRect(100, 660, 700, 60);
+  ctx.fillRect(1080, 100, 120, 500);
   ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  ctx.strokeRect(100, 660, 700, 60);
+  ctx.strokeRect(1080, 100, 120, 500);
   ctx.fillStyle='#888'; ctx.font='12px sans-serif';
-  ctx.fillText('点选单位/塔查看详情', 130, 695);
+  ctx.fillText('点选单位', 1090, 350);
 
   // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
@@ -1742,10 +1742,10 @@ function render() {
   ctx.restore();
 
   // 右下角按钮
-  const btnY = 660;
+  const btnY = 100;
   const btnH = 35;
   const btnW = 80;
-  const btnX = [900, 990, 1080];
+  const btnX = [1080, 1080];
   const btnLabels = ['1x', '重开', '模拟'];
   const btnColors = ['#607D8B', '#F44336', '#4CAF50'];
   for (let i = 0; i < 3; i++) {
