@@ -42,8 +42,8 @@
     display: flex; gap: 6px; align-items: center; flex-wrap: wrap; box-sizing: border-box; flex-shrink: 0;
   }
   .btn {
-    padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer;
-    font-size: 14px; font-weight: bold; transition: transform 0.1s;
+    padding: 14px 20px; border: none; border-radius: 8px; cursor: pointer;
+    font-size: 18px; font-weight: bold; transition: transform 0.1s;
   }
   .btn:hover { transform: scale(1.05); }
   .btn-melee { background: #4CAF50; color: #fff; }
@@ -339,7 +339,7 @@ function aiDecide(side) {
   if (game.gameOver) return;
   const aiGoldKey = side==='my' ? 'my' : 'enemy';
   // AI金币 = 每秒收入 + 击杀奖励
-  game.aiGold[aiGoldKey] += incomeRate() * 0.1; // 每帧收入
+  game.aiGold[aiGoldKey] += 2 * 0.1; // 每帧收入（每秒约2金币）
   const slots = side==='my' ? BARRACK_SLOTS : EN_BARRACK_POS;
   const existing = game.barracks.filter(b => b.side===side && b.alive);
   const gold = game.aiGold[aiGoldKey];
