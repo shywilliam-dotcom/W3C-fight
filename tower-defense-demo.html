@@ -1885,7 +1885,7 @@ canvas.addEventListener('click', e => {
   // 找兵营槽位（优先检测，避免被兵挡住）
   for (const slot of BARRACK_SLOTS) {
     const sy = LANE_Y[slot.lane] + (slot.dy||0);
-    if (Math.abs(cx-slot.x)<44 && Math.abs(cy-sy)<44) {
+    if (Math.abs(cx-slot.x)<30 && Math.abs(cy-sy)<30) {
       const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
       if (ex) {
         game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
