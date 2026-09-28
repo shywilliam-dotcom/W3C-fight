@@ -1077,10 +1077,7 @@ function render() {
   // 淡色背景
   ctx.fillStyle = '#3a3a5a';
   ctx.fillRect(0,0,1200,720);
-  // 整体缩小30%，居中
   ctx.save();
-  ctx.translate(90, 54);
-  ctx.scale(0.85, 0.85);
 
   // ===== Buff图标 =====
   const buffDefs = [
@@ -1792,8 +1789,7 @@ canvas.addEventListener('click', e => {
   }
 
   // 反算缩放坐标
-  cx = (cx - 90) / 0.85;
-  cy = (cy - 54) / 0.85;
+  // 无缩放，直接使用
 
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
