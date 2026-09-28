@@ -350,14 +350,14 @@ function aiDecide(side) {
 
   // 没兵营就先建基础兵
   if (existing.length < 6) {
-    const emptySlots = slots.filter(s => !existing.find(b => b.lane===s.lane && (b.dy||0)===(s.dy||0)));
+    const emptySlots = slots.filter(s => !existing.find(b => Math.abs(b.x-s.x)<5 && Math.abs((b.y||0)-(s.y||0))<5));
     if (emptySlots.length > 0) {
       const t = ['melee','archer','mage','cannon'][Math.floor(Math.random()*4)];
       const cost = UNIT_TYPES[t].cost;
       if (gold >= cost) {
         game.aiGold[aiGoldKey] -= cost;
         const s = emptySlots[0];
-        game.barracks.push({x:s.x, lane:s.lane, dy:s.dy, side:side, unitType:t, level:1, hp:2000, maxHp:2000, spawnTimer:2, alive:true, armorType:'fort'});
+        game.barracks.push({x:s.x, y:s.y, lane:s.lane||0, dy:s.dy||0, side:side, unitType:t, level:1, hp:2000, maxHp:2000, spawnTimer:2, alive:true, armorType:'fort'});
       }
       return;
     }
