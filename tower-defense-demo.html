@@ -631,10 +631,11 @@ function applyDmg(att, tgt, dmg, def) {
     // 野蛮人格挡弓手类攻击（穿刺攻击）
     if (tgt.parryArcher && att.atkType==='pierce' && Math.random()<tgt.parryArcher) return;
     if (tgt.dodge && Math.random()<tgt.dodge) {
-      // 闪避反击：格斗家闪避后立刻反击攻击者
-      if (tgt.dodgeCounter && att.hp>0) {
+      // 闪避反击：格斗家闪避后立刻反击，每秒最多一次
+      if (tgt.dodgeCounter && att.hp>0 && (!tgt.counterCD || tgt.counterCD<=0)) {
         let counterDmg = tgt.atk * 1.0;
         att.hp -= counterDmg;
+        tgt.counterCD = 1;
         spawnProj(tgt, att, '#FF6B9D');
       }
       // 格斗家大招：躲闪时50%概率无敌1秒+周围120范围100%伤害
@@ -784,6 +785,7 @@ function update(dt) {
     if (u.st.vulnerable>0) u.st.vulnerable-=dt;
     if (u.st.slow>0) u.st.slow-=dt;
     if (u.rampageCD && u.rampageCD>0) u.rampageCD-=dt;
+    if (u.counterCD && u.counterCD>0) u.counterCD-=dt;
     // 特斯拉电圈：身边50范围每秒10伤害
     if (u.electricField>0) {
       game.units.forEach(o => {
