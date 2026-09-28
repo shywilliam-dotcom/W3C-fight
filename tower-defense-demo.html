@@ -398,7 +398,7 @@ function spawnUnit(b) {
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
   const yOff = (Math.random()-0.5)*70; // 每路6单位并行，y偏移±35
   const u = {
-    x:b.x, y:LANE_Y[b.lane]+(b.dy||0)+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
+    x:b.side==='my'?60:1140, y:LANE_Y[b.lane]+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
     name:getUnitName(b.unitType),
     dir: b.side==='my'?1:-1, level:lv,
     atkType: def.atkType || 'normal',
