@@ -1698,8 +1698,18 @@ function render() {
     if (u.doubleStrike) skillText += `连击${Math.round(u.doubleStrike*100)}% `;
     if (u.instantKill) skillText += `即死${Math.round(u.instantKill*100)}% `;
     ctx.fillStyle='#4CAF50'; ctx.fillText(`被动: ${skillText||'无'}`, tx, py+106);
-    if (u.ultimate) {
-      ctx.fillStyle='#e94560'; ctx.fillText(`大招: ${u.ultimate}`, tx, py+122);
+    // Buff/DeBuff状态
+    let buffs = [];
+    if (u.rampageCD && u.rampageCD>0) buffs.push(`狂战(攻+10%/攻速+70%) ${u.rampageCD.toFixed(1)}s`);
+    if (u.st && u.st.burn>0) buffs.push(`灼烧dot ${u.st.burn.toFixed(1)}s`);
+    if (u.st && u.st.vulnerable>0) buffs.push(`易伤 ${u.st.vulnerable.toFixed(1)}s`);
+    if (u.st && u.st.slow>0) buffs.push(`减速 ${u.st.slow.toFixed(1)}s`);
+    if (u.st && u.st.stun>0) buffs.push(`眩晕 ${u.st.stun.toFixed(1)}s`);
+    if (u.st && u.st.iceBlock) buffs.push(`无敌/冰冻 ${u.st.iceBlock.toFixed(1)}s`);
+    if (u.shield && u.shield>0) buffs.push(`护盾 ${Math.round(u.shield)}`);
+    if (buffs.length) {
+      ctx.fillStyle='#FFD700';
+      buffs.forEach((b,i) => ctx.fillText(b, tx, py+122+i*16));
     }
   }
 
@@ -1929,7 +1939,7 @@ const CODEX = [
      '轻甲 | 血60 攻10 攻速1.1 射程145 移速70 | 造价120\n穿刺攻击→轻甲 | 后期强势'
    ]},
   {cat:'法师', types:['mage','ice','arcane','fire'],
-   names:['法师','冰巫法','奥战法','暗火法'],
+   names:['法师','冰巫师','奥战法','暗火法'],
    skills:[
      '【无大招】\n被动1【治疗术】：buff，攻击时100%概率给附近血量最低友方回3%最大生命',
      '【大招·暴风雪】主动CD60s占用1次攻击，以目标为中心180范围造成80伤害(随等级提升)，主目标冰冻3秒不可动不可攻击，范围内目标减速30%持续5秒+易伤debuff\n被动1【冰霜护盾】：主动CD3s占用1次攻击，给1个友方加护盾减伤15%，近战攻击者打护盾单位移速降20%攻速降20%\n被动2【易伤】：debuff，攻击时33%概率使目标攻速降20%持续5秒',
