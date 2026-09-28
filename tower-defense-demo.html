@@ -98,13 +98,13 @@ const EN_BASE_X = 1150;
 
 // 兵营槽位（田字格，密集在基地前方）
 const BARRACK_SLOTS = [
-  // 每路2×2田字格，3路共12个（间距加大不重叠）
-  {x:90, lane:0, dy:-35}, {x:180, lane:0, dy:-35},
-  {x:90, lane:0, dy:35},  {x:180, lane:0, dy:35},
-  {x:90, lane:1, dy:-35}, {x:180, lane:1, dy:-35},
-  {x:90, lane:1, dy:35},  {x:180, lane:1, dy:35},
-  {x:90, lane:2, dy:-35}, {x:180, lane:2, dy:-35},
-  {x:90, lane:2, dy:35},  {x:180, lane:2, dy:35}
+  // 每路2×2按钮，3路共12个，在地图最左侧
+  {x:25, lane:0, dy:-30}, {x:55, lane:0, dy:-30},
+  {x:25, lane:0, dy:30},  {x:55, lane:0, dy:30},
+  {x:25, lane:1, dy:-30}, {x:55, lane:1, dy:-30},
+  {x:25, lane:1, dy:30},  {x:55, lane:1, dy:30},
+  {x:25, lane:2, dy:-30}, {x:55, lane:2, dy:-30},
+  {x:25, lane:2, dy:30},  {x:55, lane:2, dy:30}
 ];
 // 我方塔（每路3座，后退留出战斗空间）
 const MY_TOWER_X = [180, 230, 280];
@@ -144,12 +144,12 @@ function getUnitName(type) {
 
 // 敌方兵营（镜像）
 const EN_BARRACK_POS = [
-  {x:1080, lane:0, dy:-20}, {x:1040, lane:0, dy:-20},
-  {x:1080, lane:0, dy:20},  {x:1040, lane:0, dy:20},
-  {x:1080, lane:1, dy:-20}, {x:1040, lane:1, dy:-20},
-  {x:1080, lane:1, dy:20},  {x:1040, lane:1, dy:20},
-  {x:1080, lane:2, dy:-20}, {x:1040, lane:2, dy:-20},
-  {x:1080, lane:2, dy:20},  {x:1040, lane:2, dy:20}
+  {x:1145, lane:0, dy:-30}, {x:1175, lane:0, dy:-30},
+  {x:1145, lane:0, dy:30},  {x:1175, lane:0, dy:30},
+  {x:1145, lane:1, dy:-30}, {x:1175, lane:1, dy:-30},
+  {x:1145, lane:1, dy:30},  {x:1175, lane:1, dy:30},
+  {x:1145, lane:2, dy:-30}, {x:1175, lane:2, dy:-30},
+  {x:1145, lane:2, dy:30},  {x:1175, lane:2, dy:30}
 ];
 
 // ============ 兵种（魔兽攻防相克） =====// atkType: normal(普通) / pierce(穿刺) / magic(魔法) / siege(攻城)
@@ -1218,34 +1218,26 @@ function render() {
   // 兵营
   game.barracks.forEach(b => {
     const y = LANE_Y[b.lane] + (b.dy||0);
-    const def = UNIT_TYPES[b.unitType];
     if (!b.alive) {
-      ctx.fillStyle='#444';
-      ctx.fillRect(b.x-9, y-24, 18, 16);
-      ctx.strokeStyle='#222'; ctx.strokeRect(b.x-9, y-24, 18, 16);
+      ctx.fillStyle='#333';
+      ctx.fillRect(b.x-15, y-20, 30, 30);
+      ctx.strokeStyle='#555'; ctx.strokeRect(b.x-15, y-20, 30, 30);
       return;
     }
     ctx.fillStyle = b.side==='my'?'#2196F3':'#F44336';
-    ctx.fillRect(b.x-28, y-50, 56, 44);
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-28, y-50, 56, 44);
-    // 兵种图标
+    ctx.fillRect(b.x-15, y-20, 30, 30);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-15, y-20, 30, 30);
     const iconMap = {melee:'👊', barbarian:'👊', paladin:'👊', fighter:'👊',
       archer:'🏹', musketeer:'🏹', ranger:'🏹', crossbow:'🏹',
       mage:'🧙‍♂️', ice:'🧙‍♂️', arcane:'🧙‍♂️', fire:'🧙‍♂️', darkfire:'🧙‍♂️',
       cannon:'💣', rocket:'💣', tesla:'💣', siege:'💣'};
-    ctx.font = '12px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(iconMap[b.unitType]||'❓', b.x, y-12);
-    ctx.textAlign='start';
-    // 血量条
-    if (b.hp < b.maxHp) {
-      ctx.fillStyle='#333'; ctx.fillRect(b.x-11, y-26, 22, 3);
-      ctx.fillStyle='#4CAF50'; ctx.fillRect(b.x-11, y-26, 22*(b.hp/b.maxHp), 3);
-    }
-    // 等级标记
+    ctx.font = '14px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(iconMap[b.unitType]||'❓', b.x, y+2);
     if (b.level>1) {
-      ctx.fillStyle='#FFD700'; ctx.font='9px sans-serif';
-      ctx.fillText(b.level, b.x-4, y+7);
+      ctx.fillStyle='#FFD700'; ctx.font='bold 10px sans-serif';
+      ctx.fillText('Lv'+b.level, b.x, y+14);
     }
+    ctx.textAlign='start';
   });
 
   // 单位
