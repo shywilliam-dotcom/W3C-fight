@@ -1665,13 +1665,13 @@ function render() {
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
     const pw = 800, ph = 120;
     const px = 200, py = 600;
-    ctx.fillStyle='rgba(0,0,0,0.92)';
+    ctx.fillStyle='rgba(0,0,0,0.85)';
     ctx.fillRect(px, py, pw, ph);
-    ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
+    ctx.strokeStyle='#555'; ctx.lineWidth=1;
     ctx.strokeRect(px, py, pw, ph);
 
     // 左侧大头像区域
-    const ax = px+5, ay = py+5, aw = 50, ah = 50;
+    const ax = px+10, ay = py+10, aw = 100, ah = 100;
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(ax, ay, aw, ah);
     ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
