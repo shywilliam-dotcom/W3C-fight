@@ -303,7 +303,7 @@ function initGame() {
   game = { gold:500, time:0, speed:1, selectedType:null,
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
     goldAcc:0, upgradeMenu:null, selectedUnit:null,
-    prepTime:5, bountyAnnounced:false };
+    prepTime:5, bountyAnnounced:false, aiGold:{my:500, enemy:500} };
   usedNames.clear();
 
   // 我方基地（1个，横跨三路）
@@ -326,25 +326,51 @@ function initGame() {
       game.towers.push({ x:tx, y, lane, side:'enemy', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
-    // 初始无兵营，全靠玩家/AI自己建
   }
 
-  // AI自动建兵营（双方各建6个，每路2个）
-  const types = ['melee','archer','mage','cannon'];
-  BARRACK_SLOTS.forEach((slot,i) => {
-    if (i % 2 === 0) {
-      const t = types[Math.floor(Math.random()*4)];
-      game.barracks.push({x:slot.x, lane:slot.lane, dy:slot.dy, side:'my', unitType:t, level:1, hp:2000, maxHp:2000, spawnTimer:Math.random()*3, alive:true, armorType:'fort'});
-    }
-  });
-  EN_BARRACK_POS.forEach((slot,i) => {
-    if (i % 2 === 0) {
-      const t = types[Math.floor(Math.random()*4)];
-      game.barracks.push({x:slot.x, lane:slot.lane, dy:slot.dy, side:'enemy', unitType:t, level:1, hp:2000, maxHp:2000, spawnTimer:Math.random()*3, alive:true, armorType:'fort'});
-    }
-  });
-
+  // AI兵营：空槽位，游戏过程中AI自动建和升级
   document.getElementById('game-over').style.display = 'none';
+}
+
+// AI决策：根据金币建兵营/升级
+function aiDecide(side) {
+  if (game.gameOver) return;
+  const aiGoldKey = side==='my' ? 'my' : 'enemy';
+  // AI金币 = 每秒收入 + 击杀奖励
+  game.aiGold[aiGoldKey] += incomeRate() * 0.1; // 每帧收入
+  const slots = side==='my' ? BARRACK_SLOTS : EN_BARRACK_POS;
+  const existing = game.barracks.filter(b => b.side===side && b.alive);
+  const gold = game.aiGold[aiGoldKey];
+
+  // 没兵营就先建基础兵
+  if (existing.length < 6) {
+    const emptySlots = slots.filter(s => !existing.find(b => b.lane===s.lane && (b.dy||0)===(s.dy||0)));
+    if (emptySlots.length > 0) {
+      const t = ['melee','archer','mage','cannon'][Math.floor(Math.random()*4)];
+      const cost = UNIT_TYPES[t].cost;
+      if (gold >= cost) {
+        game.aiGold[aiGoldKey] -= cost;
+        const s = emptySlots[0];
+        game.barracks.push({x:s.x, lane:s.lane, dy:s.dy, side:side, unitType:t, level:1, hp:2000, maxHp:2000, spawnTimer:2, alive:true, armorType:'fort'});
+      }
+      return;
+    }
+  }
+
+  // 有钱就升级到高级兵种
+  for (const b of existing) {
+    if (b.level >= 10) continue;
+    const upgrades = UPGRADES[b.unitType];
+    if (!upgrades) continue;
+    // 升级到随机高级兵种
+    const upT = upgrades[Math.floor(Math.random()*upgrades.length)];
+    const upCost = Math.round(UNIT_TYPES[upT].cost * 0.8);
+    if (gold >= upCost && b.level < 5) {
+      game.aiGold[aiGoldKey] -= upCost;
+      b.unitType = upT;
+      b.level = Math.max(b.level, Math.floor(Math.random()*3)+2);
+    }
+  }
 }
 
 // ============ 经济 =====
@@ -643,6 +669,10 @@ function update(dt) {
     if (game.prepTime <= 0) game.prepTime = 0;
     return;
   }
+
+  // AI决策：建兵营/升级
+  aiDecide('my');
+  aiDecide('enemy');
 
   game.time += dt;
 
@@ -1989,14 +2019,7 @@ function startSimulation(rounds) {
     r++;
     
     initGame();
-    
-    // 给双方兵营随机升级路线
-    game.barracks.forEach(b => {
-      if (UPGRADES[b.unitType]) {
-        b.unitType = UPGRADES[b.unitType][Math.floor(Math.random()*3)];
-        b.level = Math.floor(Math.random()*5)+1;
-      }
-    });
+    // AI自动建兵营和升级（不再随机分配）
     
     if (rounds === 1) {
       // 观战模式：不手动update，让主循环正常跑
