@@ -107,10 +107,10 @@ const BARRACK_SLOTS = [
   {x:120, lane:2, dy:20},  {x:160, lane:2, dy:20}
 ];
 // 我方塔（每路3座，后退留出战斗空间）
-const MY_TOWER_X = [280, 350, 420];
+const MY_TOWER_X = [180, 230, 280];
 // 中间交战区 420~780 完全让开
 // 敌方塔
-const EN_TOWER_X = [780, 850, 920];
+const EN_TOWER_X = [920, 970, 1020];
 // ============ 名字库 ============
 const NAME_POOLS = {
   melee: ['赵铁柱','王大力','李铁山','张铁柱','刘大勇','陈石头','杨守义','黄开山','赵铁柱','孙铁柱','周大勇','吴铁牛','郑石头','马守山','朱开山','林铁柱','何大勇','高铁山','罗石头','郑守义','梁铁柱','宋大勇','唐铁牛','许石头','韩开山','冯铁柱','邓大勇','曹铁山','彭石头','萧守义','田铁柱','董大勇','袁铁牛','潘石头','蒋开山','蔡铁柱','余大勇','于铁山','杜石头','叶守义'],
@@ -303,7 +303,7 @@ function initGame() {
   game = { gold:500, time:0, speed:1, selectedType:null,
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
     goldAcc:0, upgradeMenu:null, selectedUnit:null,
-    prepTime:5, bountyAnnounced:false, aiGold:{my:500, enemy:500} };
+    prepTime:3, bountyAnnounced:false, aiGold:{my:500, enemy:500} };
   usedNames.clear();
 
   // 我方基地（1个，横跨三路）
@@ -674,16 +674,16 @@ function spawnProj(a,t,c) {
 function update(dt) {
   if (game.gameOver) return;
 
+  // AI决策：建兵营/升级（准备阶段也建）
+  aiDecide('my');
+  aiDecide('enemy');
+
   // 准备阶段：倒计时，不出兵不交战
   if (game.prepTime > 0) {
     game.prepTime -= dt;
     if (game.prepTime <= 0) game.prepTime = 0;
     return;
   }
-
-  // AI决策：建兵营/升级
-  aiDecide('my');
-  aiDecide('enemy');
 
   game.time += dt;
 
