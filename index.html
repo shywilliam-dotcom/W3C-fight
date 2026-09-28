@@ -250,9 +250,9 @@ function processPortrait(img, key) {
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], g = d[i+1], b = d[i+2];
       // 白色/浅色背景变透明
-      if (r > 220 && g > 220 && b > 220) { d[i+3] = 0; }
-      // 深色/灰色背景变透明
-      else if (r < 80 && g < 80 && b < 80 && Math.abs(r-g)<25 && Math.abs(g-b)<25) { d[i+3] = 0; }
+      if (r > 200 && g > 200 && b > 200) { d[i+3] = 0; }
+      // 深色/灰色背景变透明（包括深灰到纯黑）
+      else if (r < 120 && g < 120 && b < 120 && Math.abs(r-g)<30 && Math.abs(g-b)<30) { d[i+3] = 0; }
     }
     tctx.putImageData(data, 0, 0);
     const url = tmp.toDataURL();
@@ -317,7 +317,7 @@ function initGame() {
   for (let lane=0; lane<3; lane++) {
     const y = LANE_Y[lane];
     const isMid = lane===1;
-    const tRange = isMid ? 160 : 100;
+    const tRange = 220;
     // 我方：上边2个(y-40)，下边1个(y+40)，x成三角形
     [[200,-40],[260,-40],[230,40]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'my', isBase:false,
