@@ -1742,30 +1742,26 @@ function render() {
   }
   ctx.restore();
 
-  // 右下角按钮
-  const btnY = 660;
-  const btnH = 35;
-  const btnW = 80;
-  const btnX = [900, 990, 1080];
-  const btnLabels = ['1x', '重开', '模拟'];
-  const btnColors = ['#607D8B', '#F44336', '#4CAF50'];
-  for (let i = 0; i < 3; i++) {
-    ctx.fillStyle = btnColors[i];
-    ctx.fillRect(btnX[i], btnY, btnW, btnH);
+  // 右下角按钮 2x2
+  const btnW = 70, btnH = 30;
+  const btnStartX = 1000, btnStartY = 660;
+  const btns = [
+    {x:0, y:0, label:'1x', color:'#607D8B'},
+    {x:1, y:0, label:'重开', color:'#F44336'},
+    {x:0, y:1, label:'模拟', color:'#4CAF50'},
+    {x:1, y:1, label:'图鉴', color:'#9C27B0'}
+  ];
+  btns.forEach(b => {
+    const bx = btnStartX + b.x*(btnW+5);
+    const by = btnStartY + b.y*(btnH+5);
+    ctx.fillStyle = b.color;
+    ctx.fillRect(bx, by, btnW, btnH);
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
-    ctx.strokeRect(btnX[i], btnY, btnW, btnH);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(btnLabels[i], btnX[i] + btnW/2, btnY + 22);
+    ctx.strokeRect(bx, by, btnW, btnH);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(b.label, bx + btnW/2, by + 20);
     ctx.textAlign = 'start';
-  }
-  // 图鉴按钮
-  ctx.fillStyle = '#9C27B0';
-  ctx.fillRect(950, btnY + btnH + 5, btnW*2 + 10, btnH);
-  ctx.strokeStyle = '#fff';
-  ctx.strokeRect(950, btnY + btnH + 5, btnW*2 + 10, btnH);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('📖 图鉴', 950 + (btnW*2+10)/2, btnY + btnH + 27);
-  ctx.textAlign = 'start';
+  });
 
   // 图鉴覆盖层
   drawCodex();
