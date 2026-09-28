@@ -998,7 +998,6 @@ function update(dt) {
       if (chaseT && chaseD > u.range) {
         const dx = chaseT.x - u.x;
         u.x += u.speed*(dx>0?1:-1)*dt;
-        if (Math.abs(chaseT.y - u.y) > 5) u.y += (chaseT.y - u.y)*0.05;
       } else {
         u.x += u.speed*u.dir*dt;
       }
@@ -1757,6 +1756,10 @@ canvas.addEventListener('click', e => {
     cx = dx / rect.width * 1200;
     cy = dy / rect.height * 720;
   }
+
+  // 反算缩放坐标
+  cx = (cx - 180) / 0.7;
+  cy = (cy - 108) / 0.7;
 
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
