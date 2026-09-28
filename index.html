@@ -474,7 +474,14 @@ function doAttack(att, tgt, def) {
   }
   // 斩杀：目标血量<5%时直接击杀
   if (att.execute && tgt.type!==undefined && tgt.hp < tgt.maxHp*att.execute) {
-    tgt.hp = 0; spawnProj(att,tgt,'#FF4500'); return;
+    tgt.hp = 0; spawnProj(att,tgt,'#FF4500');
+    // 狂战：回10%血，攻+10%，攻速+70%持续3秒
+    if (att.hp>0) {
+      att.hp = Math.min(att.maxHp, att.hp + att.maxHp*0.1);
+      att.atk = (att.atk||0) * 1.1;
+      att.rampageCD = 3; // 持续3秒
+    }
+    return;
   }
   let targets=[tgt];
   if (att.multiTarget && Math.random()<att.multiTarget && tgt.type!==undefined) {
@@ -756,6 +763,7 @@ function update(dt) {
     if (u.st.stun>0) u.st.stun-=dt;
     if (u.st.vulnerable>0) u.st.vulnerable-=dt;
     if (u.st.slow>0) u.st.slow-=dt;
+    if (u.rampageCD && u.rampageCD>0) u.rampageCD-=dt;
     // 特斯拉电圈：身边50范围每秒10伤害
     if (u.electricField>0) {
       game.units.forEach(o => {
@@ -881,6 +889,8 @@ function update(dt) {
       const hpPct = u.hp/u.maxHp;
       atkSpd = u.atkSpeed * (1 + (1-hpPct)*0.6);
     }
+    // 斩杀后狂怒：攻速+70%持续3秒
+    if (u.rampageCD && u.rampageCD>0) atkSpd *= 1.7;
     // 易伤debuff：攻速降低20%
     if (u.st.vulnerable>0) atkSpd *= 0.8;
     // 冰法被动减速：攻速降低20%
