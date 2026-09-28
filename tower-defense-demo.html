@@ -1226,8 +1226,8 @@ function render() {
       return;
     }
     ctx.fillStyle = b.side==='my'?'#2196F3':'#F44336';
-    ctx.fillRect(b.x-9, y-24, 18, 16);
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-9, y-24, 18, 16);
+    ctx.fillRect(b.x-14, y-30, 28, 22);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-14, y-30, 28, 22);
     // 兵种图标
     const iconMap = {melee:'👊', barbarian:'👊', paladin:'👊', fighter:'👊',
       archer:'🏹', musketeer:'🏹', ranger:'🏹', crossbow:'🏹',
@@ -1789,8 +1789,8 @@ canvas.addEventListener('click', e => {
         const col = i % 2;
         const row = Math.floor(i / 2);
         const bw = 96, bh = 51;
-        const bx = lx + col * (bw + 12);
-        const by2 = by + row * (bh + 8);
+        const bx = lx + col * (bw + 16);
+        const by2 = by + row * (bh + 12);
         if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
           codexSel = ni; render(); return;
         }
@@ -1885,7 +1885,7 @@ canvas.addEventListener('click', e => {
   // 找兵营槽位（优先检测，避免被兵挡住）
   for (const slot of BARRACK_SLOTS) {
     const sy = LANE_Y[slot.lane] + (slot.dy||0);
-    if (Math.abs(cx-slot.x)<30 && Math.abs(cy-sy)<30) {
+    if (Math.abs(cx-slot.x)<28 && Math.abs(cy-sy)<28) {
       const ex = game.barracks.find(b=>b.side==='my'&&b.lane===slot.lane&&Math.abs(b.x-slot.x)<5&&(b.dy||0)===(slot.dy||0));
       if (ex) {
         game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
@@ -2027,8 +2027,8 @@ function drawCodex() {
       const col = i % 2;
       const row = Math.floor(i / 2);
       const bw = 96, bh = 51;
-      const bx = lx + col * (bw + 12);
-      const by2 = by + row * (bh + 8);
+      const bx = lx + col * (bw + 16);
+      const by2 = by + row * (bh + 12);
       if (codexSel === ni) {
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(bx, by2, bw, bh);
