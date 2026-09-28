@@ -98,13 +98,13 @@ const EN_BASE_X = 1150;
 
 // 兵营槽位（田字格，密集在基地前方）
 const BARRACK_SLOTS = [
-  // 每路2×2按钮，3路共12个，在地图最左侧
-  {x:25, lane:0, dy:-30}, {x:55, lane:0, dy:-30},
-  {x:25, lane:0, dy:30},  {x:55, lane:0, dy:30},
-  {x:25, lane:1, dy:-30}, {x:55, lane:1, dy:-30},
-  {x:25, lane:1, dy:30},  {x:55, lane:1, dy:30},
-  {x:25, lane:2, dy:-30}, {x:55, lane:2, dy:-30},
-  {x:25, lane:2, dy:30},  {x:55, lane:2, dy:30}
+  // 左侧己方兵营区，每路2x2
+  {x:30, lane:0, dy:-25}, {x:65, lane:0, dy:-25},
+  {x:30, lane:0, dy:25},  {x:65, lane:0, dy:25},
+  {x:30, lane:1, dy:-25}, {x:65, lane:1, dy:-25},
+  {x:30, lane:1, dy:25},  {x:65, lane:1, dy:25},
+  {x:30, lane:2, dy:-25}, {x:65, lane:2, dy:-25},
+  {x:30, lane:2, dy:25},  {x:65, lane:2, dy:25}
 ];
 // 我方塔（每路3座，后退留出战斗空间）
 const MY_TOWER_X = [180, 230, 280];
@@ -144,12 +144,12 @@ function getUnitName(type) {
 
 // 敌方兵营（镜像）
 const EN_BARRACK_POS = [
-  {x:1145, lane:0, dy:-30}, {x:1175, lane:0, dy:-30},
-  {x:1145, lane:0, dy:30},  {x:1175, lane:0, dy:30},
-  {x:1145, lane:1, dy:-30}, {x:1175, lane:1, dy:-30},
-  {x:1145, lane:1, dy:30},  {x:1175, lane:1, dy:30},
-  {x:1145, lane:2, dy:-30}, {x:1175, lane:2, dy:-30},
-  {x:1145, lane:2, dy:30},  {x:1175, lane:2, dy:30}
+  {x:1135, lane:0, dy:-25}, {x:1170, lane:0, dy:-25},
+  {x:1135, lane:0, dy:25},  {x:1170, lane:0, dy:25},
+  {x:1135, lane:1, dy:-25}, {x:1170, lane:1, dy:-25},
+  {x:1135, lane:1, dy:25},  {x:1170, lane:1, dy:25},
+  {x:1135, lane:2, dy:-25}, {x:1170, lane:2, dy:-25},
+  {x:1135, lane:2, dy:25},  {x:1170, lane:2, dy:25}
 ];
 
 // ============ 兵种（魔兽攻防相克） =====// atkType: normal(普通) / pierce(穿刺) / magic(魔法) / siege(攻城)
@@ -1641,9 +1641,9 @@ function render() {
   if (game.selectedTower && game.selectedTower.alive) {
     const t = game.selectedTower;
     ctx.fillStyle='rgba(0,0,0,0.85)';
-    ctx.fillRect(200, 620, 600, 80);
+    ctx.fillRect(150, 620, 700, 80);
     ctx.strokeStyle=t.side==='my'?'#4FC3F7':'#EF5350'; ctx.lineWidth=2;
-    ctx.strokeRect(200, 620, 600, 80);
+    ctx.strokeRect(150, 620, 700, 80);
     ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
     ctx.fillText(t.isBase?'基地':'防御塔', 220, 645);
     ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
