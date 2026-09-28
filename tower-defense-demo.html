@@ -531,15 +531,16 @@ function doAttack(att, tgt, def) {
           Math.abs(o.x-att.x)<60) { applyDmg(att,o,dmg*0.8,def); hit++; }
     });
   }
-  // 特斯拉连锁闪电：跳chainLightning个目标，伤害递减
+  // 特斯拉连锁闪电：跳chainLightning个目标，伤害递减，目标间距离限制120
   if (att.chainLightning>0 && tgt.type!==undefined) {
     let hit=[tgt];
     let cur=tgt;
     for(let i=1;i<att.chainLightning;i++){
       let next=null,nd=Infinity;
       game.units.forEach(o=>{
-        if(o.lane===att.lane&&o.side!==att.side&&o.hp>0&&hit.indexOf(o)<0&&Math.abs(o.x-cur.x)<100){
-          const d=Math.abs(o.x-cur.x); if(d<nd){nd=d;next=o;}
+        if(o.lane===att.lane&&o.side!==att.side&&o.hp>0&&hit.indexOf(o)<0){
+          const d=Math.hypot(o.x-cur.x, o.y-cur.y);
+          if(d<120&&d<nd){nd=d;next=o;}
         }
       });
       if(!next) break;
