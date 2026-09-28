@@ -691,7 +691,8 @@ function spawnProj(a,t,c) {
   let style = 'orb'; // orb=光球(法师), arrow=箭, bullet=火枪, shell=攻城炮弹
   if (a.type==='archer'||a.type==='ranger'||a.type==='crossbow') style='arrow';
   else if (a.type==='musketeer') style='bullet';
-  else if (['cannon','siege','rocket','tesla'].includes(a.type)) style='shell';
+  else if (['cannon','siege','rocket'].includes(a.type)) style='shell';
+  else if (a.type==='tesla') style='bolt';
   game.projectiles.push({ x:a.x, y:a.y-5, tx:t.x, ty:t.y, p:0, color:c, style:style, startX:a.x, startY:a.y-5 });
 }
 
@@ -1535,10 +1536,24 @@ function render() {
       ctx.shadowBlur = 0;
     } else if (p.style==='shell') {
       // 攻城炮弹：抛物线
-      const arch = Math.sin(p.p * Math.PI) * 30; // 抛物线高度
+      const arch = Math.sin(p.p * Math.PI) * 30;
       ctx.shadowColor = p.color; ctx.shadowBlur = 6;
       ctx.fillStyle = '#5a4a3a';
       ctx.beginPath(); ctx.arc(cx, cy - arch, 5, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (p.style==='bolt') {
+      // 特斯拉闪电：锯齿状电光
+      ctx.strokeStyle = '#9B6BFF'; ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#B388FF'; ctx.shadowBlur = 10;
+      ctx.beginPath();
+      const segs = 5;
+      for (let i=0;i<=segs;i++) {
+        const t = i/segs;
+        const lx = p.x+(p.tx-p.x)*t;
+        const ly = p.y+(p.ty-p.y)*t + (i>0&&i<segs ? (Math.random()-0.5)*8 : 0);
+        if (i===0) ctx.moveTo(lx,ly); else ctx.lineTo(lx,ly);
+      }
+      ctx.stroke();
       ctx.shadowBlur = 0;
     } else {
       // 法师：光球
