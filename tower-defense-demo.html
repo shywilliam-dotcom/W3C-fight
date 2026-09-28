@@ -322,12 +322,12 @@ function initGame() {
     const isMid = lane===1;
     const tRange = 220;
     // 我方：上边2个(y-40)，下边1个(y+40)，间距略大于射程
-    [[150,-40],[380,-40],[265,40]].forEach(([tx,dy]) => {
+    [[130,-40],[360,-40],[245,40]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'my', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
     // 敌方镜像
-    [[1050,-40],[820,-40],[935,40]].forEach(([tx,dy]) => {
+    [[1070,-40],[840,-40],[955,40]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'enemy', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
@@ -1066,6 +1066,10 @@ function render() {
   // 淡色背景
   ctx.fillStyle = '#2a2a4a';
   ctx.fillRect(0,0,1200,720);
+  // 整体缩小30%，居中
+  ctx.save();
+  ctx.translate(180, 108);
+  ctx.scale(0.7, 0.7);
 
   // ===== Buff图标 =====
   const buffDefs = [
@@ -1121,40 +1125,33 @@ function render() {
   }
   ctx.textAlign='start';
 
-  // 路：三路在中间圆形广场汇合
-  const plazaX = 600, plazaY = 360, plazaR = 80;
+  // 路：三路直线，中间圆形广场拉通
+  const plazaX = 600, plazaY = 360, plazaR = 70;
   ctx.lineWidth = 80;
   ctx.lineCap = 'round';
   LANE_Y.forEach((y,i) => {
-    // 我方路：从基地到中间广场
     ctx.strokeStyle = '#1e1e4a';
     ctx.beginPath();
     ctx.moveTo(50, 360);
     ctx.quadraticCurveTo(200, y, 380, y);
-    ctx.lineTo(plazaX, plazaY + (y-360)*0.3);
+    ctx.lineTo(plazaX, y);
     ctx.stroke();
-    // 敌方路：从广场到敌方基地
     ctx.beginPath();
-    ctx.moveTo(plazaX, plazaY + (y-360)*0.3);
+    ctx.moveTo(plazaX, y);
+    ctx.lineTo(820, y);
     ctx.quadraticCurveTo(1000, y, 1150, 360);
     ctx.stroke();
   });
-  // 中间圆形广场
   ctx.fillStyle = '#252555';
-  ctx.beginPath();
-  ctx.arc(plazaX, plazaY, plazaR, 0, Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle = '#0f3460';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  // 路边框
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#0f3460';
+  ctx.beginPath(); ctx.arc(plazaX, plazaY, plazaR, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#0f3460'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.lineWidth = 2; ctx.strokeStyle = '#0f3460';
   LANE_Y.forEach((y,i) => {
     ctx.beginPath();
     ctx.moveTo(50, 360);
     ctx.quadraticCurveTo(200, y, 380, y);
-    ctx.lineTo(plazaX, plazaY + (y-360)*0.3);
+    ctx.lineTo(plazaX, y);
+    ctx.lineTo(820, y);
     ctx.quadraticCurveTo(1000, y, 1150, 360);
     ctx.stroke();
   });
@@ -1733,6 +1730,7 @@ function render() {
     ctx.fillText('⚔ 击杀敌方小兵可获得金币收益！⚔', 600, 130);
     ctx.textAlign='start';
   }
+  ctx.restore();
 
   // 图鉴覆盖层
   drawCodex();
