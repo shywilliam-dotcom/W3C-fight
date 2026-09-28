@@ -33,8 +33,9 @@
   }
   #gold-display { color: #ffd700; font-weight: bold; font-size: 16px; }
   canvas {
-    background: #0f0f23; border: 1px solid #0f3460; border-top: none; border-bottom: none;
+    background: #0f0f23; border: none;
     cursor: pointer; display: block;
+    width: 100vw; height: 100vh;
   }
   #control-panel { display: none; }
     background: #16213e; padding: 6px 12px;
@@ -1742,10 +1743,10 @@ function render() {
   ctx.restore();
 
   // 右下角按钮
-  const btnY = 100;
+  const btnY = 660;
   const btnH = 35;
   const btnW = 80;
-  const btnX = [1080, 1080];
+  const btnX = [900, 990, 1080];
   const btnLabels = ['1x', '重开', '模拟'];
   const btnColors = ['#607D8B', '#F44336', '#4CAF50'];
   for (let i = 0; i < 3; i++) {
