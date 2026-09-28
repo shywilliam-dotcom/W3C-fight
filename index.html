@@ -98,13 +98,9 @@ const EN_BASE_X = 1150;
 
 // 兵营槽位（田字格，密集在基地前方）
 const BARRACK_SLOTS = [
-  // 左侧己方12兵营：2列6行
-  {x:-60, y:100}, {x:-25, y:100},
-  {x:-60, y:180}, {x:-25, y:180},
-  {x:-60, y:260}, {x:-25, y:260},
-  {x:-60, y:340}, {x:-25, y:340},
-  {x:-60, y:420}, {x:-25, y:420},
-  {x:-60, y:500}, {x:-25, y:500}
+  // 上方己方12兵营：6列2行（旋转后=屏幕右边）
+  {x:200, y:20}, {x:320, y:20}, {x:440, y:20}, {x:560, y:20}, {x:680, y:20}, {x:800, y:20},
+  {x:200, y:55}, {x:320, y:55}, {x:440, y:55}, {x:560, y:55}, {x:680, y:55}, {x:800, y:55}
 ];
 // 我方塔（每路3座，后退留出战斗空间）
 const MY_TOWER_X = [230, 273, 315];
@@ -144,13 +140,9 @@ function getUnitName(type) {
 
 // 敌方兵营（镜像）
 const EN_BARRACK_POS = [
-  // 右侧敌方12兵营：2列6行
-  {x:1225, y:100}, {x:1260, y:100},
-  {x:1225, y:180}, {x:1260, y:180},
-  {x:1225, y:260}, {x:1260, y:260},
-  {x:1225, y:340}, {x:1260, y:340},
-  {x:1225, y:420}, {x:1260, y:420},
-  {x:1225, y:500}, {x:1260, y:500}
+  // 下方敌方12兵营：6列2行（旋转后=屏幕左边）
+  {x:200, y:665}, {x:320, y:665}, {x:440, y:665}, {x:560, y:665}, {x:680, y:665}, {x:800, y:665},
+  {x:200, y:695}, {x:320, y:695}, {x:440, y:695}, {x:560, y:695}, {x:680, y:695}, {x:800, y:695}
 ];
 
 // ============ 兵种（魔兽攻防相克） =====// atkType: normal(普通) / pierce(穿刺) / magic(魔法) / siege(攻城)
@@ -1640,11 +1632,11 @@ function render() {
 
   // 常驻信息栏（底部中间）
   ctx.fillStyle='rgba(0,0,0,0.5)';
-  ctx.fillRect(300, 620, 600, 100);
+  ctx.fillRect(1050, 100, 130, 500);
   ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  ctx.strokeRect(300, 620, 600, 100);
+  ctx.strokeRect(1050, 100, 130, 500);
   ctx.fillStyle='#888'; ctx.font='12px sans-serif';
-  ctx.fillText('点选单位/塔查看详情', 330, 670);
+  ctx.fillText('点选单位', 1060, 350);
 
   // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
@@ -1745,9 +1737,9 @@ function render() {
   const btnY = 640;
   const btnH = 35;
   const btnW = 80;
-  const btnX = [950, 1040, 1130];
-  const btnLabels = ['1x', '重开', '模拟'];
-  const btnColors = ['#607D8B', '#F44336', '#4CAF50'];
+  const btnX = [1050, 1140];
+  const btnLabels = ['1x', '重开'];
+  const btnColors = ['#607D8B', '#F44336'];
   for (let i = 0; i < 3; i++) {
     ctx.fillStyle = btnColors[i];
     ctx.fillRect(btnX[i], btnY, btnW, btnH);
