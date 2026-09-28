@@ -1136,8 +1136,7 @@ function render() {
   }
   ctx.textAlign='start';
 
-  // 路：三路直线，中间长方形广场连通
-  const plazaX = 600, plazaW = 120, plazaH = 320;
+  // 路：三条独立直路
   ctx.lineWidth = 80;
   ctx.lineCap = 'round';
   LANE_Y.forEach((y,i) => {
@@ -1145,26 +1144,15 @@ function render() {
     ctx.beginPath();
     ctx.moveTo(50, 360);
     ctx.quadraticCurveTo(200, y, 380, y);
-    ctx.lineTo(plazaX-plazaW/2, y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(plazaX+plazaW/2, y);
     ctx.lineTo(820, y);
     ctx.quadraticCurveTo(1000, y, 1150, 360);
     ctx.stroke();
   });
-  // 中间长方形广场
-  ctx.fillStyle = '#252555';
-  ctx.fillRect(plazaX-plazaW/2, 360-plazaH/2, plazaW, plazaH);
-  ctx.strokeStyle = '#0f3460'; ctx.lineWidth = 3;
-  ctx.strokeRect(plazaX-plazaW/2, 360-plazaH/2, plazaW, plazaH);
   ctx.lineWidth = 2; ctx.strokeStyle = '#0f3460';
   LANE_Y.forEach((y,i) => {
     ctx.beginPath();
     ctx.moveTo(50, 360);
     ctx.quadraticCurveTo(200, y, 380, y);
-    ctx.lineTo(plazaX-plazaW/2, y);
-    ctx.lineTo(plazaX+plazaW/2, y);
     ctx.lineTo(820, y);
     ctx.quadraticCurveTo(1000, y, 1150, 360);
     ctx.stroke();
