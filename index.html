@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.83';
+const VERSION = 'v8.84';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -385,26 +385,26 @@ function initGame() {
   game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
     atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
-  // 每边10个塔，严格按用户红圈位置：上路上方2+中路上方2+中路下方3+下路下方3
+  // 每边9个塔，严格按用户红点位置：上路上方2+中路上方1+中路下方3+下路下方3
   const tRange = 220;
   const roadHalf = 65;
-  // 我方10个塔：[lane, x, dy] dy=-65上方 dy=+65下方
+  // 我方塔：[lane, x, dy] dy=-65上方 dy=+65下方
   const myTowers = [
     // 上路上方2个
-    [0, 350, -roadHalf], [0, 580, -roadHalf],
-    // 中路上方2个
-    [1, 200, -roadHalf], [1, 420, -roadHalf],
+    [0, 420, -roadHalf], [0, 620, -roadHalf],
+    // 中路上方1个
+    [1, 500, -roadHalf],
     // 中路下方3个
-    [1, 250, roadHalf], [1, 480, roadHalf], [1, 680, roadHalf],
+    [1, 280, roadHalf], [1, 480, roadHalf], [1, 680, roadHalf],
     // 下路下方3个
-    [2, 350, roadHalf], [2, 580, roadHalf], [2, 750, roadHalf],
+    [2, 380, roadHalf], [2, 550, roadHalf], [2, 720, roadHalf],
   ];
   myTowers.forEach(([lane, tx, dy]) => {
     const ry = getRoadY(lane, tx);
     game.towers.push({ x:tx, y:ry+dy, lane, side:'my', isBase:false,
       hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
-  // 敌方镜像10个塔：x=1200-tx，dy相同
+  // 敌方镜像：x=1200-tx，dy相同
   myTowers.forEach(([lane, tx, dy]) => {
     const ex = 1200 - tx;
     const ry = getRoadY(lane, ex);
