@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.67';
+const VERSION = 'v8.68';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -2403,37 +2403,121 @@ let duelAnim = null; // {a:{hp,maxHp,cd,anim}, b:{...}, time, done}
 let duelLogScroll = 0; // 日志滚动偏移（像素），0=底部
 let duelLogAutoScroll = true; // 是否自动滚动到底部
 
-function startDuel(typeA, typeB, lv) {
-  const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
-  lv = lv || 6;
-  // 统一成长系数1.1
+
+// ============ 1v1模拟（复用主游戏战斗逻辑） ============
+// 创建跟主游戏完全一样的unit对象
+function createDuelUnit(type, side, lv, x) {
+  const def = UNIT_TYPES[type];
   const mul = Math.pow(1.1, lv-1);
-  const calcSpeed = (def, type) => {
-    let m = 1.0;
-    if (def.armorType === 'fort') m = 0.8;
-    else if (def.armorType === 'light') m = 1.3;
-    else if (def.armorType === 'unarmored') m = 0.9;
-    if (['mage','arcane','ice','fire'].includes(type)) m = 0.9;
-    return def.speed * m;
+  const rangeMul = 1 + (lv-1)*0.05;
+  const isMage = ['mage','arcane','ice','fire'].includes(type);
+  let speedMul = 1.0;
+  if (def.armorType === 'fort') speedMul = 0.8;
+  else if (def.armorType === 'light') speedMul = 1.3;
+  else if (def.armorType === 'unarmored') speedMul = 0.9;
+  if (isMage) speedMul = 0.9;
+  const u = {
+    x:x, y:320, yOff:0, lane:1, side:side, type:type,
+    name:getUnitName(type),
+    dir: side==='my'?1:-1, level:lv,
+    atkType: def.atkType || 'normal',
+    armorType: def.armorType || 'unarmored',
+    flatArmor: def.armor || 0,
+    hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
+    atk:Math.round(def.atk*mul), atkSpeed:def.atkSpeed,
+    range:def.range*rangeMul, speed:def.speed*speedMul, atkTimer:0.3,
+    crit:['cannon','rocket','tesla','siege'].includes(type)?0:(type==='fighter'?0.10:0.05)*mul,
+    dodge:['cannon','rocket','tesla','siege'].includes(type)?0:(type==='fighter'?0.15:0.05)*mul,
+    instantKill:0, polymorpth:0,
+    burnDps:0, poison:0, poisonDps:0, splash:0,
+    doubleStrike:0, multiTarget:0, splashRange:0,
+    focusFire:0, focusStacks:0, focusTarget:null,
+    doubleStrikeBonus:0,
+    aoe:0, dmgReduce:0, buildingDamage:0,
+    iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
+    armorPierce:false, summonGolem:0, chainLightning:0, longRange:0,
+    stun:0, vulnerable:0, dodgeCounter:false, execute:0, electricField:0,
+    summonSkeleton:0, skeletonTimer:0, burnStack:0,
+    currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
+    shieldWall:0, shieldCD:0, shield:0,
+    shieldAlly:0, shieldAllyCD:0,
+    golemCD:0, charge:0, chargeCD:0, rocketCd:0,
+    airSlugCD:0, airSlugStacks:0, stunBlastCD:0, stunBlastStacks:0,
+    pierceCD:0, blizzardCD:0, whirlwindCD:0, whirlwindActive:0,
+    backJumpCD:0, knockback:0, strikeStun:0, healAlly:0,
+    parryArcher:0, rampageCD:0,
+    ultimate: lv>=6 ? def.ult : null,
+    holyShieldT:0, holyUltCD:0,
+    arrowRainWaves:0, arrowRainWaveTimer:0, arrowRainX:0, arrowRainLane:1, arrowRainDmg:0,
+    whirlwindTick:0,
+    st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, poisonStacks:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 }
   };
-  const hpA = Math.round(defA.hp * mul);
-  const atkA = Math.round(defA.atk * mul);
-  const critA = ['cannon','rocket','tesla','siege'].includes(typeA)?0:(typeA==='fighter'?0.10:0.05) * mul;
-  const dodgeA = ['cannon','rocket','tesla','siege'].includes(typeA)?0:(typeA==='fighter'?0.15:0.05) * mul;
-  const spdA = calcSpeed(defA, typeA);
-  const hpB = Math.round(defB.hp * mul);
-  const atkB = Math.round(defB.atk * mul);
-  const critB = ['cannon','rocket','tesla','siege'].includes(typeB)?0:(typeB==='fighter'?0.10:0.05) * mul;
-  const dodgeB = ['cannon','rocket','tesla','siege'].includes(typeB)?0:(typeB==='fighter'?0.15:0.05) * mul;
-  const spdB = calcSpeed(defB, typeB);
-  // 战斗区域中心x=400，双方初始间距300，从两端入场
-  const centerX = 400, gap = 300;
+  // 应用技能
+  [def.skill1, def.skill2, def.skill3].forEach(s => {
+    if (!s) return;
+    if (s.k==='dmgReduce') u.dmgReduce = s.v*mul;
+    else if (s.k==='crit') u.crit = Math.max(u.crit, s.v*mul);
+    else if (s.k==='dodge') u.dodge = Math.max(u.dodge, s.v*mul);
+    else if (s.k==='instantKill') u.instantKill = s.v;
+    else if (s.k==='polymorph') u.polymorpth = s.v*mul;
+    else if (s.k==='burn') u.burnDps = 20*mul;
+    else if (s.k==='poison') { u.poison = s.v*mul; u.poisonDps = 6*mul; }
+    else if (s.k==='splash') u.splash = s.v*mul;
+    else if (s.k==='splashRange') u.splashRange = s.v*rangeMul;
+    else if (s.k==='doubleStrike') u.doubleStrike = s.v*mul;
+    else if (s.k==='focusFire') u.focusFire = s.v;
+    else if (s.k==='armorPierce') u.armorPierce = !!s.v;
+    else if (s.k==='aoe') u.aoe = s.v;
+    else if (s.k==='berserk') u.berserk = !!s.v;
+    else if (s.k==='holyHeal') u.holyHeal = !!s.v;
+    else if (s.k==='iceBlock') u.iceBlock = !!s.v;
+    else if (s.k==='summonGolem') u.summonGolem = s.v*mul;
+    else if (s.k==='chainLightning') u.chainLightning = s.v;
+    else if (s.k==='buildingDamage') u.buildingDamage = s.v;
+    else if (s.k==='longRange') u.range *= 1.3;
+    else if (s.k==='stun') u.stun = s.v*mul;
+    else if (s.k==='vulnerable') u.vulnerable = s.v*mul;
+    else if (s.k==='dodgeCounter') u.dodgeCounter = !!s.v;
+    else if (s.k==='execute') u.execute = s.v;
+    else if (s.k==='parryArcher') u.parryArcher = s.v;
+    else if (s.k==='electricField') u.electricField = s.v;
+    else if (s.k==='summonSkeleton') u.summonSkeleton = s.v;
+    else if (s.k==='burnStack') u.burnStack = 1;
+    else if (s.k==='shieldWall') u.shieldWall = s.v;
+    else if (s.k==='shieldAlly') u.shieldAlly = s.v;
+    else if (s.k==='charge') u.charge = s.v;
+    else if (s.k==='backJump') u.backJump = s.v;
+    else if (s.k==='knockback') u.knockback = s.v;
+    else if (s.k==='strikeStun') u.strikeStun = s.v;
+    else if (s.k==='healAlly') u.healAlly = s.v;
+  });
+  if (type==='fighter') u.dodge += (lv-1)*0.05;
+  return u;
+}
+
+// 1v1虚拟game环境（doAttack需要访问game.units等）
+let duelGame = null;
+
+function startDuel(typeA, typeB, lv) {
+  lv = lv || 6;
+  const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
+  // 创建跟主游戏一样的unit
+  const unitA = createDuelUnit(typeA, 'my', lv, 250);
+  const unitB = createDuelUnit(typeB, 'enemy', lv, 550);
+  // 虚拟game环境
+  duelGame = {
+    units: [unitA, unitB],
+    projectiles: [],
+    myBuffs: {},
+    time: 0
+  };
   duelAnim = {
-    typeA, typeB,
-    a: {hp:hpA, maxHp:hpA, atk:atkA, atkSpeed:defA.atkSpeed, crit:critA, dodge:dodgeA, speed:spdA, cd:0.5, anim:0, def:defA, stun:0, poison:0, ultCd:3, golemCd:0, golemHp:0, golemAtkCd:0, healCd:0, skeletonCd:0, skeletonHp:0, skeletonAtkCd:0, shield:0, x:centerX-gap/2, moving:true, slowT:0, arrowRainWaves:0, arrowRainTimer:0, whirlwindActive:0, whirlwindTick:0, airSlugStacks:0, stunBlastStacks:0, vulnerable:0},
-    b: {hp:hpB, maxHp:hpB, atk:atkB, atkSpeed:defB.atkSpeed, crit:critB, dodge:dodgeB, speed:spdB, cd:0.5, anim:0, def:defB, stun:0, poison:0, ultCd:3, golemCd:0, golemHp:0, golemAtkCd:0, healCd:0, skeletonCd:0, skeletonHp:0, skeletonAtkCd:0, shield:0, x:centerX+gap/2, moving:true, slowT:0, arrowRainWaves:0, arrowRainTimer:0, whirlwindActive:0, whirlwindTick:0, airSlugStacks:0, stunBlastStacks:0, vulnerable:0},
+    typeA, typeB, level: lv,
+    a: unitA, b: unitB,
+    game: duelGame,
     time: 0, done: false, winner: null,
-    logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})，双方从两端入场！`]
+    logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})，双方从两端入场！`],
+    aAttackAnim: 0, bAttackAnim: 0
   };
   duelLogScroll = 0;
   duelLogAutoScroll = true;
@@ -2442,389 +2526,186 @@ function startDuel(typeA, typeB, lv) {
 function updateDuel(dt) {
   if (!duelAnim || duelAnim.done) return;
   const d = duelAnim;
-  const mul = Math.pow(1.1, (duelLv||6)-1);
+  const a = d.a, b = d.b;
   d.time += dt;
-  const dmgMul = (atkType, armorType) => {
-    if (atkType === 'chaos') return 1.0;
-    const table = {normal:{unarmored:1.0,light:1.0,medium:1.0,heavy:1.0,fort:0.5},
-                   pierce:{unarmored:1.0,light:1.5,medium:0.75,heavy:0.5,fort:0.35},
-                   magic:{unarmored:1.25,light:0.75,medium:0.75,heavy:1.25,fort:1.0},
-                   siege:{unarmored:1.0,light:1.0,medium:1.0,heavy:1.0,fort:1.5}};
-    return (table[atkType] && table[atkType][armorType]) || 1.0;
-  };
-  d.a.cd -= dt; d.b.cd -= dt;
-  d.a.ultCd -= dt; d.b.ultCd -= dt;
-  d.a.stun = Math.max(0, d.a.stun - dt); d.b.stun = Math.max(0, d.b.stun - dt);
-  d.a.poison = Math.max(0, d.a.poison - dt); d.b.poison = Math.max(0, d.b.poison - dt);
-  d.a.anim = Math.max(0, d.a.anim - dt*3);
-  d.b.anim = Math.max(0, d.b.anim - dt*3);
-  d.a.slowT = Math.max(0, d.a.slowT - dt);
-  d.b.slowT = Math.max(0, d.b.slowT - dt);
-  // 圣骑士被动大招：血量低于15%时触发，回血100%+减伤60%持续2秒
-  if (d.a.def.ult === 'holyUlt' && d.a.hp>0 && d.a.hp/d.a.maxHp<0.15 && (!d.a.holyUltCD || d.a.holyUltCD<=0)) {
-    d.a.hp = d.a.maxHp; d.a.holyUltCD = 60; d.a.holyShieldT = 2;
-    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.a.def.name} 被动大招【圣光庇护】！回满血量+减伤60%持续2秒！`);
+  d.game.time = d.time;
+
+  // 状态衰减
+  a.atkTimer -= dt; b.atkTimer -= dt;
+  a.st.stun = Math.max(0, a.st.stun - dt);
+  b.st.stun = Math.max(0, b.st.stun - dt);
+  a.st.poison = Math.max(0, a.st.poison - dt);
+  b.st.poison = Math.max(0, b.st.poison - dt);
+  a.st.burn = Math.max(0, a.st.burn - dt);
+  b.st.burn = Math.max(0, b.st.burn - dt);
+  a.st.vulnerable = Math.max(0, a.st.vulnerable - dt);
+  b.st.vulnerable = Math.max(0, b.st.vulnerable - dt);
+  a.st.slow = Math.max(0, a.st.slow - dt);
+  b.st.slow = Math.max(0, b.st.slow - dt);
+  a.st.iceBlock = Math.max(0, a.st.iceBlock - dt);
+  b.st.iceBlock = Math.max(0, b.st.iceBlock - dt);
+  a.holyShieldT = Math.max(0, a.holyShieldT - dt);
+  b.holyShieldT = Math.max(0, b.holyShieldT - dt);
+  a.holyUltCD = Math.max(0, a.holyUltCD - dt);
+  b.holyUltCD = Math.max(0, b.holyUltCD - dt);
+  a.whirlwindCD = Math.max(0, a.whirlwindCD - dt);
+  b.whirlwindCD = Math.max(0, b.whirlwindCD - dt);
+  a.arrowRainWaveTimer = Math.max(0, a.arrowRainWaveTimer - dt);
+  b.arrowRainWaveTimer = Math.max(0, b.arrowRainWaveTimer - dt);
+  d.aAttackAnim = Math.max(0, d.aAttackAnim - dt*3);
+  d.bAttackAnim = Math.max(0, d.bAttackAnim - dt*3);
+
+  // 圣骑士被动大招：血量低于15%时触发
+  if (a.ultimate==='holyUlt' && a.hp>0 && a.hp/a.maxHp<0.15 && a.holyUltCD<=0) {
+    a.hp = a.maxHp; a.holyUltCD = 60; a.holyShieldT = 2;
+    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${UNIT_TYPES[d.typeA].name} 被动大招【圣光庇护】！回满血量+减伤60%持续2秒！`);
   }
-  if (d.a.holyShieldT>0) d.a.holyShieldT -= dt;
-  if (d.a.holyUltCD>0) d.a.holyUltCD -= dt;
-  if (d.b.def.ult === 'holyUlt' && d.b.hp>0 && d.b.hp/d.b.maxHp<0.15 && (!d.b.holyUltCD || d.b.holyUltCD<=0)) {
-    d.b.hp = d.b.maxHp; d.b.holyUltCD = 60; d.b.holyShieldT = 2;
-    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.b.def.name} 被动大招【圣光庇护】！回满血量+减伤60%持续2秒！`);
+  if (b.ultimate==='holyUlt' && b.hp>0 && b.hp/b.maxHp<0.15 && b.holyUltCD<=0) {
+    b.hp = b.maxHp; b.holyUltCD = 60; b.holyShieldT = 2;
+    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${UNIT_TYPES[d.typeB].name} 被动大招【圣光庇护】！回满血量+减伤60%持续2秒！`);
   }
-  if (d.b.holyShieldT>0) d.b.holyShieldT -= dt;
-  if (d.b.holyUltCD>0) d.b.holyUltCD -= dt;
-  // 移动入场：双方向对方移动，进入射程后停止
-  const dist = Math.abs(d.b.x - d.a.x);
-  const aRange = d.a.def.range || 15;
-  const bRange = d.b.def.range || 15;
-  const aSpd = d.a.slowT > 0 ? d.a.speed*0.5 : d.a.speed;
-  const bSpd = d.b.slowT > 0 ? d.b.speed*0.5 : d.b.speed;
-  if (d.a.hp > 0 && d.a.stun <= 0) {
-    if (dist > aRange) { d.a.x += aSpd * dt; d.a.moving = true; } else d.a.moving = false;
-  }
-  if (d.b.hp > 0 && d.b.stun <= 0) {
-    if (dist > bRange) { d.b.x -= bSpd * dt; d.b.moving = true; } else d.b.moving = false;
-  }
+
   // 毒dot每秒触发（无视护甲）
-  d.a.poisonTick = (d.a.poisonTick || 0) - dt;
-  d.b.poisonTick = (d.b.poisonTick || 0) - dt;
-  if (d.a.poison > 0 && d.a.poisonTick <= 0) { d.a.poisonTick = 1; const pd = d.a.atk*0.2*(d.a.poisonStacks||1); d.a.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.a.poisonStacks||1}层)对${d.a.def.name}造成${Math.round(pd)}伤害`); }
-  if (d.b.poison > 0 && d.b.poisonTick <= 0) { d.b.poisonTick = 1; const pd = d.b.atk*0.2*(d.b.poisonStacks||1); d.b.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.b.poisonStacks||1}层)对${d.b.def.name}造成${Math.round(pd)}伤害`); }
-  // 箭雨波次：每0.5秒一次，共4次
-  if (d.a.arrowRainWaves>0) {
-    d.a.arrowRainTimer -= dt;
-    if (d.a.arrowRainTimer<=0) {
-      d.a.arrowRainTimer = 0.5;
-      d.a.arrowRainWaves--;
-      const wd = d.a.atk*1.2;
-      d.b.hp -= wd;
-      d.logs.push(`[${d.time.toFixed(1)}s] 箭雨第${4-d.a.arrowRainWaves}波，造成${Math.round(wd)}伤害`);
-    }
+  a.poisonTick = (a.poisonTick||0) - dt;
+  b.poisonTick = (b.poisonTick||0) - dt;
+  if (a.st.poison > 0 && a.poisonTick <= 0) {
+    a.poisonTick = 1;
+    const pd = (a.st.poisonDps||0) * (a.st.poisonStacks||1);
+    a.hp -= pd;
+    d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${a.st.poisonStacks||1}层)对${UNIT_TYPES[d.typeA].name}造成${Math.round(pd)}伤害`);
   }
-  if (d.b.arrowRainWaves>0) {
-    d.b.arrowRainTimer -= dt;
-    if (d.b.arrowRainTimer<=0) {
-      d.b.arrowRainTimer = 0.5;
-      d.b.arrowRainWaves--;
-      const wd = d.b.atk*1.2;
-      d.a.hp -= wd;
-      d.logs.push(`[${d.time.toFixed(1)}s] 箭雨第${4-d.b.arrowRainWaves}波，造成${Math.round(wd)}伤害`);
-    }
-  }
-  // 旋风斩持续伤害：每秒120%，持续3秒
-  if (d.a.whirlwindActive>0) {
-    d.a.whirlwindActive -= dt;
-    d.a.whirlwindTick = (d.a.whirlwindTick||0) - dt;
-    if (d.a.whirlwindTick<=0) {
-      d.a.whirlwindTick = 0.5;
-      const wd = d.a.atk*1.2;
-      d.b.hp -= wd;
-      d.logs.push(`[${d.time.toFixed(1)}s] 旋风斩造成${Math.round(wd)}伤害`);
-    }
-  }
-  if (d.b.whirlwindActive>0) {
-    d.b.whirlwindActive -= dt;
-    d.b.whirlwindTick = (d.b.whirlwindTick||0) - dt;
-    if (d.b.whirlwindTick<=0) {
-      d.b.whirlwindTick = 0.5;
-      const wd = d.b.atk*1.2;
-      d.a.hp -= wd;
-      d.logs.push(`[${d.time.toFixed(1)}s] 旋风斩造成${Math.round(wd)}伤害`);
-    }
-  }
-  // A攻击（需要在射程内，持续大招期间不能普攻）
-  if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0 && dist <= aRange && d.a.whirlwindActive<=0 && d.a.arrowRainWaves<=0) {
-    // 大招：攻击时释放，占用1次攻击
-    let aUltUsed = false;
-    if (d.a.ultCd <= 0 && d.a.def.ult && d.a.def.ult !== 'arcaneBlink' && d.a.def.ult !== 'dodgeUlt') {
-      d.a.ultCd = 20;
-      d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.a.def.name} 释放大招【${d.a.def.ult}】！`);
-      if (d.a.def.ult === 'holyUlt') { /* 被动触发，不主动释放 */ }
-      else if (d.a.def.ult === 'whirlwind') { d.a.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每0.5秒120%伤害`); aUltUsed=true; }
-      else if (d.a.def.ult === 'arrowRain') { d.a.arrowRainWaves = 4; d.a.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); aUltUsed=true; }
-      else if (d.a.def.ult === 'pierceShot') { const pd = d.a.atk*3; d.b.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); aUltUsed=true; }
-      else if (d.a.def.ult === 'fireBlast') { const fd = d.a.atk*9; d.b.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); aUltUsed=true; }
-      else if (d.a.def.ult === 'blizzardNova') { const bd = 80*Math.pow(1.1,(duelLv||6)-1); d.b.hp -= bd; d.b.stun = 3; d.b.slowT = 5; d.b.vulnerable = 5; d.logs.push(`暴风雪造成${Math.round(bd)}伤害！冰冻3秒+减速5秒+易伤！`); aUltUsed=true; }
-      else if (d.a.def.ult === 'rapidFire') { for(let i=0;i<3;i++){ const rd=d.a.atk; d.b.hp-=rd; if(Math.random()<0.2) d.b.hp-=rd; } d.logs.push(`连发3次！每次20%连击`); aUltUsed=true; }
-      else if (d.a.def.ult === 'airSlug') { d.a.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
-      else if (d.a.def.ult === 'stunBlast') { d.a.stunBlastStacks = 3; d.logs.push(`闪电风暴装填！下3次攻击必晕2秒`); }
-      else if (d.a.def.ult === 'rocketBarrage') { const rd = d.a.atk*1.2; d.b.hp -= rd; d.logs.push(`火箭突袭造成${Math.round(rd)}伤害！`); aUltUsed=true; }
-      // 专注射击攻速加成
-      let aAtkSpd = d.a.atkSpeed;
-      if (d.a.focusStacks > 0) aAtkSpd *= (1 + Math.min(3.0, d.a.focusStacks * 0.06));
-      d.a.cd = 1/aAtkSpd;
-    }
-    if (!aUltUsed) {
-    // 闪避（使用单位的dodge属性，随等级成长）
-    if (d.b.dodge && d.b.stun<=0 && Math.random() < d.b.dodge) {
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避！(${Math.round(d.b.dodge*100)}%)`);
-      // 闪避反击
-      const counterDmg = Math.round(d.a.atk * 1.0);
-      d.a.hp -= counterDmg;
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 反击！造成${counterDmg}伤害`);
-    } else {
-      let dmg = d.a.atk * dmgMul(d.a.def.atkType, d.b.def.armorType);
-      let targetArmor = d.b.def.armor || 0;
-      if (d.a.def.skill2 && d.a.def.skill2.k==='armorPierce') targetArmor = 0;
-      dmg = dmg * (1 - targetArmor/(targetArmor+15));
-      // 即死
-      if (d.a.def.skill1 && d.a.def.skill1.k==='instantKill' && Math.random() < d.a.def.skill1.v) {
-        dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 触发即死！`);
-      }
-      // 斩杀
-      if (d.a.def.skill2 && d.a.def.skill2.k==='execute' && d.b.hp/d.b.maxHp < d.a.def.skill2.v) {
-        dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 斩杀！`);
-      }
-      // 暴击（使用单位的crit属性，随等级成长）
-      let crit = false;
-      if (d.a.crit && Math.random() < d.a.crit) { dmg *= 2; crit = true; }
-      dmg = Math.round(dmg);
-      // 攻城炮大招：空气弹层数，200%伤害+击飞
-      if (d.a.airSlugStacks > 0) {
-        d.a.airSlugStacks--;
-        dmg = Math.round(dmg * 2);
-        d.b.x += 30; // 击飞
-        d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 空气弹！200%伤害+击飞`);
-      }
-      // 特斯拉大招：闪电风暴层数，必晕2秒
-      if (d.a.stunBlastStacks > 0) {
-        d.a.stunBlastStacks--;
-        d.b.stun = 2;
-        d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪电风暴！目标昏迷2秒`);
-      }
-      // 圣骑士被动减伤60%
-      if (d.b.holyShieldT && d.b.holyShieldT>0) dmg *= 0.4;
-      d.b.hp -= dmg;
-      if (crit) d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 暴击！造成${Math.round(dmg)}伤害`);
-      // 法师自回血3%
-      if (d.a.def.skill1 && d.a.def.skill1.k==='healAlly') {
-        d.a.hp = Math.min(d.a.maxHp, d.a.hp + d.a.maxHp*0.03);
-        d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 治疗自己3%血！`);
-      }
-      // A连击（连锁最多5次，保底：未触发时+10%）
-      const dsSkill = (d.a.def.skill1 && d.a.def.skill1.k==='doubleStrike') ? d.a.def.skill1 :
-                      (d.a.def.skill2 && d.a.def.skill2.k==='doubleStrike') ? d.a.def.skill2 : null;
-      let hits = 1;
-      if (dsSkill) {
-        const dsChance = dsSkill.v + (d.a.dsBonus||0);
-        while (hits < 5 && Math.random() < dsChance) hits++;
-        if (hits===1) d.a.dsBonus = Math.min(0.5, (d.a.dsBonus||0)+0.10);
-        else d.a.dsBonus = 0;
-      }
-      if (hits > 1) { d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 连击${hits}次！`); for(let i=1;i<hits;i++) d.b.hp -= dmg; }
-      // 专注射击：破甲弩手同一目标每次攻击攻速+6%
-      if (d.a.def.skill3 && d.a.def.skill3.k==='focusFire') {
-        d.a.focusStacks = (d.a.focusStacks||0) + hits;
-        if (d.a.focusStacks > 0) d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 专注射击${d.a.focusStacks}层！攻速+${Math.min(300, d.a.focusStacks*6)}%`);
-      }
-      // 毒
-      if (d.a.def.skill1 && d.a.def.skill1.k==='poison') { d.b.poison = 3; d.b.poisonStacks = Math.min(4,(d.b.poisonStacks||0)+1); d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施毒！(${d.b.poisonStacks}层)`); }
-      // 晕
-      if (d.a.def.skill3 && d.a.def.skill3.k==='strikeStun' && Math.random() < d.a.def.skill3.v) { d.b.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 击晕目标！`); }
-      // 变羊
-      if (d.a.def.skill1 && d.a.def.skill1.k==='polymorph' && Math.random() < d.a.def.skill1.v) { d.b.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 变羊！目标无法行动！`); }
-      // 易伤：对已有易伤目标再次施加时额外50%伤害
-      if (d.a.def.skill2 && d.a.def.skill2.k==='vulnerable' && Math.random() < d.a.def.skill2.v) {
-        if (d.b.vulnerable > 0) {
-          const extraDmg = d.a.atk * 0.5;
-          d.b.hp -= extraDmg;
-          d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 易伤爆发！额外造成${Math.round(extraDmg)}伤害！`);
-        }
-        d.b.vulnerable = 3; d.b.slowT = 5;
-        d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施加易伤+减速！受到伤害+30%`);
-      }
-      // 连击已在上面处理
-      // 群伤/溅射
-      if (d.a.def.skill1 && d.a.def.skill1.k==='aoe') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 横扫！群伤！`); }
-      if (d.a.def.skill1 && d.a.def.skill1.k==='splashRange') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 溅射攻击！`); }
-      // 招架
-      if (d.a.def.skill3 && d.a.def.skill3.k==='parryArcher' && d.b.def.atkType==='pierce' && Math.random() < d.a.def.skill3.v) { dmg = 0; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 招架弓手攻击！`); }
-      if (hits === 2) { d.b.hp -= dmg; }
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 攻击 ${d.b.def.name}，造成${dmg}伤害`);
-    }
-    d.a.cd = 1/d.a.def.atkSpeed; d.a.anim = 1;
-    } // end if (!aUltUsed)
-  }
-  // B攻击（需要在射程内，持续大招期间不能普攻）
-  if (d.b.cd <= 0 && d.b.hp > 0 && d.b.stun <= 0 && dist <= bRange && d.b.whirlwindActive<=0 && d.b.arrowRainWaves<=0) {
-    // 大招：攻击时释放，占用1次攻击
-    let bUltUsed = false;
-    if (d.b.ultCd <= 0 && d.b.def.ult && d.b.def.ult !== 'arcaneBlink' && d.b.def.ult !== 'dodgeUlt') {
-      d.b.ultCd = 20;
-      d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.b.def.name} 释放大招【${d.b.def.ult}】！`);
-      if (d.b.def.ult === 'holyUlt') { /* 被动触发，不主动释放 */ }
-      else if (d.b.def.ult === 'whirlwind') { d.b.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每0.5秒120%伤害`); bUltUsed=true; }
-      else if (d.b.def.ult === 'arrowRain') { d.b.arrowRainWaves = 4; d.b.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); bUltUsed=true; }
-      else if (d.b.def.ult === 'pierceShot') { const pd = d.b.atk*3; d.a.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); bUltUsed=true; }
-      else if (d.b.def.ult === 'fireBlast') { const fd = d.b.atk*9; d.a.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); bUltUsed=true; }
-      else if (d.b.def.ult === 'blizzardNova') { const bd = 80*Math.pow(1.1,(duelLv||6)-1); d.a.hp -= bd; d.a.stun = 3; d.a.slowT = 5; d.a.vulnerable = 5; d.logs.push(`暴风雪造成${Math.round(bd)}伤害！冰冻3秒+减速5秒+易伤！`); bUltUsed=true; }
-      else if (d.b.def.ult === 'rapidFire') { for(let i=0;i<3;i++){ const rd=d.b.atk; d.a.hp-=rd; if(Math.random()<0.2) d.a.hp-=rd; } d.logs.push(`连发3次！每次20%连击`); bUltUsed=true; }
-      else if (d.b.def.ult === 'airSlug') { d.b.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
-      else if (d.b.def.ult === 'stunBlast') { d.b.stunBlastStacks = 3; d.logs.push(`闪电风暴装填！下3次攻击必晕2秒`); }
-      else if (d.b.def.ult === 'rocketBarrage') { const rd = d.b.atk*1.2; d.a.hp -= rd; d.logs.push(`火箭突袭造成${Math.round(rd)}伤害！`); bUltUsed=true; }
-      // 专注射击攻速加成
-      let bAtkSpd = d.b.atkSpeed;
-      if (d.b.focusStacks > 0) bAtkSpd *= (1 + Math.min(3.0, d.b.focusStacks * 0.06));
-      d.b.cd = 1/bAtkSpd;
-    }
-    if (!bUltUsed) {
-    if (d.a.dodge && d.a.stun<=0 && Math.random() < d.a.dodge) {
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避！(${Math.round(d.a.dodge*100)}%)`);
-      const counterDmg = Math.round(d.b.atk * 1.0);
-      d.b.hp -= counterDmg;
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 反击！造成${counterDmg}伤害`);
-    } else {
-      let dmg = d.b.atk * dmgMul(d.b.def.atkType, d.a.def.armorType);
-      let tArmor = d.a.def.armor || 0;
-      if (d.b.def.skill2 && d.b.def.skill2.k==='armorPierce') tArmor = 0;
-      dmg = dmg * (1 - tArmor/(tArmor+15));
-      if (d.b.def.skill1 && d.b.def.skill1.k==='instantKill' && Math.random() < d.b.def.skill1.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 触发即死！`); }
-      if (d.b.def.skill2 && d.b.def.skill2.k==='execute' && d.a.hp/d.a.maxHp < d.b.def.skill2.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 斩杀！`); }
-      // 暴击（基础5%，2倍伤害）
-      let critB = false;
-      if (d.b.crit && Math.random() < d.b.crit) { dmg *= 2; critB = true; }
-      dmg = Math.round(dmg);
-      // 攻城炮大招：空气弹层数，200%伤害+击飞
-      if (d.b.airSlugStacks > 0) {
-        d.b.airSlugStacks--;
-        dmg = Math.round(dmg * 2);
-        d.a.x -= 30; // 击飞
-        d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 空气弹！200%伤害+击飞`);
-      }
-      // 特斯拉大招：闪电风暴层数，必晕2秒
-      if (d.b.stunBlastStacks > 0) {
-        d.b.stunBlastStacks--;
-        d.a.stun = 2;
-        d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪电风暴！目标昏迷2秒`);
-      }
-      // 圣骑士被动减伤60%
-      if (d.a.holyShieldT && d.a.holyShieldT>0) dmg *= 0.4;
-      d.a.hp -= dmg;
-      if (critB) d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 暴击！造成${Math.round(dmg)}伤害`);
-      // 法师自回血3%
-      if (d.b.def.skill1 && d.b.def.skill1.k==='healAlly') {
-        d.b.hp = Math.min(d.b.maxHp, d.b.hp + d.b.maxHp*0.03);
-        d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 治疗自己3%血！`);
-      }
-      // B连击（连锁最多5次，保底：未触发时+10%）
-      const dsSkillB = (d.b.def.skill1 && d.b.def.skill1.k==='doubleStrike') ? d.b.def.skill1 :
-                       (d.b.def.skill2 && d.b.def.skill2.k==='doubleStrike') ? d.b.def.skill2 : null;
-      let hitsB = 1;
-      if (dsSkillB) {
-        const dsChanceB = dsSkillB.v + (d.b.dsBonus||0);
-        while (hitsB < 5 && Math.random() < dsChanceB) hitsB++;
-        if (hitsB===1) d.b.dsBonus = Math.min(0.5, (d.b.dsBonus||0)+0.10);
-        else d.b.dsBonus = 0;
-      }
-      if (hitsB > 1) { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 连击${hitsB}次！`); for(let i=1;i<hitsB;i++) d.a.hp -= dmg; }
-      // 专注射击：破甲弩手同一目标每次攻击攻速+6%
-      if (d.b.def.skill3 && d.b.def.skill3.k==='focusFire') {
-        d.b.focusStacks = (d.b.focusStacks||0) + hitsB;
-        if (d.b.focusStacks > 0) d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 专注射击${d.b.focusStacks}层！攻速+${Math.min(300, d.b.focusStacks*6)}%`);
-      }
-      if (d.b.def.skill1 && d.b.def.skill1.k==='poison') { d.a.poison = 3; d.a.poisonStacks = Math.min(4,(d.a.poisonStacks||0)+1); d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施毒！(${d.a.poisonStacks}层)`); }
-      if (d.b.def.skill3 && d.b.def.skill3.k==='strikeStun' && Math.random() < d.b.def.skill3.v) { d.a.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 击晕目标！`); }
-      if (d.b.def.skill1 && d.b.def.skill1.k==='polymorph' && Math.random() < d.b.def.skill1.v) { d.a.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 变羊！目标无法行动！`); }
-      // 易伤：对已有易伤目标再次施加时额外50%伤害
-      if (d.b.def.skill2 && d.b.def.skill2.k==='vulnerable' && Math.random() < d.b.def.skill2.v) {
-        if (d.a.vulnerable > 0) {
-          const extraDmg = d.b.atk * 0.5;
-          d.a.hp -= extraDmg;
-          d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 易伤爆发！额外造成${Math.round(extraDmg)}伤害！`);
-        }
-        d.a.vulnerable = 3; d.a.slowT = 5;
-        d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施加易伤+减速！受到伤害+30%`);
-      }
-      if (d.b.def.skill1 && d.b.def.skill1.k==='aoe') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 横扫！群伤！`); }
-      if (d.b.def.skill1 && d.b.def.skill1.k==='splashRange') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 溅射攻击！`); }
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 攻击 ${d.a.def.name}，造成${dmg}伤害`);
-    }
-    d.b.cd = 1/d.b.def.atkSpeed; d.b.anim = 1;
-    } // end if (!bUltUsed)
-  }
-  // 奥法召唤傀儡
-  d.a.golemCd -= dt; d.b.golemCd -= dt;
-  if (d.a.def.name === '奥法' && d.a.golemCd <= 0 && d.a.hp > 0 && d.a.golemHp <= 0) {
-    d.a.golemCd = 15; d.a.golemHp = 180 * mul;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 召唤傀儡！HP=${Math.round(d.a.golemHp)}`);
-  }
-  if (d.b.def.name === '奥法' && d.b.golemCd <= 0 && d.b.hp > 0 && d.b.golemHp <= 0) {
-    d.b.golemCd = 15; d.b.golemHp = 180 * mul;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 召唤傀儡！HP=${Math.round(d.b.golemHp)}`);
-  }
-  // 傀儡攻击（2秒1次，攻击力20）
-  d.a.golemAtkCd -= dt; d.b.golemAtkCd -= dt;
-  if (d.a.golemHp > 0 && d.a.golemAtkCd <= 0 && d.b.hp > 0) {
-    d.a.golemAtkCd = 2;
-    const gdmg = Math.round(20 * mul);
-    d.b.hp -= gdmg;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name}的傀儡攻击，造成${gdmg}伤害`);
-  }
-  if (d.b.golemHp > 0 && d.b.golemAtkCd <= 0 && d.a.hp > 0) {
-    d.b.golemAtkCd = 2;
-    const gdmg = Math.round(20 * mul);
-    d.a.hp -= gdmg;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name}的傀儡攻击，造成${gdmg}伤害`);
+  if (b.st.poison > 0 && b.poisonTick <= 0) {
+    b.poisonTick = 1;
+    const pd = (b.st.poisonDps||0) * (b.st.poisonStacks||1);
+    b.hp -= pd;
+    d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${b.st.poisonStacks||1}层)对${UNIT_TYPES[d.typeB].name}造成${Math.round(pd)}伤害`);
   }
 
-  // 圣骑士低血回血（25%，CD15秒）
-  d.a.healCd -= dt; d.b.healCd -= dt;
-  if (d.a.def.name==='圣骑士' && d.a.hp < d.a.maxHp*0.5 && d.a.healCd <= 0 && d.a.hp > 0) {
-    d.a.hp = Math.min(d.a.maxHp, d.a.hp + d.a.maxHp*0.25);
-    d.a.healCd = 15;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 圣光回血25%！`);
+  // 灼烧dot每秒触发
+  a.burnTick = (a.burnTick||0) - dt;
+  b.burnTick = (b.burnTick||0) - dt;
+  if (a.st.burn > 0 && a.burnTick <= 0) {
+    a.burnTick = 1;
+    const bd = a.st.burnDps || 0;
+    a.hp -= bd;
+    if (bd > 0) d.logs.push(`[${d.time.toFixed(1)}s] 灼烧dot对${UNIT_TYPES[d.typeA].name}造成${Math.round(bd)}伤害`);
   }
-  if (d.b.def.name==='圣骑士' && d.b.hp < d.b.maxHp*0.5 && d.b.healCd <= 0 && d.b.hp > 0) {
-    d.b.hp = Math.min(d.b.maxHp, d.b.hp + d.b.maxHp*0.25);
-    d.b.healCd = 15;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 圣光回血25%！`);
-  }
-
-  // 暗火法召唤骷髅（5秒CD，最多3个）
-  d.a.skeletonCd -= dt; d.b.skeletonCd -= dt;
-  if (d.a.def.name==='暗火法' && d.a.skeletonCd <= 0 && d.a.hp > 0) {
-    d.a.skeletonCd = 5; d.a.skeletonHp = 50;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 召唤骷髅！`);
-  }
-  if (d.b.def.name==='暗火法' && d.b.skeletonCd <= 0 && d.b.hp > 0) {
-    d.b.skeletonCd = 5; d.b.skeletonHp = 50;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 召唤骷髅！`);
-  }
-  // 骷髅攻击（1秒1次，攻击力4*mul*0.85）
-  d.a.skeletonAtkCd -= dt; d.b.skeletonAtkCd -= dt;
-  if (d.a.skeletonHp > 0 && d.a.skeletonAtkCd <= 0 && d.b.hp > 0) {
-    d.a.skeletonAtkCd = 1;
-    const sdmg = Math.round(4 * mul * 0.85);
-    d.b.hp -= sdmg;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name}的骷髅攻击，造成${sdmg}伤害`);
-  }
-  if (d.b.skeletonHp > 0 && d.b.skeletonAtkCd <= 0 && d.a.hp > 0) {
-    d.b.skeletonAtkCd = 1;
-    const sdmg = Math.round(4 * mul * 0.85);
-    d.a.hp -= sdmg;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name}的骷髅攻击，造成${sdmg}伤害`);
+  if (b.st.burn > 0 && b.burnTick <= 0) {
+    b.burnTick = 1;
+    const bd = b.st.burnDps || 0;
+    b.hp -= bd;
+    if (bd > 0) d.logs.push(`[${d.time.toFixed(1)}s] 灼烧dot对${UNIT_TYPES[d.typeB].name}造成${Math.round(bd)}伤害`);
   }
 
-  // 奥法护盾（40%血上限，一次性）
-  if (d.a.def.name==='奥法' && d.a.shield <= 0) { d.a.shield = d.a.maxHp*0.4; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 群体护盾！+${Math.round(d.a.shield)}`); }
-  if (d.b.def.name==='奥法' && d.b.shield <= 0) { d.b.shield = d.b.maxHp*0.4; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 群体护盾！+${Math.round(d.b.shield)}`); }
+  // 旋风斩持续伤害：每0.5秒120%
+  if (a.whirlwindActive > 0) {
+    a.whirlwindActive -= dt;
+    a.whirlwindTick = (a.whirlwindTick||0) - dt;
+    if (a.whirlwindTick <= 0) {
+      a.whirlwindTick = 0.5;
+      const wd = a.atk * 1.2;
+      b.hp -= wd;
+      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeA].name} 旋风斩造成${Math.round(wd)}伤害`);
+    }
+  }
+  if (b.whirlwindActive > 0) {
+    b.whirlwindActive -= dt;
+    b.whirlwindTick = (b.whirlwindTick||0) - dt;
+    if (b.whirlwindTick <= 0) {
+      b.whirlwindTick = 0.5;
+      const wd = b.atk * 1.2;
+      a.hp -= wd;
+      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeB].name} 旋风斩造成${Math.round(wd)}伤害`);
+    }
+  }
 
-  // 大招已移到攻击时触发
-  // 奥法濒死传送
-  if (d.a.def.ult === 'arcaneBlink' && d.a.hp > 0 && d.a.hp < d.a.maxHp*0.15 && d.a.ultCd <= 0) {
-    d.a.ultCd = 60; d.a.hp = d.a.maxHp*0.2;
-    d.logs.push(`[${d.time.toFixed(1)}s] ⭐奥法濒死传送！回20%血！`);
+  // 箭雨持续伤害：4波每0.5秒120%
+  if (a.arrowRainWaves > 0) {
+    if (a.arrowRainWaveTimer <= 0) {
+      a.arrowRainWaveTimer = 0.5;
+      a.arrowRainWaves--;
+      const wd = a.arrowRainDmg || a.atk * 1.2;
+      b.hp -= wd;
+      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeA].name} 箭雨第${4-a.arrowRainWaves}波，造成${Math.round(wd)}伤害`);
+    }
   }
-  if (d.b.def.ult === 'arcaneBlink' && d.b.hp > 0 && d.b.hp < d.b.maxHp*0.15 && d.b.ultCd <= 0) {
-    d.b.ultCd = 60; d.b.hp = d.b.maxHp*0.2;
-    d.logs.push(`[${d.time.toFixed(1)}s] ⭐奥法濒死传送！回20%血！`);
+  if (b.arrowRainWaves > 0) {
+    if (b.arrowRainWaveTimer <= 0) {
+      b.arrowRainWaveTimer = 0.5;
+      b.arrowRainWaves--;
+      const wd = b.arrowRainDmg || b.atk * 1.2;
+      a.hp -= wd;
+      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeB].name} 箭雨第${4-b.arrowRainWaves}波，造成${Math.round(wd)}伤害`);
+    }
   }
-  if (d.a.hp <= 0 || d.b.hp <= 0 || d.time > 60) {
+
+  // 移动入场：双方向对方移动，进入射程后停止
+  const dist = Math.abs(b.x - a.x);
+  const aRange = a.range || 15;
+  const bRange = b.range || 15;
+  const aSpd = a.st.slow > 0 ? a.speed*0.5 : a.speed;
+  const bSpd = b.st.slow > 0 ? b.speed*0.5 : b.speed;
+  if (a.hp > 0 && a.st.stun <= 0) {
+    if (dist > aRange) { a.x += aSpd * dt; }
+  }
+  if (b.hp > 0 && b.st.stun <= 0) {
+    if (dist > bRange) { b.x -= bSpd * dt; }
+  }
+
+  // 攻速计算（复用主游戏逻辑）
+  const calcAtkSpd = (u) => {
+    let spd = u.atkSpeed;
+    if (u.berserk) { const hpPct = u.hp/u.maxHp; spd = u.atkSpeed * (1 + (1-hpPct)*0.6); }
+    if (u.rampageCD && u.rampageCD>0) { spd *= 1.7; u.rampageCD -= dt; }
+    if (u.st.vulnerable>0) spd *= 0.8;
+    if (u.st.slow>0) spd *= 0.8;
+    if (u.focusFire>0 && u.focusStacks>0) spd *= (1 + Math.min(3.0, u.focusStacks * u.focusFire));
+    return spd;
+  };
+
+  // A攻击（复用主游戏doAttack）
+  if (a.atkTimer <= 0 && a.hp > 0 && a.st.stun <= 0 && dist <= aRange && a.whirlwindActive<=0 && a.arrowRainWaves<=0) {
+    const beforeHp = b.hp;
+    const beforeLogs = d.logs.length;
+    // 临时把game指向duelGame，让doAttack能工作
+    const oldGame = game;
+    game = d.game;
+    doAttack(a, b, UNIT_TYPES[d.typeA]);
+    game = oldGame;
+    d.aAttackAnim = 1;
+    const aSpd = calcAtkSpd(a);
+    a.atkTimer = 1 / aSpd;
+    // 记录伤害日志
+    if (b.hp < beforeHp) {
+      const dmg = beforeHp - b.hp;
+      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeA].name} 攻击 ${UNIT_TYPES[d.typeB].name}，造成${Math.round(dmg)}伤害`);
+    }
+  }
+
+  // B攻击（复用主游戏doAttack）
+  if (b.atkTimer <= 0 && b.hp > 0 && b.st.stun <= 0 && dist <= bRange && b.whirlwindActive<=0 && b.arrowRainWaves<=0) {
+    const beforeHp = a.hp;
+    const oldGame = game;
+    game = d.game;
+    doAttack(b, a, UNIT_TYPES[d.typeB]);
+    game = oldGame;
+    d.bAttackAnim = 1;
+    const bSpd = calcAtkSpd(b);
+    b.atkTimer = 1 / bSpd;
+    if (a.hp < beforeHp) {
+      const dmg = beforeHp - a.hp;
+      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeB].name} 攻击 ${UNIT_TYPES[d.typeA].name}，造成${Math.round(dmg)}伤害`);
+    }
+  }
+
+  // 胜负判定
+  if (a.hp <= 0 || b.hp <= 0 || d.time > 120) {
     d.done = true;
-    d.winner = d.a.hp <= 0 && d.b.hp <= 0 ? '平局' : d.a.hp > d.b.hp ? d.a.def.name : d.b.def.name;
+    d.winner = a.hp <= 0 && b.hp <= 0 ? '平局' : a.hp > b.hp ? UNIT_TYPES[d.typeA].name : UNIT_TYPES[d.typeB].name;
     d.logs.push(`战斗结束！胜者：${d.winner}，用时${d.time.toFixed(1)}秒`);
   }
 }
+
 const CODEX = [
   {cat:'近战', types:['melee','barbarian','paladin','fighter'],
    names:['刀盾手','斧头野蛮人','圣骑士','格斗家'],
@@ -2957,7 +2838,7 @@ function drawCodex() {
       ctx.fillStyle='#3a3a5a'; ctx.fillRect(60, 80, 680, 450);
       ctx.strokeStyle='#888'; ctx.strokeRect(60, 80, 680, 450);
       // A单位（左）- 真实x坐标
-      const ax = d.a.x + d.a.anim*15;
+      const ax = d.a.x + d.aAttackAnim*15;
       const aSKey = typeToSprite[d.typeA];
       const aImg = aSKey ? spriteImgs[aSKey] : null;
       if (aImg && aImg.complete && aImg.naturalWidth > 0 && aImg._ready!==false) {
@@ -2974,14 +2855,14 @@ function drawCodex() {
         ctx.fillRect(ax-8, 293, 16, 25);
       }
       ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(d.a.def.name, ax, 225);
+      ctx.fillText(UNIT_TYPES[d.typeA].name, ax, 225);
       // A血条跟随单位（上方）
       ctx.fillStyle='#333'; ctx.fillRect(ax-50, 230, 100, 12);
       ctx.fillStyle='#4CAF50'; ctx.fillRect(ax-50, 230, 100*Math.max(0,d.a.hp/d.a.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.a.hp))}/${d.a.maxHp}`, ax, 240);
       // B单位（右）- 真实x坐标
-      const bx = d.b.x - d.b.anim*15;
+      const bx = d.b.x - d.bAttackAnim*15;
       const bSKey = typeToSprite[d.typeB];
       const bImg = bSKey ? spriteImgs[bSKey] : null;
       if (bImg && bImg.complete && bImg.naturalWidth > 0 && bImg._ready!==false) {
@@ -2998,45 +2879,45 @@ function drawCodex() {
         ctx.fillRect(bx-8, 293, 16, 25);
       }
       ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
-      ctx.fillText(d.b.def.name, bx, 400);
+      ctx.fillText(UNIT_TYPES[d.typeB].name, bx, 400);
       // B血条跟随单位（下方）
       ctx.fillStyle='#333'; ctx.fillRect(bx-50, 380, 100, 12);
       ctx.fillStyle='#F44336'; ctx.fillRect(bx-50, 380, 100*Math.max(0,d.b.hp/d.b.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.b.hp))}/${d.b.maxHp}`, bx, 390);
       // 攻击特效：用真实坐标
-      if (d.a.anim > 0.3) {
-        const prog = 1 - d.a.anim;
+      if (d.aAttackAnim > 0.3) {
+        const prog = 1 - d.aAttackAnim;
         const px = ax + (bx - ax) * prog;
         const py = 320;
-        if (d.a.def.atkType === 'melee') {
+        if (UNIT_TYPES[d.typeA].atkType === 'melee') {
           ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
           ctx.beginPath(); ctx.arc(bx-10, py, 25, -Math.PI/4, Math.PI/4); ctx.stroke();
-        } else if (d.a.def.atkType === 'pierce') {
+        } else if (UNIT_TYPES[d.typeA].atkType === 'pierce') {
           ctx.strokeStyle = '#FF6B6B'; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(px-10, py); ctx.lineTo(px+10, py); ctx.stroke();
-        } else if (d.a.def.atkType === 'magic') {
+        } else if (UNIT_TYPES[d.typeA].atkType === 'magic') {
           ctx.fillStyle = '#FF00FF'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
           ctx.fillStyle = 'rgba(255,0,255,0.3)'; ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2); ctx.fill();
-        } else if (d.a.def.atkType === 'siege') {
+        } else if (UNIT_TYPES[d.typeA].atkType === 'siege') {
           const arch = Math.sin(prog*Math.PI)*30;
           ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py-arch, 8, 0, Math.PI*2); ctx.fill();
         }
       }
-      if (d.b.anim > 0.3) {
-        const prog = 1 - d.b.anim;
+      if (d.bAttackAnim > 0.3) {
+        const prog = 1 - d.bAttackAnim;
         const px = bx + (ax - bx) * prog;
         const py = 320;
-        if (d.b.def.atkType === 'melee') {
+        if (UNIT_TYPES[d.typeB].atkType === 'melee') {
           ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
           ctx.beginPath(); ctx.arc(ax+10, py, 25, Math.PI*3/4, Math.PI*5/4); ctx.stroke();
-        } else if (d.b.def.atkType === 'pierce') {
+        } else if (UNIT_TYPES[d.typeB].atkType === 'pierce') {
           ctx.strokeStyle = '#FF6B6B'; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(px+10, py); ctx.lineTo(px-10, py); ctx.stroke();
-        } else if (d.b.def.atkType === 'magic') {
+        } else if (UNIT_TYPES[d.typeB].atkType === 'magic') {
           ctx.fillStyle = '#00BFFF'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
           ctx.fillStyle = 'rgba(0,191,255,0.3)'; ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2); ctx.fill();
-        } else if (d.b.def.atkType === 'siege') {
+        } else if (UNIT_TYPES[d.typeB].atkType === 'siege') {
           const arch = Math.sin(prog*Math.PI)*30;
           ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py-arch, 8, 0, Math.PI*2); ctx.fill();
         }
@@ -3080,7 +2961,7 @@ function drawCodex() {
       allLines.forEach((line, i) => {
         const ly = visibleTop + i*lineH - duelLogScroll;
         if (ly < visibleTop - lineH || ly > visibleTop + visibleH + lineH) return;
-        ctx.fillStyle = line.log.includes('⭐') ? '#FFD700' : (line.log.includes(d.b.def.name) ? '#EF5350' : '#4FC3F7');
+        ctx.fillStyle = line.log.includes('⭐') ? '#FFD700' : (line.log.includes(UNIT_TYPES[d.typeB].name) ? '#EF5350' : '#4FC3F7');
         ctx.font='12px monospace';
         ctx.fillText(line.text, logX+10, ly);
       });
