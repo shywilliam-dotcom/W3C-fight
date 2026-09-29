@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.99';
+const VERSION = 'v9.00';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -955,7 +955,10 @@ function update(dt) {
   if (game.gameOver) return;
 
   // AI决策：只有开始后才运行
-  if (game.started) { aiDecide('my'); aiDecide('enemy'); }
+  if (game.started) {
+    if (game._watchMode) { aiDecide('my'); aiDecide('enemy'); } // 模拟观战：双方AI
+    else { aiDecide('enemy'); } // 正常模式：只有敌方AI，己方玩家控制
+  }
 
   // 准备阶段：倒计时，不出兵不交战
   if (game.prepTime > 0) {
