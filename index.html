@@ -5,7 +5,7 @@
 <title>三路兵营战 - Demo</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; overflow: hidden; background: #1a1a2e; }
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #3a3a5e; }
   body {
     color: #eee;
     font-family: 'Microsoft YaHei', sans-serif;
@@ -28,7 +28,7 @@
   }
   #hud {
     display: flex; justify-content: space-between; align-items: center;
-    background: #16213e; padding: 6px 12px;
+    background: #2a3a5e; padding: 6px 12px;
     border: 1px solid #0f3460; box-sizing: border-box; flex-shrink: 0;
   }
   #gold-display { color: #ffd700; font-weight: bold; font-size: 16px; }
@@ -1332,14 +1332,14 @@ function render() {
         ctx.fillStyle = '#2a1f14';
         ctx.fillRect(-4 - sw, 4, 3, 6);
         ctx.fillRect(1.5 + sw, 4, 3, 6);
-        ctx.fillStyle = '#1a1a1a';
+        ctx.fillStyle = '#3a3a4a';
         ctx.fillRect(-4.5 - sw, 9, 3.5, 1.5);
         ctx.fillRect(1 + sw, 9, 3.5, 1.5);
       } else {
         ctx.fillStyle = '#2a1f14';
         ctx.fillRect(-3.5, 4, 3, 6);
         ctx.fillRect(1, 4, 3, 6);
-        ctx.fillStyle = '#1a1a1a';
+        ctx.fillStyle = '#3a3a4a';
         ctx.fillRect(-4, 9, 3.5, 1.5);
         ctx.fillRect(0.5, 9, 3.5, 1.5);
       }
@@ -1463,7 +1463,7 @@ function render() {
         }
       }
       else if (t === 'fighter') {
-        ctx.fillStyle = '#1a1a2e';
+        ctx.fillStyle = '#4a4a6e';
         ctx.fillRect(-4, 2, 8, 6);
         const skinC = my ? '#E8B89A' : '#A08060';
         ctx.fillStyle = skinC;
@@ -1472,7 +1472,7 @@ function render() {
         ctx.beginPath(); ctx.moveTo(-2, -3); ctx.lineTo(2, -3); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(-2, -1); ctx.lineTo(2, -1); ctx.stroke();
         ctx.beginPath(); ctx.arc(0, -8, 3.8, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#1a1a1a';
+        ctx.fillStyle = '#3a3a4a';
         ctx.beginPath(); ctx.arc(0, -9.5, 3.8, Math.PI, 0); ctx.fill();
         ctx.fillStyle = '#FFF';
         if (u.animState === 'attack') {
@@ -1683,7 +1683,7 @@ function render() {
 
     // 左侧大头像区域
     const ax = px+10, ay = py+10, aw = 100, ah = 100;
-    ctx.fillStyle = '#1a1a2e';
+    ctx.fillStyle = '#4a4a6e';
     ctx.fillRect(ax, ay, aw, ah);
     ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
     ctx.strokeRect(ax, ay, aw, ah);
