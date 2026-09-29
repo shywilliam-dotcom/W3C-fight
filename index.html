@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.79';
+const VERSION = 'v8.80';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -3009,11 +3009,13 @@ function drawCodex() {
       const ax = d.a.x + d.aAttackAnim*15;
       const aSKey = typeToSprite[d.typeA];
       const aImg = aSKey ? spriteImgs[aSKey] : null;
+      // 需要镜像翻转的兵种（原图朝左，A方朝右需要翻转）
+      const flipTypes = ['mage','ice','arcane','fire','musketeer','melee','barbarian','archer','cannon','siege','rocket','tesla'];
       if (aImg && aImg.complete && aImg.naturalWidth > 0 && aImg._ready!==false) {
         ctx.save();
         ctx.translate(ax, 320);
-        // A方朝右，法师系原图朝左需要翻转
-        if (['mage','ice','arcane','fire'].includes(d.typeA)) ctx.scale(-2.5, 2.5);
+        // A方朝右，原图朝左的兵种需要翻转
+        if (flipTypes.includes(d.typeA)) ctx.scale(-2.5, 2.5);
         else ctx.scale(2.5, 2.5);
         ctx.drawImage(aImg, -15, -25, 30, 40);
         ctx.restore();
@@ -3036,8 +3038,8 @@ function drawCodex() {
       if (bImg && bImg.complete && bImg.naturalWidth > 0 && bImg._ready!==false) {
         ctx.save();
         ctx.translate(bx, 320);
-        // B方朝左，法师系原图朝左不需要翻转
-        if (['mage','ice','arcane','fire'].includes(d.typeB)) ctx.scale(2.5, 2.5);
+        // B方朝左，原图朝左的兵种不需要翻转，原图朝右的需要翻转
+        if (flipTypes.includes(d.typeB)) ctx.scale(2.5, 2.5);
         else ctx.scale(-2.5, 2.5);
         ctx.drawImage(bImg, -15, -25, 30, 40);
         ctx.restore();
