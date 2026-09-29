@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.54';
+const VERSION = 'v8.55';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -501,6 +501,8 @@ function doAttack(att, tgt, def) {
   let dmg = att.atk;
   // 羁绊：四基础兵种齐全 → 全体攻击+15%
   if (att.side==='my' && game.myBuffs.fullRoster) dmg *= 1.15;
+  // 死亡光环：悲壮 → 攻击+30%
+  if (att.atkBuff && att.atkBuffT>0) dmg *= (1 + att.atkBuff);
   if (att.crit && Math.random()<att.crit) dmg*=2;
   if (att.holyStrike && Math.random()<att.holyStrike) dmg*=1.5;
   if (att.instantKill && Math.random()<att.instantKill && tgt.type!==undefined) {
@@ -651,10 +653,10 @@ function doAttack(att, tgt, def) {
         ultUsed = true;
       }
     }
-    // 火法大招：对目标500%伤害（20秒CD）
+    // 火法大招：对目标900%伤害（20秒CD）
     if (att.ultimate==='fireBlast') {
       if (!att.fireBlastCD || att.fireBlastCD<=0) {
-        applyDmg(att,tgt,dmg*5,def);
+        applyDmg(att,tgt,dmg*9,def);
         att.fireBlastCD = 20;
         ultUsed = true;
       }
@@ -910,6 +912,10 @@ function update(dt) {
     if (u.st.slow>0) u.st.slow-=dt;
     if (u.rampageCD && u.rampageCD>0) u.rampageCD-=dt;
     if (u.counterCD && u.counterCD>0) u.counterCD-=dt;
+    // 死亡光环buff递减
+    if (u.atkBuffT && u.atkBuffT>0) u.atkBuffT-=dt;
+    if (u.atkSpdBuffT && u.atkSpdBuffT>0) u.atkSpdBuffT-=dt;
+    if (u.shieldT && u.shieldT>0) { u.shieldT-=dt; if (u.shieldT<=0) u.shield=0; }
     // 特斯拉电圈：身边50范围每秒10伤害
     if (u.electricField>0) {
       game.units.forEach(o => {
@@ -1112,6 +1118,8 @@ function update(dt) {
     if (u.st.slow>0) atkSpd *= 0.8;
     // 羁绊：弓手3种齐全 → 全体攻速+10%
     if (u.side==='my' && game.myBuffs.archerMaster) atkSpd *= 1.1;
+    // 死亡光环：不惧 → 攻速+20%
+    if (u.atkSpdBuff && u.atkSpdBuffT>0) atkSpd *= (1 + u.atkSpdBuff);
 
     // 找目标：优先攻击移动单位，其次塔
     let bestT=null, bestD=Infinity;
@@ -1198,6 +1206,27 @@ function update(dt) {
   // 召唤者死亡时召唤物也死亡
   game.units.forEach(u => {
     if ((u.type==='skeleton'||u.type==='golem') && u.master && u.master.hp<=0) u.hp=0;
+  });
+  // 死亡光环技能
+  game.units.forEach(u => {
+    if (u.hp<=0 && !u.deathAuraTriggered) {
+      u.deathAuraTriggered = true;
+      const allies = game.units.filter(o => o.side===u.side && o.hp>0 && o.lane===u.lane && Math.abs(o.x-u.x)<80);
+      if (u.type==='mage') {
+        // 牺牲：80范围友方恢复30%生命
+        allies.forEach(o => { o.hp = Math.min(o.maxHp, o.hp + o.maxHp*0.3); });
+      } else if (u.type==='melee') {
+        // 悲壮：80范围友方+30%攻击，8秒
+        allies.forEach(o => { o.atkBuff = 0.3; o.atkBuffT = 8; });
+      } else if (u.type==='archer') {
+        // 不惧：80范围友方+20%攻速，8秒
+        allies.forEach(o => { o.atkSpdBuff = 0.2; o.atkSpdBuffT = 8; });
+      } else if (u.type==='siege') {
+        // 坚强：80范围友方护盾，吸收工程车生命20%伤害，15秒
+        const shieldVal = u.maxHp * 0.2;
+        allies.forEach(o => { o.shield = (o.shield||0) + shieldVal; o.shieldT = 15; });
+      }
+    }
   });
   game.units = game.units.filter(u=>u.hp>0);
   // 兵营被摧毁
@@ -2401,7 +2430,7 @@ function updateDuel(dt) {
       else if (d.a.def.ult === 'whirlwind') { d.a.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每秒120%伤害`); aUltUsed=true; }
       else if (d.a.def.ult === 'arrowRain') { d.a.arrowRainWaves = 4; d.a.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); aUltUsed=true; }
       else if (d.a.def.ult === 'pierceShot') { const pd = d.a.atk*3; d.b.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); aUltUsed=true; }
-      else if (d.a.def.ult === 'fireBlast') { const fd = d.a.atk*5; d.b.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); aUltUsed=true; }
+      else if (d.a.def.ult === 'fireBlast') { const fd = d.a.atk*9; d.b.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); aUltUsed=true; }
       else if (d.a.def.ult === 'blizzardNova') { const bd = 80*Math.pow(1.1,(duelLv||6)-1); d.b.hp -= bd; d.b.stun = 3; d.b.slowT = 5; d.b.vulnerable = 5; d.logs.push(`暴风雪造成${Math.round(bd)}伤害！冰冻3秒+减速5秒+易伤！`); aUltUsed=true; }
       else if (d.a.def.ult === 'rapidFire') { for(let i=0;i<3;i++){ const rd=d.a.atk; d.b.hp-=rd; if(Math.random()<0.2) d.b.hp-=rd; } d.logs.push(`连发3次！每次20%连击`); aUltUsed=true; }
       else if (d.a.def.ult === 'airSlug') { d.a.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
@@ -2491,7 +2520,7 @@ function updateDuel(dt) {
       else if (d.b.def.ult === 'whirlwind') { d.b.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每秒120%伤害`); bUltUsed=true; }
       else if (d.b.def.ult === 'arrowRain') { d.b.arrowRainWaves = 4; d.b.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); bUltUsed=true; }
       else if (d.b.def.ult === 'pierceShot') { const pd = d.b.atk*3; d.a.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); bUltUsed=true; }
-      else if (d.b.def.ult === 'fireBlast') { const fd = d.b.atk*5; d.a.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); bUltUsed=true; }
+      else if (d.b.def.ult === 'fireBlast') { const fd = d.b.atk*9; d.a.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); bUltUsed=true; }
       else if (d.b.def.ult === 'blizzardNova') { const bd = 80*Math.pow(1.1,(duelLv||6)-1); d.a.hp -= bd; d.a.stun = 3; d.a.slowT = 5; d.a.vulnerable = 5; d.logs.push(`暴风雪造成${Math.round(bd)}伤害！冰冻3秒+减速5秒+易伤！`); bUltUsed=true; }
       else if (d.b.def.ult === 'rapidFire') { for(let i=0;i<3;i++){ const rd=d.b.atk; d.a.hp-=rd; if(Math.random()<0.2) d.a.hp-=rd; } d.logs.push(`连发3次！每次20%连击`); bUltUsed=true; }
       else if (d.b.def.ult === 'airSlug') { d.b.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
