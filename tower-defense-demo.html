@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.68';
+const VERSION = 'v8.69';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -194,7 +194,7 @@ const UNIT_TYPES = {
   ranger:   { name:'游侠', armor:2, shape:'triangle', size:9, hp:220, atk:11, atkSpeed:1.0, range:220, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
     skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭(最多叠4层)+超远射程 | 大招箭雨：150范围4波×120%伤害，CD40s（初期强）' },
   crossbow: { name:'破甲弩手', armor:2, shape:'triangle', size:9, hp:200, atk:10, atkSpeed:0.5, range:145, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
-    skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, skill3:{k:'focusFire',v:0.06}, desc:'20%连锁连击(最多5次)+无视护甲+专注射击(同一目标每次攻击攻速+6%最高300%)（后期强）' },
+    skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, skill3:{k:'focusFire',v:0.06}, skill4:{k:'armorReduce',v:0.5}, desc:'20%连锁连击+无视护甲+专注射击+护甲撕裂(每次-0.5护甲可叠加)（后期强）' },
 
   // 法师升级（大招=暴风雪）
   arcane:   { name:'奥法', armor:2, shape:'diamond', size:9, hp:200, atk:18, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'medium', ult:'arcaneBlink',
@@ -462,7 +462,7 @@ function spawnUnit(b) {
     dir: b.side==='my'?1:-1, level:lv,
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
-    flatArmor: def.armor || 0,
+    flatArmor: def.armor || 0, baseArmor: def.armor || 0,
     hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
     atk:Math.round(def.atk*mul*timeMul), atkSpeed:def.atkSpeed,
     range:def.range*rangeMul, speed:def.speed*speedMul, atkTimer:0,
@@ -524,6 +524,7 @@ function spawnUnit(b) {
     else if (s.k==='knockback') u.knockback = s.v;
     else if (s.k==='strikeStun') u.strikeStun = s.v;
     else if (s.k==='healAlly') u.healAlly = s.v;
+    else if (s.k==='armorReduce') u.armorReduce = s.v;
   });
   // 格斗家专属：闪避随等级大幅成长（后期型）
   if (b.unitType==='fighter') u.dodge += (lv-1)*0.05;
@@ -586,6 +587,11 @@ function doAttack(att, tgt, def) {
       att.focusStacks = 0;
     }
     att.focusStacks += strikes; // 连击也加快叠加
+  }
+  // 护甲撕裂：每次攻击降低目标0.5护甲，持续5秒，可叠加，下限-5
+  if (att.armorReduce>0 && tgt.type!==undefined && tgt.st) {
+    tgt.flatArmor = Math.max(-5, (tgt.flatArmor||0) - att.armorReduce * strikes);
+    tgt.st.armorReduceT = 5; // 5秒后恢复
   }
   targets.forEach(t => { for(let i=0;i<strikes;i++) applyDmg(att,t,dmg,def); });
 
@@ -699,17 +705,21 @@ function doAttack(att, tgt, def) {
         ultUsed = true;
       }
     }
-    // 弩手大招：连发3次，每次20%连击（15秒CD）
+    // 弩手大招：连发5次，每次20%连击（15秒CD）
     if (att.ultimate==='rapidFire') {
       if (!att.rapidFireCD || att.rapidFireCD<=0) {
-        for (let i=0;i<3;i++) {
+        for (let i=0;i<5;i++) {
           applyDmg(att,tgt,dmg,def);
           if (Math.random()<0.20) applyDmg(att,tgt,dmg,def);
         }
-        // 大招连发也叠加专注射击
+        // 大招连发也叠加专注射击和护甲撕裂
         if (att.focusFire>0) {
           if (att.focusTarget !== tgt) { att.focusTarget = tgt; att.focusStacks = 0; }
-          att.focusStacks += 3;
+          att.focusStacks += 5;
+        }
+        if (att.armorReduce>0 && tgt.st) {
+          tgt.flatArmor = Math.max(-5, (tgt.flatArmor||0) - att.armorReduce * 5);
+          tgt.st.armorReduceT = 5;
         }
         att.rapidFireCD = 15;
         ultUsed = true;
@@ -796,9 +806,9 @@ function applyDmg(att, tgt, dmg, def) {
   const tgtArmor = tgt.armorType || (tgt.type===undefined ? 'fort' : 'unarmored');
   let mul = (ATK_MUL[att.atkType] && ATK_MUL[att.atkType][tgtArmor]) || 1.0;
   let fd = dmg * mul;
-  // 护甲值免伤（魔兽公式：免伤% = 护甲/(护甲+100)）
+  // 护甲值免伤（护甲下限-5，负数增伤最多50%）
   if (!att.armorPierce) {
-    const flatArmor = tgt.flatArmor || 0;
+    const flatArmor = Math.max(-5, tgt.flatArmor || 0);
     const reduce = flatArmor / (flatArmor + 15);
     fd = fd * (1 - reduce);
   }
@@ -975,6 +985,11 @@ function update(dt) {
     if (u.st.stun>0) u.st.stun-=dt;
     if (u.st.vulnerable>0) u.st.vulnerable-=dt;
     if (u.st.slow>0) u.st.slow-=dt;
+    // 护甲撕裂恢复：5秒后恢复原始护甲
+    if (u.st.armorReduceT && u.st.armorReduceT>0) {
+      u.st.armorReduceT -= dt;
+      if (u.st.armorReduceT <= 0) { u.flatArmor = u.baseArmor || 0; }
+    }
     if (u.rampageCD && u.rampageCD>0) u.rampageCD-=dt;
     if (u.counterCD && u.counterCD>0) u.counterCD-=dt;
     // 死亡光环buff递减
@@ -2024,6 +2039,7 @@ function render() {
     if (u.crit) skillText += `暴击${Math.round(u.crit*100)}% `;
     if (u.doubleStrike) skillText += `连击${Math.round(u.doubleStrike*100)}% `;
     if (u.focusFire) skillText += `专注射击(每次+${Math.round(u.focusFire*100)}%攻速最高300%) `;
+    if (u.armorReduce) skillText += `护甲撕裂(每次-${u.armorReduce}护甲) `;
     if (u.instantKill) skillText += `即死${Math.round(u.instantKill*100)}% `;
     ctx.fillStyle='#4CAF50'; ctx.fillText(`被动: ${skillText||'无'}`, tx, py+106);
     // Buff/DeBuff状态
@@ -2422,7 +2438,7 @@ function createDuelUnit(type, side, lv, x) {
     dir: side==='my'?1:-1, level:lv,
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
-    flatArmor: def.armor || 0,
+    flatArmor: def.armor || 0, baseArmor: def.armor || 0,
     hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
     atk:Math.round(def.atk*mul), atkSpeed:def.atkSpeed,
     range:def.range*rangeMul, speed:def.speed*speedMul, atkTimer:0.3,
@@ -2542,6 +2558,15 @@ function updateDuel(dt) {
   b.st.vulnerable = Math.max(0, b.st.vulnerable - dt);
   a.st.slow = Math.max(0, a.st.slow - dt);
   b.st.slow = Math.max(0, b.st.slow - dt);
+  // 护甲撕裂恢复
+  if (a.st.armorReduceT && a.st.armorReduceT > 0) {
+    a.st.armorReduceT -= dt;
+    if (a.st.armorReduceT <= 0) a.flatArmor = a.baseArmor || 0;
+  }
+  if (b.st.armorReduceT && b.st.armorReduceT > 0) {
+    b.st.armorReduceT -= dt;
+    if (b.st.armorReduceT <= 0) b.flatArmor = b.baseArmor || 0;
+  }
   a.st.iceBlock = Math.max(0, a.st.iceBlock - dt);
   b.st.iceBlock = Math.max(0, b.st.iceBlock - dt);
   a.holyShieldT = Math.max(0, a.holyShieldT - dt);
@@ -2727,7 +2752,7 @@ const CODEX = [
      '【无大招】\n被动1【毒箭】：debuff，攻击时20%概率附加持续毒伤3秒\n被动2【后跳】：被动，敌人近身时向后跳200并定身近身目标',
      '【大招·穿透射击】主动CD35s占用1次攻击，直线400内最多攻击5个单位\n被动1【即死】：debuff，攻击时8%概率直接秒杀目标\n被动2【霰弹】：被动，攻击时25%概率对目标周围造成范围伤害',
      '【大招·箭雨】主动CD40s占用1次攻击，150范围造成伤害\n被动1【毒箭】：debuff，攻击时25%概率附加毒伤+5%毒伤加成3秒\n被动2【长弓精通】：常驻buff，射程+15%',
-     '【大招·连发】主动CD15s占用1次攻击，连续攻击3次，每次20%概率触发连击\n被动1【连锁连击】：被动，攻击时20%概率连击，最多连锁5次\n被动2【双目标】：常驻，攻击时同时打击2个目标'
+     '【大招·连发】主动CD15s占用1次攻击，连续攻击5次，每次20%概率触发连击\n被动1【连锁连击】：被动，攻击时20%概率连击，最多连锁5次\n被动2【破甲】：常驻，无视目标护甲值\n被动3【专注射击】：同一目标每次攻击攻速+6%最高300%，换目标清零\n被动4【护甲撕裂】：每次攻击降低目标0.5护甲，持续5秒可叠加，下限-5(增伤50%)'
    ],
    desc:[
      '轻甲 | 血120 攻7 攻速0.9 射程140 移速70 | 造价80\n穿刺攻击→轻甲',
