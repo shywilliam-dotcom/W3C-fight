@@ -2426,16 +2426,23 @@ function drawCodex() {
       }
       ctx.textAlign='start';
       // 日志面板
-      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(1030, 80, 350, 450);
-      ctx.strokeStyle='#888'; ctx.strokeRect(1030, 80, 350, 450);
+      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(1020, 80, 380, 500);
+      ctx.strokeStyle='#888'; ctx.strokeRect(1020, 80, 380, 500);
       ctx.fillStyle='#aaa'; ctx.font='11px monospace';
-      const showLogs = d.logs.slice(-20);
+      const showLogs = d.logs.slice(-25);
       showLogs.forEach((log, i) => {
         ctx.fillStyle = log.includes('⭐') ? '#FFD700' : (log.includes(d.b.def.name) ? '#EF5350' : '#4FC3F7');
         ctx.font='9px monospace';
-        // 每行拆短
-        const short = log.length>20 ? log.slice(0,20)+'…' : log;
-        ctx.font='11px monospace'; ctx.fillText(short, 1040, 95 + i*11);
+        // 长日志换行显示
+        let lines = [];
+        let s = log;
+        while (s.length > 28) { lines.push(s.slice(0,28)); s = s.slice(28); }
+        lines.push(s);
+        lines.forEach((line, li) => {
+          ctx.fillStyle = log.includes('⭐') ? '#FFD700' : (log.includes(d.b.def.name) ? '#EF5350' : '#4FC3F7');
+          ctx.font='12px monospace';
+          ctx.fillText(line, 1030, 100 + (i+li)*15);
+        });
       });
     }
     // 画兵种列表
