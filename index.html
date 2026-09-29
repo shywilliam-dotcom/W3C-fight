@@ -1914,50 +1914,22 @@ canvas.addEventListener('click', e => {
       return;
     }
     if (duelMode) {
-      let ci2 = 0;
-      const lx = 30;
-      let by = 30;
-      const titleH = 20;
-      const bw = 88, bh = 42;
-      const hGap = 10, vGap = 8, catGap = 8;
-      for (const cat of CODEX) {
-        by += titleH;
-        for (let i=0; i<cat.names.length; i++) {
-          const col = i % 2, row = Math.floor(i/2);
-          const bx = lx + col*(bw+hGap), by2 = by + row*(bh+vGap);
-          if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
-            if (duelPick === 0) { duelA = cat.types[i]; duelPick = 1; }
-            else { duelB = cat.types[i]; duelPick = 2; duelLv = 6; }
-            render(); return;
-          }
-          ci2++;
+      for (let i=0; i<16; i++) {
+        const rect = getCodexButtonRect(i);
+        if (cx >= rect.x && cx <= rect.x+rect.w && cy >= rect.y && cy <= rect.y+rect.h) {
+          if (duelPick === 0) { duelA = rect.type; duelPick = 1; }
+          else { duelB = rect.type; duelPick = 2; duelLv = 6; }
+          render(); return;
         }
-        by += 2*(bh+vGap) + catGap;
       }
       return;
     }
-    // 左侧按钮 2x2网格（1v1模式上移并缩小间距）
-    const lx = 30;
-    let idx = 0;
-    let by = duelMode ? 30 : 70;
-    const titleH = duelMode ? 20 : 26;
-    const bw = duelMode ? 88 : 96, bh = duelMode ? 42 : 51;
-    const hGap = duelMode ? 10 : 16, vGap = duelMode ? 8 : 12;
-    const catGap = duelMode ? 8 : 12;
-    for (const cat of CODEX) {
-      by += titleH;
-      for (let i=0; i<cat.names.length; i++) {
-        const ni = idx;
-        const col = i % 2;
-        const row = Math.floor(i / 2);
-        const bx = lx + col * (bw + hGap);
-        const by2 = by + row * (bh + vGap);
-        if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
-          codexSel = ni; render(); return;
-        }
-        idx++;
+    // 左侧按钮（用统一函数计算位置，确保与绘制严格一致）
+    for (let i=0; i<16; i++) {
+      const rect = getCodexButtonRect(i);
+      if (cx >= rect.x && cx <= rect.x+rect.w && cy >= rect.y && cy <= rect.y+rect.h) {
+        codexSel = i; render(); return;
       }
-      by += 2 * (bh + vGap) + catGap;
     }
     // 其他位置不退出
     return;
@@ -2398,6 +2370,31 @@ function showCodex() {
   render();
 }
 
+// 统一计算图鉴/1v1选兵按钮位置，绘制和点击共用，确保严格一致
+function getCodexButtonRect(idx) {
+  const lx = 30;
+  const isDuel = duelMode;
+  let by = isDuel ? 30 : 70;
+  const titleH = isDuel ? 20 : 26;
+  const bw = isDuel ? 88 : 96, bh = isDuel ? 42 : 51;
+  const hGap = isDuel ? 10 : 16, vGap = isDuel ? 8 : 12;
+  const catGap = isDuel ? 8 : 12;
+  let n = 0;
+  for (const cat of CODEX) {
+    by += titleH;
+    for (let i=0; i<cat.names.length; i++) {
+      if (n === idx) {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        return { x: lx + col*(bw+hGap), y: by + row*(bh+vGap), w: bw, h: bh, cat: cat, type: cat.types[i], name: cat.names[i] };
+      }
+      n++;
+    }
+    by += 2*(bh+vGap) + catGap;
+  }
+  return null;
+}
+
 function drawCodex() {
   if (!codexOpen) return;
   ctx.fillStyle = 'rgba(0,0,0,0.9)';
@@ -2602,37 +2599,33 @@ function drawCodex() {
   ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
   ctx.fillText(duelMode ? '返回图鉴' : '⚔️ 1v1对战', 1010, 36);
 
-  // 左半区：4类，每类2x2网格按钮（1v1模式上移并缩小间距）
+  // 左半区：4类，每类2x2网格按钮（用统一函数计算位置，确保与点击严格一致）
   const lx = 30;
-  let idx = 0;
   let by = duelMode ? 30 : 70;
   const titleH = duelMode ? 20 : 26;
   const bw = duelMode ? 88 : 96, bh = duelMode ? 42 : 51;
   const hGap = duelMode ? 10 : 16, vGap = duelMode ? 8 : 12;
   const catGap = duelMode ? 8 : 12;
+  let btnIdx = 0;
   for (const cat of CODEX) {
     // 分类标题
     ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 17px sans-serif';
     ctx.fillText(cat.cat, lx, by);
     by += titleH;
     for (let i=0; i<cat.names.length; i++) {
-      const ni = idx;
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const bx = lx + col * (bw + hGap);
-      const by2 = by + row * (bh + vGap);
-      if (codexSel === ni) {
+      const rect = getCodexButtonRect(btnIdx);
+      if (codexSel === btnIdx) {
         ctx.fillStyle = '#FFD700';
-        ctx.fillRect(bx, by2, bw, bh);
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
         ctx.fillStyle = '#000';
       } else {
         ctx.fillStyle = '#3a3a5a';
-        ctx.fillRect(bx, by2, bw, bh);
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
         ctx.fillStyle = '#ddd';
       }
       ctx.font = '13px sans-serif';
-      ctx.fillText(cat.names[i], bx+6, by2+26);
-      idx++;
+      ctx.fillText(cat.names[i], rect.x+6, rect.y + rect.h*0.6);
+      btnIdx++;
     }
     by += 2 * (bh + vGap) + catGap;
   }
