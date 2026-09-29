@@ -2246,6 +2246,7 @@ function updateDuel(dt) {
     else if (d.a.def.ult === 'whirlwind') { d.b.hp -= d.a.atk*3; d.logs.push(`旋风斩造成${Math.round(d.a.atk*3)}伤害！`); }
     else if (d.a.def.ult === 'arrowRain') { d.b.hp -= d.a.atk*2; d.logs.push(`箭雨造成${Math.round(d.a.atk*2)}伤害！`); }
     else if (d.a.def.ult === 'pierceShot') { d.b.hp -= d.a.atk*3; d.logs.push(`穿透射击造成${Math.round(d.a.atk*3)}伤害！`); }
+    else if (d.a.def.ult === 'arcaneBlink') { d.logs.push(`奥法闪现！回20%血！`); d.a.hp = Math.max(d.a.hp, d.a.maxHp*0.2); }
   }
   if (d.b.ultCd <= 0 && d.b.hp > 0 && d.b.def.ult) {
     d.b.ultCd = 20;
@@ -2254,6 +2255,15 @@ function updateDuel(dt) {
     else if (d.b.def.ult === 'whirlwind') { d.a.hp -= d.b.atk*3; d.logs.push(`旋风斩造成${Math.round(d.b.atk*3)}伤害！`); }
     else if (d.b.def.ult === 'arrowRain') { d.a.hp -= d.b.atk*2; d.logs.push(`箭雨造成${Math.round(d.b.atk*2)}伤害！`); }
     else if (d.b.def.ult === 'pierceShot') { d.a.hp -= d.b.atk*3; d.logs.push(`穿透射击造成${Math.round(d.b.atk*3)}伤害！`); }
+  }
+  // 奥法濒死传送
+  if (d.a.def.ult === 'arcaneBlink' && d.a.hp > 0 && d.a.hp < d.a.maxHp*0.15 && d.a.ultCd <= 0) {
+    d.a.ultCd = 60; d.a.hp = d.a.maxHp*0.2;
+    d.logs.push(`[${d.time.toFixed(1)}s] ⭐奥法濒死传送！回20%血！`);
+  }
+  if (d.b.def.ult === 'arcaneBlink' && d.b.hp > 0 && d.b.hp < d.b.maxHp*0.15 && d.b.ultCd <= 0) {
+    d.b.ultCd = 60; d.b.hp = d.b.maxHp*0.2;
+    d.logs.push(`[${d.time.toFixed(1)}s] ⭐奥法濒死传送！回20%血！`);
   }
   if (d.a.hp <= 0 || d.b.hp <= 0 || d.time > 60) {
     d.done = true;
