@@ -1916,13 +1916,15 @@ canvas.addEventListener('click', e => {
     if (duelMode) {
       let ci2 = 0;
       const lx = 30;
-      const catW = 180;
-      for (let ci=0; ci<CODEX.length; ci++) {
-        const cat = CODEX[ci];
-        const cx2 = lx + ci * catW;
+      let by = 30;
+      const titleH = 20;
+      const bw = 88, bh = 42;
+      const hGap = 10, vGap = 8, catGap = 8;
+      for (const cat of CODEX) {
+        by += titleH;
         for (let i=0; i<cat.names.length; i++) {
           const col = i % 2, row = Math.floor(i/2);
-          const bw=80, bh=44, bx=cx2+col*(bw+10), by2=95+row*(bh+10);
+          const bx = lx + col*(bw+hGap), by2 = by + row*(bh+vGap);
           if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
             if (duelPick === 0) { duelA = cat.types[i]; duelPick = 1; }
             else { duelB = cat.types[i]; duelPick = 2; duelLv = 6; }
@@ -1930,28 +1932,32 @@ canvas.addEventListener('click', e => {
           }
           ci2++;
         }
+        by += 2*(bh+vGap) + catGap;
       }
       return;
     }
-    // 左侧按钮 4类横向排列，每类2x2网格
+    // 左侧按钮 2x2网格（1v1模式上移并缩小间距）
     const lx = 30;
     let idx = 0;
-    const catW = 180;
-    for (let ci=0; ci<CODEX.length; ci++) {
-      const cat = CODEX[ci];
-      const cx2 = lx + ci * catW;
+    let by = duelMode ? 30 : 70;
+    const titleH = duelMode ? 20 : 26;
+    const bw = duelMode ? 88 : 96, bh = duelMode ? 42 : 51;
+    const hGap = duelMode ? 10 : 16, vGap = duelMode ? 8 : 12;
+    const catGap = duelMode ? 8 : 12;
+    for (const cat of CODEX) {
+      by += titleH;
       for (let i=0; i<cat.names.length; i++) {
         const ni = idx;
         const col = i % 2;
         const row = Math.floor(i / 2);
-        const bw = 80, bh = 44;
-        const bx = cx2 + col * (bw + 10);
-        const by2 = 95 + row * (bh + 10);
+        const bx = lx + col * (bw + hGap);
+        const by2 = by + row * (bh + vGap);
         if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
           codexSel = ni; render(); return;
         }
         idx++;
       }
+      by += 2 * (bh + vGap) + catGap;
     }
     // 其他位置不退出
     return;
@@ -2596,23 +2602,25 @@ function drawCodex() {
   ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
   ctx.fillText(duelMode ? '返回图鉴' : '⚔️ 1v1对战', 1010, 36);
 
-  // 左半区：4类横向排列，每类2x2网格按钮
+  // 左半区：4类，每类2x2网格按钮（1v1模式上移并缩小间距）
   const lx = 30;
   let idx = 0;
-  const catW = 180; // 每类宽度
-  for (let ci=0; ci<CODEX.length; ci++) {
-    const cat = CODEX[ci];
-    const cx = lx + ci * catW;
+  let by = duelMode ? 30 : 70;
+  const titleH = duelMode ? 20 : 26;
+  const bw = duelMode ? 88 : 96, bh = duelMode ? 42 : 51;
+  const hGap = duelMode ? 10 : 16, vGap = duelMode ? 8 : 12;
+  const catGap = duelMode ? 8 : 12;
+  for (const cat of CODEX) {
     // 分类标题
     ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 17px sans-serif';
-    ctx.fillText(cat.cat, cx, 85);
+    ctx.fillText(cat.cat, lx, by);
+    by += titleH;
     for (let i=0; i<cat.names.length; i++) {
       const ni = idx;
       const col = i % 2;
       const row = Math.floor(i / 2);
-      const bw = 80, bh = 44;
-      const bx = cx + col * (bw + 10);
-      const by2 = 95 + row * (bh + 10);
+      const bx = lx + col * (bw + hGap);
+      const by2 = by + row * (bh + vGap);
       if (codexSel === ni) {
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(bx, by2, bw, bh);
@@ -2623,12 +2631,14 @@ function drawCodex() {
         ctx.fillStyle = '#ddd';
       }
       ctx.font = '13px sans-serif';
-      ctx.fillText(cat.names[i], bx+6, by2+27);
+      ctx.fillText(cat.names[i], bx+6, by2+26);
       idx++;
     }
+    by += 2 * (bh + vGap) + catGap;
   }
 
-  // 右半区：详情
+  // 右半区：详情（1v1模式不显示）
+  if (!duelMode) {
   let ci = 0;
   let selCat=null, selName=null, selDesc=null, selType=null;
   for (const cat of CODEX) {
@@ -2641,7 +2651,7 @@ function drawCodex() {
     // 大图（放下方左侧）
     const pKey = typeToPortrait[selType];
     const pImg = pKey ? portraitImgs[pKey] : null;
-    const dx = 40, dy = 210, dw = 260, dh = 440;
+    const dx = 480, dy = 70, dw = 280, dh = 440;
     ctx.fillStyle = '#0d0d1a';
     ctx.fillRect(dx, dy, dw, dh);
     ctx.strokeStyle = '#444'; ctx.lineWidth = 2;
@@ -2654,7 +2664,7 @@ function drawCodex() {
       ctx.textAlign='start';
     }
     // 文字区（放下方右侧）
-    const tx = 330, ty = 220;
+    const tx = 790, ty = 80;
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 26px sans-serif';
     ctx.fillText(selName, tx, ty+10);
     ctx.fillStyle = '#9b59b6'; ctx.font = '15px sans-serif';
@@ -2696,6 +2706,7 @@ function drawCodex() {
       }
     }
   }
+  } // end !duelMode
 }
 
 function restartGame() { initGame(); }
