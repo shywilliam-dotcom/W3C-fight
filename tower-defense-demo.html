@@ -1854,6 +1854,16 @@ canvas.addEventListener('click', e => {
       duelMode = !duelMode; duelPick = 0; duelA = null; duelB = null; duelResult = null;
       render(); return;
     }
+    if (duelMode && duelPick===2 && !duelAnim) {
+      // 等级选择
+      for (let i=1; i<=10; i++) {
+        const bx = 200 + (i-1)*80;
+        if (cx >= bx && cx <= bx+60 && cy >= 250 && cy <= 290) { duelLv = i; render(); return; }
+      }
+      // 开始按钮
+      if (cx >= 450 && cx <= 750 && cy >= 350 && cy <= 400) { startDuel(duelA, duelB, duelLv); render(); return; }
+      return;
+    }
     if (duelMode) {
       let ci = 0, by = 250;
       for (const cat of CODEX) {
@@ -1863,7 +1873,7 @@ canvas.addEventListener('click', e => {
           const bw=96, bh=40, bx=30+col*(bw+16), by2=by+row*(bh+8);
           if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
             if (duelPick === 0) { duelA = cat.types[i]; duelPick = 1; }
-            else { duelB = cat.types[i]; startDuel(duelA, duelB); duelPick = 2; codexOpen = false; }
+            else { duelB = cat.types[i]; duelPick = 2; codexOpen = false; duelLv = 6; }
             render(); return;
           }
           ci++;
@@ -2027,12 +2037,13 @@ document.getElementById('speed-btn').addEventListener('click', () => {
 
 // ===== 图鉴 =====
 let codexOpen = false, codexSel = 0;
-let duelMode = false, duelPick = 0, duelA = null, duelB = null;
+let duelMode = false, duelPick = 0, duelA = null, duelB = null, duelLv = 6;
 let duelAnim = null; // {a:{hp,maxHp,cd,anim}, b:{...}, time, done}
 
-function startDuel(typeA, typeB) {
+function startDuel(typeA, typeB, lv) {
   const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
-  const lv = 6, mul = Math.pow(1.1, lv-1); // 6级
+  lv = lv || 6;
+  const mul = Math.pow(1.1, lv-1);
   duelAnim = {
     typeA, typeB,
     a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 0},
@@ -2226,6 +2237,28 @@ function drawCodex() {
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign='center';
     ctx.fillText(duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '1v1对战', 600, 35);
     ctx.textAlign='start';
+    if (duelPick===2 && !duelAnim) {
+      // 等级选择界面
+      ctx.fillStyle='#3a3a5a'; ctx.fillRect(150, 80, 900, 450);
+      ctx.strokeStyle='#888'; ctx.strokeRect(150, 80, 900, 450);
+      ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(`选择等级: ${duelLv}级`, 600, 150);
+      ctx.font='16px sans-serif';
+      ctx.fillText(`${duelA} vs ${duelB}`, 600, 190);
+      // 等级按钮
+      for (let i=1; i<=10; i++) {
+        const bx = 200 + (i-1)*80;
+        ctx.fillStyle = i===duelLv ? '#4CAF50' : '#666';
+        ctx.fillRect(bx, 250, 60, 40);
+        ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
+        ctx.fillText(i, bx+30, 275);
+      }
+      // 开始按钮
+      ctx.fillStyle='#FF9800'; ctx.fillRect(450, 350, 300, 50);
+      ctx.fillStyle='#fff'; ctx.font='bold 20px sans-serif';
+      ctx.fillText('开始对战', 600, 382);
+      ctx.textAlign='start';
+    }
     if (duelAnim && duelPick===2) {
       const d = duelAnim;
       // 战场背景
