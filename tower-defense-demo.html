@@ -2029,7 +2029,8 @@ function startDuel(typeA, typeB) {
     typeA, typeB,
     a: {hp: defA.hp, maxHp: defA.hp, atk: defA.atk, atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA},
     b: {hp: defB.hp, maxHp: defB.hp, atk: defB.atk, atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB},
-    time: 0, done: false, winner: null
+    time: 0, done: false, winner: null,
+    logs: [`战斗开始！${defA.name} vs ${defB.name}`]
   };
 }
 
@@ -2049,16 +2050,21 @@ function updateDuel(dt) {
   d.a.anim = Math.max(0, d.a.anim - dt*3);
   d.b.anim = Math.max(0, d.b.anim - dt*3);
   if (d.a.cd <= 0 && d.a.hp > 0) {
-    d.b.hp -= d.a.atk * dmgMul(d.a.def.atkType, d.b.def.armorType);
+    const dmg = Math.round(d.a.atk * dmgMul(d.a.def.atkType, d.b.def.armorType));
+    d.b.hp -= dmg;
     d.a.cd = d.a.def.atkSpeed; d.a.anim = 1;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 攻击 ${d.b.def.name}，造成${dmg}伤害`);
   }
   if (d.b.cd <= 0 && d.b.hp > 0) {
-    d.a.hp -= d.b.atk * dmgMul(d.b.def.atkType, d.a.def.armorType);
+    const dmg = Math.round(d.b.atk * dmgMul(d.b.def.atkType, d.a.def.armorType));
+    d.a.hp -= dmg;
     d.b.cd = d.b.def.atkSpeed; d.b.anim = 1;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 反击 ${d.a.def.name}，造成${dmg}伤害`);
   }
   if (d.a.hp <= 0 || d.b.hp <= 0 || d.time > 60) {
     d.done = true;
     d.winner = d.a.hp <= 0 && d.b.hp <= 0 ? '平局' : d.a.hp > d.b.hp ? d.a.def.name : d.b.def.name;
+    d.logs.push(`战斗结束！胜者：${d.winner}，用时${d.time.toFixed(1)}秒`);
   }
 }
 const CODEX = [
@@ -2171,6 +2177,15 @@ function drawCodex() {
         ctx.fillText('点击任意兵种重新对战', 600, 215);
       }
       ctx.textAlign='start';
+      // 日志面板
+      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(200, 420, 800, 80);
+      ctx.strokeStyle='#555'; ctx.strokeRect(200, 420, 800, 80);
+      ctx.fillStyle='#aaa'; ctx.font='11px monospace';
+      const showLogs = d.logs.slice(-8);
+      showLogs.forEach((log, i) => {
+        ctx.fillStyle = log.includes('反击') ? '#EF5350' : '#4FC3F7';
+        ctx.fillText(log, 210, 438 + i*10);
+      });
     }
     // 画兵种列表
     let idx = 0, by = 250;
