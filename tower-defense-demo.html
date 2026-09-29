@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.43';
+const VERSION = 'v8.44';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -1832,6 +1832,21 @@ function shade(c,p) {
 }
 
 // ============ 交互 =====
+// 滚轮滚动日志
+canvas.addEventListener('wheel', e => {
+  if (!duelAnim) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+  // 日志区域：x=760~1160, y=80~580
+  if (mx >= 760 && mx <= 1160 && my >= 80 && my <= 580) {
+    e.preventDefault();
+    duelLogScroll = Math.max(0, duelLogScroll + e.deltaY * 0.8);
+    duelLogAutoScroll = false; // 用户手动滚动后停止自动滚动
+    render();
+  }
+}, {passive: false});
+
 canvas.addEventListener('click', e => {
   if (game.gameOver) return;
   const rect = canvas.getBoundingClientRect();
@@ -1902,6 +1917,12 @@ canvas.addEventListener('click', e => {
     }
     if (duelAnim && duelAnim.done && cx >= 420 && cx <= 580 && cy >= 225 && cy <= 260) {
       duelAnim = null; duelPick = 0; duelA = null; duelB = null; render(); return;
+    }
+    // 点击日志区域：回到底部并恢复自动滚动
+    if (duelAnim && cx >= 760 && cx <= 1160 && cy >= 80 && cy <= 580) {
+      duelLogAutoScroll = true;
+      duelLogScroll = 0;
+      render(); return;
     }
     if (duelMode && duelPick===2 && !duelAnim) {
       // 等级选择
@@ -2068,6 +2089,8 @@ document.getElementById('speed-btn').addEventListener('click', () => {
 let codexOpen = false, codexSel = 0;
 let duelMode = false, duelPick = 0, duelA = null, duelB = null, duelLv = 6;
 let duelAnim = null; // {a:{hp,maxHp,cd,anim}, b:{...}, time, done}
+let duelLogScroll = 0; // 日志滚动偏移（像素），0=底部
+let duelLogAutoScroll = true; // 是否自动滚动到底部
 
 function startDuel(typeA, typeB, lv) {
   const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
@@ -2080,6 +2103,8 @@ function startDuel(typeA, typeB, lv) {
     time: 0, done: false, winner: null,
     logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})`]
   };
+  duelLogScroll = 0;
+  duelLogAutoScroll = true;
 }
 
 function updateDuel(dt) {
@@ -2545,25 +2570,49 @@ function drawCodex() {
         ctx.fillText('重选兵种', 500, 248);
       }
       ctx.textAlign='start';
-      // 日志面板
-      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(760, 80, 400, 500);
-      ctx.strokeStyle='#888'; ctx.strokeRect(760, 80, 400, 500);
-      ctx.fillStyle='#aaa'; ctx.font='11px monospace';
-      const showLogs = d.logs.slice(-25);
-      showLogs.forEach((log, i) => {
-        ctx.fillStyle = log.includes('⭐') ? '#FFD700' : (log.includes(d.b.def.name) ? '#EF5350' : '#4FC3F7');
-        ctx.font='9px monospace';
-        // 长日志换行显示
-        let lines = [];
+      // 日志面板（可滚动）
+      const logX = 760, logY = 80, logW = 400, logH = 500;
+      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(logX, logY, logW, logH);
+      ctx.strokeStyle='#888'; ctx.strokeRect(logX, logY, logW, logH);
+      // 标题
+      ctx.fillStyle='#FFD700'; ctx.font='bold 12px sans-serif';
+      ctx.fillText('⚔️ 战斗日志', logX+10, logY+18);
+      // 把所有日志展开成显示行（长日志换行）
+      const allLines = [];
+      d.logs.forEach(log => {
         let s = log;
-        while (s.length > 28) { lines.push(s.slice(0,28)); s = s.slice(28); }
-        lines.push(s);
-        lines.forEach((line, li) => {
-          ctx.fillStyle = log.includes('⭐') ? '#FFD700' : (log.includes(d.b.def.name) ? '#EF5350' : '#4FC3F7');
-          ctx.font='12px monospace';
-          ctx.fillText(line, 775, 100 + (i+li)*15);
-        });
+        while (s.length > 28) { allLines.push({text:s.slice(0,28), log:log}); s = s.slice(28); }
+        allLines.push({text:s, log:log});
       });
+      const lineH = 15;
+      const contentH = allLines.length * lineH;
+      const visibleTop = logY + 25;
+      const visibleH = logH - 30;
+      // 自动滚动到底部
+      if (duelLogAutoScroll) duelLogScroll = Math.max(0, contentH - visibleH);
+      // 裁剪绘制区域
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(logX+5, visibleTop, logW-10, visibleH);
+      ctx.clip();
+      allLines.forEach((line, i) => {
+        const ly = visibleTop + i*lineH - duelLogScroll;
+        if (ly < visibleTop - lineH || ly > visibleTop + visibleH + lineH) return;
+        ctx.fillStyle = line.log.includes('⭐') ? '#FFD700' : (line.log.includes(d.b.def.name) ? '#EF5350' : '#4FC3F7');
+        ctx.font='12px monospace';
+        ctx.fillText(line.text, logX+10, ly);
+      });
+      ctx.restore();
+      // 滚动条
+      if (contentH > visibleH) {
+        const barH = Math.max(20, visibleH * visibleH / contentH);
+        const barY = visibleTop + (duelLogScroll / contentH) * (visibleH - barH);
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillRect(logX+logW-8, barY, 4, barH);
+      }
+      // 提示
+      ctx.fillStyle='#666'; ctx.font='10px sans-serif';
+      ctx.fillText('滚轮滚动查看历史', logX+10, logY+logH-8);
     }
     // 画兵种列表（对战中不画）—— 用统一函数getCodexButtonRect，确保与点击坐标严格一致
     if (duelPick === 2) return;
