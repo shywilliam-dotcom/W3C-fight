@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.61';
+const VERSION = 'v8.62';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -456,7 +456,7 @@ function spawnUnit(b) {
     hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
     atk:Math.round(def.atk*mul*timeMul), atkSpeed:def.atkSpeed,
     range:def.range*rangeMul, speed:def.speed*speedMul, atkTimer:0,
-    crit:(b.unitType==='fighter'?0.10:0.05)*mul, dodge:['cannon','rocket','tesla','siege'].includes(b.unitType)?0:(b.unitType==='fighter'?0.15:0.05)*mul, instantKill:0, polymorpth:0,
+    crit:['cannon','rocket','tesla','siege'].includes(b.unitType)?0:(b.unitType==='fighter'?0.10:0.05)*mul, dodge:['cannon','rocket','tesla','siege'].includes(b.unitType)?0:(b.unitType==='fighter'?0.15:0.05)*mul, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
     doubleStrike:0, multiTarget:0, splashRange:0,
     aoe:0, dmgReduce:0, buildingDamage:0,
@@ -2377,12 +2377,12 @@ function startDuel(typeA, typeB, lv) {
   };
   const hpA = Math.round(defA.hp * mul);
   const atkA = Math.round(defA.atk * mul);
-  const critA = (typeA==='fighter'?0.10:0.05) * mul;
+  const critA = ['cannon','rocket','tesla','siege'].includes(typeA)?0:(typeA==='fighter'?0.10:0.05) * mul;
   const dodgeA = ['cannon','rocket','tesla','siege'].includes(typeA)?0:(typeA==='fighter'?0.15:0.05) * mul;
   const spdA = calcSpeed(defA, typeA);
   const hpB = Math.round(defB.hp * mul);
   const atkB = Math.round(defB.atk * mul);
-  const critB = (typeB==='fighter'?0.10:0.05) * mul;
+  const critB = ['cannon','rocket','tesla','siege'].includes(typeB)?0:(typeB==='fighter'?0.10:0.05) * mul;
   const dodgeB = ['cannon','rocket','tesla','siege'].includes(typeB)?0:(typeB==='fighter'?0.15:0.05) * mul;
   const spdB = calcSpeed(defB, typeB);
   // 战斗区域中心x=400，双方初始间距300，从两端入场
