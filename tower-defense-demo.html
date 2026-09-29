@@ -1752,9 +1752,8 @@ function render() {
   const btnStartX = 1020, btnStartY = 620;
   const btns = [
     {x:0, y:0, label:'1x', color:'#607D8B'},
-    {x:1, y:0, label:'重开', color:'#F44336'},
-    {x:0, y:1, label:'模拟', color:'#4CAF50'},
-    {x:1, y:1, label:'图鉴', color:'#9C27B0'}
+    {x:1, y:0, label:'设置', color:'#FF9800'},
+    {x:0, y:1, label:'图鉴', color:'#9C27B0'}
   ];
   btns.forEach(b => {
     const bx = btnStartX + b.x*(btnW+5);
@@ -1767,6 +1766,17 @@ function render() {
     ctx.fillText(b.label, bx + btnW/2, by + 20);
     ctx.textAlign = 'start';
   });
+
+  // 设置菜单
+  if (game.settingsOpen) {
+    ctx.fillStyle='rgba(0,0,0,0.9)';
+    ctx.fillRect(900, 550, 280, 100);
+    ctx.strokeStyle='#FF9800'; ctx.lineWidth=2;
+    ctx.strokeRect(900, 550, 280, 100);
+    ctx.fillStyle='#F44336'; ctx.font='bold 16px sans-serif';
+    ctx.fillText('重开游戏', 920, 585);
+    ctx.fillStyle='#4CAF50'; ctx.fillText('模拟1局', 920, 620);
+  }
 
   // 图鉴覆盖层
   drawCodex();
@@ -1801,20 +1811,24 @@ canvas.addEventListener('click', e => {
   const btnStartX = 1020, btnStartY = 620;
   const btns = [
     {x:0, y:0, act:'speed'},
-    {x:1, y:0, act:'restart'},
-    {x:0, y:1, act:'sim'},
-    {x:1, y:1, act:'codex'}
+    {x:1, y:0, act:'settings'},
+    {x:0, y:1, act:'codex'}
   ];
   for (const b of btns) {
     const bx = btnStartX + b.x*(btnW+5);
     const by = btnStartY + b.y*(btnH+5);
     if (cx >= bx && cx <= bx+btnW && cy >= by && cy <= by+btnH) {
       if (b.act==='speed') { game.speed = game.speed>=4?1:game.speed*2; }
-      else if (b.act==='restart') { initGame(); }
-      else if (b.act==='sim') { startSimulation(1); }
+      else if (b.act==='settings') { game.settingsOpen = !game.settingsOpen; }
       else if (b.act==='codex') { showCodex(); }
       return;
     }
+  }
+
+  // 设置菜单点击
+  if (game.settingsOpen) {
+    if (cx >= 900 && cx <= 1180 && cy >= 565 && cy <= 595) { game.settingsOpen=false; initGame(); return; }
+    if (cx >= 900 && cx <= 1180 && cy >= 600 && cy <= 630) { game.settingsOpen=false; startSimulation(1); return; }
   }
 
   // 兵营用屏幕坐标，战场内容需要反算缩放
