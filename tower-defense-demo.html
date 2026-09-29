@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.73';
+const VERSION = 'v8.74';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -473,7 +473,7 @@ function spawnUnit(b) {
     doubleStrikeBonus:0, // 连击保底：未触发时+10%
     aoe:0, dmgReduce:0, buildingDamage:0,
     iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
-    armorPierce:false, summonGolem:0, chainLightning:0, longRange:0,
+    armorPierce:false, armorReduce:0, summonGolem:0, chainLightning:0, longRange:0,
     stun:0, vulnerable:0, dodgeCounter:false, execute:0, electricField:0,
     summonSkeleton:0, skeletonTimer:0, burnStack:0,
     currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
@@ -604,6 +604,9 @@ function doAttack(att, tgt, def) {
         : Math.round((1-(tgt.flatArmor*0.06)/(1+tgt.flatArmor*0.06))*100) + '%减伤';
       pushCombatLog(`【护甲撕裂】${attName} 将 ${tgtName} 护甲降到 ${tgt.flatArmor.toFixed(1)}（${layers}层），受到伤害${dmgPct}`);
     }
+  } else if (att.armorReduce>0) {
+    // 调试：确认为什么没进入护甲撕裂
+    pushCombatLog(`【调试】护甲撕裂未触发: armorReduce=${att.armorReduce}, tgt.type=${tgt.type}, tgt.st=${!!tgt.st}`);
   }
   targets.forEach(t => { for(let i=0;i<strikes;i++) applyDmg(att,t,dmg,def); });
 
@@ -2485,7 +2488,7 @@ function createDuelUnit(type, side, lv, x) {
     doubleStrikeBonus:0,
     aoe:0, dmgReduce:0, buildingDamage:0,
     iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
-    armorPierce:false, summonGolem:0, chainLightning:0, longRange:0,
+    armorPierce:false, armorReduce:0, summonGolem:0, chainLightning:0, longRange:0,
     stun:0, vulnerable:0, dodgeCounter:false, execute:0, electricField:0,
     summonSkeleton:0, skeletonTimer:0, burnStack:0,
     currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
