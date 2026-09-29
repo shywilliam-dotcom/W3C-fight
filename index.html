@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.46';
+const VERSION = 'v8.47';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -205,8 +205,8 @@ const UNIT_TYPES = {
     skill1:{k:'summonSkeleton',v:5}, skill2:{k:'burnStack',v:1}, desc:'每5秒召唤骷髅+dot叠加（后期强）' },
 
   // 攻城车升级（大招=弹幕）
-  rocket:   { name:'火箭炮', armor:1, shape:'square', size:11, hp:350, atk:25, atkSpeed:0.3, range:220, speed:50, cost:494, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'tripleShot',
-    skill1:{k:'splashRange',v:150}, skill2:{k:'splash',v:0.25}, desc:'大范围溅射150+25%溅射伤害 | 大招:3个随机目标各攻击1次(单目标打3次)CD40s（中期强）' },
+  rocket:   { name:'火箭炮', armor:1, shape:'square', size:11, hp:350, atk:25, atkSpeed:0.3, range:220, speed:50, cost:494, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'rocketBarrage',
+    skill1:{k:'splashRange',v:150}, skill2:{k:'splash',v:0.25}, desc:'大范围溅射150+25%概率溅射 | 大招:每20秒发射1枚火箭全屏随机打击1个目标造成120%伤害(不占攻击CD)（中期强）' },
   tesla:    { name:'特斯拉', armor:1, shape:'square', size:11, hp:180, atk:25, atkSpeed:0.3, range:190, speed:50, cost:494, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'stunBlast',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标每单位15%概率晕1秒+电圈50范围20/s | 大招:下3次攻击必晕2秒并丢失目标CD40s（后期强）' },
   siege:    { name:'攻城炮', shape:'square', size:13, hp:400, atk:25, atkSpeed:0.35, range:170, speed:50, cost:494, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'airSlug',
@@ -433,7 +433,7 @@ function spawnUnit(b) {
     currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
     shieldWall:0, shieldCD:0, shield:0,
     shieldAlly:0, shieldAllyCD:0, dmgReduce:0,
-    golemCD:0, charge:0, chargeCD:0,
+    golemCD:0, charge:0, chargeCD:0, rocketCd:0,
     ultimate: lv>=6 ? def.ult : null,
     st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 }
   };
@@ -869,6 +869,26 @@ function update(dt) {
       u.x = u.side==='my' ? 100 : 1100;
       u.hp = Math.max(u.hp, u.maxHp*0.20);
       u.arcaneBlinkCD = 60;
+    }
+    // 火箭炮大招：每20秒发射1枚火箭，全屏随机打击1个目标，造成120%伤害，不占攻击CD
+    if (u.type==='rocket' && u.hp>0) {
+      if (u.rocketCd===undefined) u.rocketCd=0;
+      if (u.rocketCd>0) u.rocketCd-=dt;
+      else {
+        u.rocketCd = 20;
+        // 全屏随机选一个敌方单位（包括防御塔/基地）
+        const enemies = game.units.filter(o => o.side!==u.side && o.hp>0);
+        const towers = game.towers.filter(t => t.side!==u.side && t.hp>0);
+        const bases = [game.myBase, game.enemyBase].filter(b => b && b.side!==u.side && b.hp>0);
+        const allTargets = [...enemies, ...towers, ...bases];
+        if (allTargets.length>0) {
+          const target = allTargets[Math.floor(Math.random()*allTargets.length)];
+          const rocketDmg = u.atk * 1.2;
+          applyDmg(u, target, rocketDmg, null);
+          // 火箭特效：高抛物线
+          game.projectiles.push({ x:u.x, y:u.y-10, tx:target.x, ty:target.y, p:0, color:'#FF4500', style:'rocket', startX:u.x, startY:u.y-10 });
+        }
+      }
     }
     // 攻城车死亡爆炸：造成2次攻击伤害
     if (u.hp<=0 && u.atkType==='siege' && !u.exploded) {
@@ -1554,6 +1574,25 @@ function render() {
       ctx.shadowColor = p.color; ctx.shadowBlur = 6;
       ctx.fillStyle = '#5a4a3a';
       ctx.beginPath(); ctx.arc(cx, cy - arch, 5, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (p.style==='rocket') {
+      // 火箭炮大招：高抛物线火箭，带尾焰
+      const arch = Math.sin(p.p * Math.PI) * 80;
+      const rx = cx, ry = cy - arch;
+      // 尾焰
+      const tailX = p.x+(p.tx-p.x)*(p.p-0.08), tailY = p.y+(p.ty-p.y)*(p.p-0.08) - Math.sin((p.p-0.08)*Math.PI)*80;
+      const grad = ctx.createLinearGradient(tailX, tailY, rx, ry);
+      grad.addColorStop(0, 'rgba(255,100,0,0)');
+      grad.addColorStop(0.5, 'rgba(255,150,0,0.6)');
+      grad.addColorStop(1, 'rgba(255,200,50,0.9)');
+      ctx.strokeStyle = grad; ctx.lineWidth = 4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(tailX, tailY); ctx.lineTo(rx, ry); ctx.stroke();
+      // 火箭头
+      ctx.shadowColor = '#FF6600'; ctx.shadowBlur = 15;
+      ctx.fillStyle = '#FF4500';
+      ctx.beginPath(); ctx.arc(rx, ry, 6, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath(); ctx.arc(rx, ry, 3, 0, Math.PI*2); ctx.fill();
       ctx.shadowBlur = 0;
     } else if (p.style==='bolt') {
       // 特斯拉闪电：锯齿状电光
@@ -2394,7 +2433,7 @@ const CODEX = [
    skills:[
      '【无大招】\n被动1【溅射】：常驻，攻击时40范围溅射伤害\n被动2【击退】：被动，攻击时10%概率击退主要目标',
      '【大招·重力冲击】主动CD40s，下2次攻击造成200%伤害并击飞目标，受击单位丢失目标重新锁定\n被动1【攻城专长】：常驻buff，对塔/基地造成3倍伤害\n被动2【溅射】：常驻，攻击时50范围溅射',
-     '【大招·齐射】主动CD40s占用1次攻击，对3个随机目标各攻击1次(若范围内仅1个目标则打3次)，均触发被动\n被动1【大范围溅射】：常驻，攻击时150范围溅射\n被动2【燃烧弹头】：常驻buff，溅射伤害+25%',
+     '【大招·火箭突袭】被动CD20s不占攻击CD，发射1枚火箭全屏随机打击1个目标造成120%伤害\n被动1【大范围溅射】：常驻，攻击时150范围溅射60%伤害\n被动2【燃烧弹头】：被动，攻击时25%概率触发50范围额外溅射50%伤害',
      '【大招·过载电击】主动CD40s，下3次攻击必然使目标昏迷2秒并丢失攻击目标\n被动1【连锁闪电】：被动，攻击时连锁8个目标，每单位15%概率昏迷1秒\n被动2【电磁力场】：常驻buff，身边50范围每秒造成20点伤害'
    ],
    desc:[
