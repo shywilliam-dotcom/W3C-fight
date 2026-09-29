@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.56';
+const VERSION = 'v8.57';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -415,10 +415,26 @@ function spawnUnit(b) {
   if (myCount >= 30) return;
   const def = UNIT_TYPES[b.unitType];
   const lv = b.level || 1;
-  const mul = Math.pow(1.15, lv-1);  // 每级+15%血攻（指数成长）
+  // 兵种分类
+  const isMelee = ['melee','barbarian','paladin','fighter'].includes(b.unitType);
+  const isArcher = ['archer','musketeer','ranger','crossbow'].includes(b.unitType);
+  const isMage = ['mage','arcane','ice','fire'].includes(b.unitType);
+  const isSiege = ['cannon','rocket','tesla','siege'].includes(b.unitType);
+  // 专项成长系数
+  const hpMul = isMelee ? Math.pow(1.2, lv-1) : Math.pow(1.1, lv-1);
+  const atkMul = isSiege ? Math.pow(1.2, lv-1) : Math.pow(1.1, lv-1);
+  const dodgeMul = isArcher ? Math.pow(1.2, lv-1) : Math.pow(1.1, lv-1);
+  const critMul = isMage ? Math.pow(1.2, lv-1) : Math.pow(1.1, lv-1);
+  const mul = Math.pow(1.1, lv-1);  // 其他属性通用1.1
   const rangeMul = 1 + (lv-1)*0.05;
   // 后期rush：300秒后新出兵攻击每60秒+15%
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
+  // 移动速度按护甲类型调整
+  let speedMul = 1.0;
+  if (def.armorType === 'fort') speedMul = 0.8; // 城甲-20%
+  else if (def.armorType === 'light') speedMul = 1.3; // 轻甲+30%
+  else if (def.armorType === 'unarmored') speedMul = 0.9; // 无甲-10%
+  if (isMage) speedMul = 0.9; // 法师类都-10%
   const yOff = (Math.random()-0.5)*70; // 每路6单位并行，y偏移±35
   const u = {
     x:b.side==='my'?120:1080, y:LANE_Y[b.lane]+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
@@ -427,10 +443,10 @@ function spawnUnit(b) {
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
     flatArmor: def.armor || 0,
-    hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
-    atk:Math.round(def.atk*mul*timeMul), atkSpeed:def.atkSpeed,
-    range:def.range*rangeMul, speed:def.speed, atkTimer:0,
-    crit:0, dodge:0, instantKill:0, polymorpth:0,
+    hp:Math.round(def.hp*hpMul), maxHp:Math.round(def.hp*hpMul),
+    atk:Math.round(def.atk*atkMul*timeMul), atkSpeed:def.atkSpeed,
+    range:def.range*rangeMul, speed:def.speed*speedMul, atkTimer:0,
+    crit:0.05*critMul, dodge:(b.unitType==='fighter'?0.15:0.05)*dodgeMul, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
     doubleStrike:0, multiTarget:0, splashRange:0,
     aoe:0, dmgReduce:0, buildingDamage:0,
@@ -452,8 +468,8 @@ function spawnUnit(b) {
   [def.skill1, def.skill2].forEach(s => {
     if (!s) return;
     if (s.k==='dmgReduce') u.dmgReduce = s.v*mul;
-    else if (s.k==='crit') u.crit = s.v*mul;
-    else if (s.k==='dodge') u.dodge = s.v*mul;
+    else if (s.k==='crit') u.crit = Math.max(u.crit, s.v*critMul);
+    else if (s.k==='dodge') u.dodge = Math.max(u.dodge, s.v*dodgeMul);
     else if (s.k==='instantKill') u.instantKill = s.v + 0.005*(lv-1);
     else if (s.k==='polymorph') u.polymorpth = s.v*mul;
     else if (s.k==='burn') u.burnDps = 20*mul;
@@ -2328,13 +2344,42 @@ let duelLogAutoScroll = true; // 是否自动滚动到底部
 function startDuel(typeA, typeB, lv) {
   const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
   lv = lv || 6;
-  const mul = Math.pow(1.1, lv-1);
+  // 跟主游戏一致的成长系数
+  const calcMul = (type, stat) => {
+    const isMelee = ['melee','barbarian','paladin','fighter'].includes(type);
+    const isArcher = ['archer','musketeer','ranger','crossbow'].includes(type);
+    const isMage = ['mage','arcane','ice','fire'].includes(type);
+    const isSiege = ['cannon','rocket','tesla','siege'].includes(type);
+    if (stat==='hp' && isMelee) return Math.pow(1.2, lv-1);
+    if (stat==='atk' && isSiege) return Math.pow(1.2, lv-1);
+    if (stat==='dodge' && isArcher) return Math.pow(1.2, lv-1);
+    if (stat==='crit' && isMage) return Math.pow(1.2, lv-1);
+    return Math.pow(1.1, lv-1);
+  };
+  const calcSpeed = (def, type) => {
+    let m = 1.0;
+    if (def.armorType === 'fort') m = 0.8;
+    else if (def.armorType === 'light') m = 1.3;
+    else if (def.armorType === 'unarmored') m = 0.9;
+    if (['mage','arcane','ice','fire'].includes(type)) m = 0.9;
+    return def.speed * m;
+  };
+  const hpA = Math.round(defA.hp * calcMul(typeA,'hp'));
+  const atkA = Math.round(defA.atk * calcMul(typeA,'atk'));
+  const critA = 0.05 * calcMul(typeA,'crit');
+  const dodgeA = (typeA==='fighter'?0.15:0.05) * calcMul(typeA,'dodge');
+  const spdA = calcSpeed(defA, typeA);
+  const hpB = Math.round(defB.hp * calcMul(typeB,'hp'));
+  const atkB = Math.round(defB.atk * calcMul(typeB,'atk'));
+  const critB = 0.05 * calcMul(typeB,'crit');
+  const dodgeB = (typeB==='fighter'?0.15:0.05) * calcMul(typeB,'dodge');
+  const spdB = calcSpeed(defB, typeB);
   // 战斗区域中心x=400，双方初始间距300，从两端入场
   const centerX = 400, gap = 300;
   duelAnim = {
     typeA, typeB,
-    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0, x: centerX - gap/2, moving: true, slowT: 0, arrowRainWaves:0, arrowRainTimer:0, whirlwindActive:0, whirlwindTick:0, airSlugStacks:0, stunBlastStacks:0, vulnerable:0},
-    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0, x: centerX + gap/2, moving: true, slowT: 0, arrowRainWaves:0, arrowRainTimer:0, whirlwindActive:0, whirlwindTick:0, airSlugStacks:0, stunBlastStacks:0, vulnerable:0},
+    a: {hp:hpA, maxHp:hpA, atk:atkA, atkSpeed:defA.atkSpeed, crit:critA, dodge:dodgeA, speed:spdA, cd:0.5, anim:0, def:defA, stun:0, poison:0, ultCd:3, golemCd:0, golemHp:0, golemAtkCd:0, healCd:0, skeletonCd:0, skeletonHp:0, skeletonAtkCd:0, shield:0, x:centerX-gap/2, moving:true, slowT:0, arrowRainWaves:0, arrowRainTimer:0, whirlwindActive:0, whirlwindTick:0, airSlugStacks:0, stunBlastStacks:0, vulnerable:0},
+    b: {hp:hpB, maxHp:hpB, atk:atkB, atkSpeed:defB.atkSpeed, crit:critB, dodge:dodgeB, speed:spdB, cd:0.5, anim:0, def:defB, stun:0, poison:0, ultCd:3, golemCd:0, golemHp:0, golemAtkCd:0, healCd:0, skeletonCd:0, skeletonHp:0, skeletonAtkCd:0, shield:0, x:centerX+gap/2, moving:true, slowT:0, arrowRainWaves:0, arrowRainTimer:0, whirlwindActive:0, whirlwindTick:0, airSlugStacks:0, stunBlastStacks:0, vulnerable:0},
     time: 0, done: false, winner: null,
     logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})，双方从两端入场！`]
   };
@@ -2367,9 +2412,8 @@ function updateDuel(dt) {
   const dist = Math.abs(d.b.x - d.a.x);
   const aRange = d.a.def.range || 15;
   const bRange = d.b.def.range || 15;
-  const moveSpeed = 80;
-  const aSpd = d.a.slowT > 0 ? moveSpeed*0.5 : moveSpeed;
-  const bSpd = d.b.slowT > 0 ? moveSpeed*0.5 : moveSpeed;
+  const aSpd = d.a.slowT > 0 ? d.a.speed*0.5 : d.a.speed;
+  const bSpd = d.b.slowT > 0 ? d.b.speed*0.5 : d.b.speed;
   if (d.a.hp > 0 && d.a.stun <= 0) {
     if (dist > aRange) { d.a.x += aSpd * dt; d.a.moving = true; } else d.a.moving = false;
   }
@@ -2443,9 +2487,9 @@ function updateDuel(dt) {
       d.a.cd = 1/d.a.atkSpeed;
     }
     if (!aUltUsed) {
-    // 闪避
-    if (d.b.def.skill1 && d.b.def.skill1.k==='dodge' && Math.random() < d.b.def.skill1.v) {
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避！`);
+    // 闪避（使用单位的dodge属性，随等级成长）
+    if (d.b.dodge && Math.random() < d.b.dodge) {
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避！(${Math.round(d.b.dodge*100)}%)`);
       // 闪避反击
       const counterDmg = Math.round(d.a.atk * 1.0);
       d.a.hp -= counterDmg;
@@ -2463,9 +2507,9 @@ function updateDuel(dt) {
       if (d.a.def.skill2 && d.a.def.skill2.k==='execute' && d.b.hp/d.b.maxHp < d.a.def.skill2.v) {
         dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 斩杀！`);
       }
-      // 暴击（基础5%，2倍伤害）
+      // 暴击（使用单位的crit属性，随等级成长）
       let crit = false;
-      if (Math.random() < 0.05) { dmg *= 2; crit = true; }
+      if (d.a.crit && Math.random() < d.a.crit) { dmg *= 2; crit = true; }
       dmg = Math.round(dmg);
       // 攻城炮大招：空气弹层数，200%伤害+击飞
       if (d.a.airSlugStacks > 0) {
@@ -2533,8 +2577,8 @@ function updateDuel(dt) {
       d.b.cd = 1/d.b.atkSpeed;
     }
     if (!bUltUsed) {
-    if (d.a.def.skill1 && d.a.def.skill1.k==='dodge' && Math.random() < d.a.def.skill1.v) {
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避！`);
+    if (d.a.dodge && Math.random() < d.a.dodge) {
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避！(${Math.round(d.a.dodge*100)}%)`);
       const counterDmg = Math.round(d.b.atk * 1.0);
       d.b.hp -= counterDmg;
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 反击！造成${counterDmg}伤害`);
@@ -2547,7 +2591,7 @@ function updateDuel(dt) {
       if (d.b.def.skill2 && d.b.def.skill2.k==='execute' && d.a.hp/d.a.maxHp < d.b.def.skill2.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 斩杀！`); }
       // 暴击（基础5%，2倍伤害）
       let critB = false;
-      if (Math.random() < 0.05) { dmg *= 2; critB = true; }
+      if (d.b.crit && Math.random() < d.b.crit) { dmg *= 2; critB = true; }
       dmg = Math.round(dmg);
       // 攻城炮大招：空气弹层数，200%伤害+击飞
       if (d.b.airSlugStacks > 0) {
