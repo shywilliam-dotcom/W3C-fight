@@ -302,10 +302,19 @@ for (const t in spriteData) {
   img.src = spriteData[t];
   spriteImgs[t] = img;
 }
+// 缺少的sprite用PORTRAITS立绘代替
+for (const t in PORTRAITS) {
+  if (!spriteImgs[t]) {
+    const img = new Image();
+    img.src = PORTRAITS[t];
+    spriteImgs[t] = img;
+  }
+}
 const typeToSprite = { paladin:'paladin', barbarian:'paladin', fighter:'paladin',
   ice:'ice', mage:'mage', arcane:'arcane', fire:'darkfire',
   melee:'melee', archer:'archer', musketeer:'musketeer', ranger:'ranger', crossbow:'crossbow',
-  cannon:'cannon', rocket:'rocket', tesla:'tesla' };
+  cannon:'cannon', rocket:'rocket', tesla:'tesla', siege:'siege',
+  skeleton:'skeleton', golem:'golem' };
 
 function initGame() {
   game.started = false;
