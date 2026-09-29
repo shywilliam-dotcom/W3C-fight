@@ -2116,8 +2116,8 @@ function updateDuel(dt) {
   // 毒dot每0.5秒触发
   d.a.poisonTick = (d.a.poisonTick || 0) - dt;
   d.b.poisonTick = (d.b.poisonTick || 0) - dt;
-  if (d.a.poison > 0 && d.a.poisonTick <= 0) { d.a.poisonTick = 0.5; d.a.hp -= d.a.atk*0.2; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot对${d.a.def.name}造成${Math.round(d.a.atk*0.2)}伤害`); }
-  if (d.b.poison > 0 && d.b.poisonTick <= 0) { d.b.poisonTick = 0.5; d.b.hp -= d.b.atk*0.2; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot对${d.b.def.name}造成${Math.round(d.b.atk*0.2)}伤害`); }
+  if (d.a.poison > 0 && d.a.poisonTick <= 0) { d.a.poisonTick = 0.5; const pd = d.a.atk*0.2*(d.a.poisonStacks||1); d.a.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.a.poisonStacks||1}层)对${d.a.def.name}造成${Math.round(pd)}伤害`); }
+  if (d.b.poison > 0 && d.b.poisonTick <= 0) { d.b.poisonTick = 0.5; const pd = d.b.atk*0.2*(d.b.poisonStacks||1); d.b.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.b.poisonStacks||1}层)对${d.b.def.name}造成${Math.round(pd)}伤害`); }
   // A攻击
   if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0) {
     // 闪避
@@ -2154,7 +2154,7 @@ function updateDuel(dt) {
       while (hits < 5 && dsSkill && Math.random() < dsSkill.v) hits++;
       if (hits > 1) { d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 连击${hits}次！`); for(let i=1;i<hits;i++) d.b.hp -= dmg; }
       // 毒
-      if (d.a.def.skill1 && d.a.def.skill1.k==='poison') { d.b.poison = 3; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施毒！`); }
+      if (d.a.def.skill1 && d.a.def.skill1.k==='poison') { d.b.poison = 3; d.b.poisonStacks = (d.b.poisonStacks||0)+1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施毒！(${d.b.poisonStacks}层)`); }
       // 晕
       if (d.a.def.skill3 && d.a.def.skill3.k==='strikeStun' && Math.random() < d.a.def.skill3.v) { d.b.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 击晕目标！`); }
       // 变羊
@@ -2199,7 +2199,7 @@ function updateDuel(dt) {
       let hitsB = 1;
       while (hitsB < 5 && dsSkillB && Math.random() < dsSkillB.v) hitsB++;
       if (hitsB > 1) { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 连击${hitsB}次！`); for(let i=1;i<hitsB;i++) d.a.hp -= dmg; }
-      if (d.b.def.skill1 && d.b.def.skill1.k==='poison') { d.a.poison = 3; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施毒！`); }
+      if (d.b.def.skill1 && d.b.def.skill1.k==='poison') { d.a.poison = 3; d.a.poisonStacks = (d.a.poisonStacks||0)+1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施毒！(${d.a.poisonStacks}层)`); }
       if (d.b.def.skill3 && d.b.def.skill3.k==='strikeStun' && Math.random() < d.b.def.skill3.v) { d.a.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 击晕目标！`); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='polymorph' && Math.random() < d.b.def.skill1.v) { d.a.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 变羊！目标无法行动！`); }
       if (d.b.def.skill2 && d.b.def.skill2.k==='vulnerable' && Math.random() < d.b.def.skill2.v) { dmg *= 1.3; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施加易伤！伤害+30%`); }
