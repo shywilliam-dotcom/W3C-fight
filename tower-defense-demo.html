@@ -303,7 +303,9 @@ for (const t in spriteData) {
   spriteImgs[t] = img;
 }
 const typeToSprite = { paladin:'paladin', barbarian:'paladin', fighter:'paladin',
-  ice:'ice', mage:'mage', arcane:'arcane', fire:'darkfire' };
+  ice:'ice', mage:'mage', arcane:'arcane', fire:'darkfire',
+  melee:'melee', archer:'archer', musketeer:'musketeer', ranger:'ranger', crossbow:'crossbow',
+  cannon:'cannon', rocket:'rocket', tesla:'tesla' };
 
 function initGame() {
   game.started = false;
@@ -2308,18 +2310,21 @@ function drawCodex() {
       // 战场背景
       ctx.fillStyle='#3a3a5a'; ctx.fillRect(120, 80, 880, 450);
       ctx.strokeStyle='#888'; ctx.strokeRect(120, 80, 880, 450);
-      // A单位（左）- 立绘
+      // A单位（左）- 用游戏里的sprite
       const ax = 350 + d.a.anim*20;
-      const aKey = typeToPortrait[d.typeA];
-      const aImg = aKey ? portraitImgs[aKey] : null;
-      if (aImg && aImg.complete && aImg.naturalWidth > 0) {
+      const aSKey = typeToSprite[d.typeA];
+      const aImg = aSKey ? spriteImgs[aSKey] : null;
+      if (aImg && aImg.complete && aImg.naturalWidth > 0 && aImg._ready!==false) {
         ctx.save();
         ctx.translate(ax, 320);
-        ctx.scale(2, 2);
-        ctx.drawImage(aImg, -20, -30, 40, 50);
+        ctx.scale(2.5, 2.5);
+        ctx.drawImage(aImg, -15, -25, 30, 40);
         ctx.restore();
       } else {
-        ctx.fillStyle='#4FC3F7'; ctx.beginPath(); ctx.arc(ax, 300, 30, 0, Math.PI*2); ctx.fill();
+        // 画简单人形
+        ctx.fillStyle='#4FC3F7';
+        ctx.beginPath(); ctx.arc(ax, 285, 8, 0, Math.PI*2); ctx.fill(); // 头
+        ctx.fillRect(ax-8, 293, 16, 25); // 身体
       }
       ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.textAlign='center';
       ctx.fillText(d.a.def.name, ax, 380);
@@ -2328,18 +2333,20 @@ function drawCodex() {
       ctx.fillStyle='#4CAF50'; ctx.fillRect(250, 250, 200*Math.max(0,d.a.hp/d.a.maxHp), 15);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.a.hp))}/${d.a.maxHp}`, 350, 262);
-      // B单位（右）- 立绘
+      // B单位（右）- 用游戏里的sprite
       const bx = 850 - d.b.anim*20;
-      const bKey = typeToPortrait[d.typeB];
-      const bImg = bKey ? portraitImgs[bKey] : null;
-      if (bImg && bImg.complete && bImg.naturalWidth > 0) {
+      const bSKey = typeToSprite[d.typeB];
+      const bImg = bSKey ? spriteImgs[bSKey] : null;
+      if (bImg && bImg.complete && bImg.naturalWidth > 0 && bImg._ready!==false) {
         ctx.save();
         ctx.translate(bx, 320);
-        ctx.scale(-2, 2);
-        ctx.drawImage(bImg, -20, -30, 40, 50);
+        ctx.scale(-2.5, 2.5);
+        ctx.drawImage(bImg, -15, -25, 30, 40);
         ctx.restore();
       } else {
-        ctx.fillStyle='#EF5350'; ctx.beginPath(); ctx.arc(bx, 300, 30, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle='#EF5350';
+        ctx.beginPath(); ctx.arc(bx, 285, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillRect(bx-8, 293, 16, 25);
       }
       ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
       ctx.fillText(d.b.def.name, bx, 380);
