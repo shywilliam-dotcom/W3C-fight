@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.65';
+const VERSION = 'v8.66';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -193,7 +193,7 @@ const UNIT_TYPES = {
     skill1:{k:'instantKill',v:0.03}, skill2:{k:'splash',v:0.25}, desc:'3%即死(每级+0.5%)+25%溅射 | 大招穿透射击:直线400内5个单位CD35s（中期强）' },
   ranger:   { name:'游侠', armor:2, shape:'triangle', size:9, hp:220, atk:11, atkSpeed:1.0, range:220, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
     skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭(最多叠4层)+超远射程 | 大招箭雨：150范围4波×120%伤害，CD40s（初期强）' },
-  crossbow: { name:'破甲弩手', armor:2, shape:'triangle', size:9, hp:200, atk:10, atkSpeed:1.1, range:145, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
+  crossbow: { name:'破甲弩手', armor:2, shape:'triangle', size:9, hp:200, atk:10, atkSpeed:2.0, range:145, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
     skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, skill3:{k:'focusFire',v:0.06}, desc:'20%连锁连击(最多5次)+无视护甲+专注射击(同一目标每次攻击攻速+6%最高300%)（后期强）' },
 
   // 法师升级（大招=暴风雪）
@@ -470,6 +470,7 @@ function spawnUnit(b) {
     burnDps:0, poison:0, poisonDps:0, splash:0,
     doubleStrike:0, multiTarget:0, splashRange:0,
     focusFire:0, focusStacks:0, focusTarget:null,
+    doubleStrikeBonus:0, // 连击保底：未触发时+10%
     aoe:0, dmgReduce:0, buildingDamage:0,
     iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
     armorPierce:false, summonGolem:0, chainLightning:0, longRange:0,
@@ -565,9 +566,18 @@ function doAttack(att, tgt, def) {
     });
   }
   // 连锁连击：每次攻击都有概率再触发一次，最多连打5次
+  // 保底机制：未触发连击时，下次连击概率+10%，触发后清零
   let strikes = 1;
   if (att.doubleStrike>0) {
-    while (strikes<5 && Math.random()<att.doubleStrike) strikes++;
+    const dsChance = att.doubleStrike + (att.doubleStrikeBonus||0);
+    while (strikes<5 && Math.random()<dsChance) strikes++;
+    if (strikes===1) {
+      // 未触发连击，保底+10%
+      att.doubleStrikeBonus = Math.min(0.5, (att.doubleStrikeBonus||0) + 0.10);
+    } else {
+      // 触发了连击，保底清零
+      att.doubleStrikeBonus = 0;
+    }
   }
   // 破甲弩手专注射击：同一目标每次攻击（含连击）叠加攻速，换目标清零
   if (att.focusFire>0 && tgt.type!==undefined) {
@@ -2591,11 +2601,16 @@ function updateDuel(dt) {
         d.a.hp = Math.min(d.a.maxHp, d.a.hp + d.a.maxHp*0.03);
         d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 治疗自己3%血！`);
       }
-      // A连击（连锁最多5次）
+      // A连击（连锁最多5次，保底：未触发时+10%）
       const dsSkill = (d.a.def.skill1 && d.a.def.skill1.k==='doubleStrike') ? d.a.def.skill1 :
                       (d.a.def.skill2 && d.a.def.skill2.k==='doubleStrike') ? d.a.def.skill2 : null;
       let hits = 1;
-      while (hits < 5 && dsSkill && Math.random() < dsSkill.v) hits++;
+      if (dsSkill) {
+        const dsChance = dsSkill.v + (d.a.dsBonus||0);
+        while (hits < 5 && Math.random() < dsChance) hits++;
+        if (hits===1) d.a.dsBonus = Math.min(0.5, (d.a.dsBonus||0)+0.10);
+        else d.a.dsBonus = 0;
+      }
       if (hits > 1) { d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 连击${hits}次！`); for(let i=1;i<hits;i++) d.b.hp -= dmg; }
       // 专注射击：破甲弩手同一目标每次攻击攻速+6%
       if (d.a.def.skill3 && d.a.def.skill3.k==='focusFire') {
@@ -2691,11 +2706,16 @@ function updateDuel(dt) {
         d.b.hp = Math.min(d.b.maxHp, d.b.hp + d.b.maxHp*0.03);
         d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 治疗自己3%血！`);
       }
-      // B连击
+      // B连击（连锁最多5次，保底：未触发时+10%）
       const dsSkillB = (d.b.def.skill1 && d.b.def.skill1.k==='doubleStrike') ? d.b.def.skill1 :
                        (d.b.def.skill2 && d.b.def.skill2.k==='doubleStrike') ? d.b.def.skill2 : null;
       let hitsB = 1;
-      while (hitsB < 5 && dsSkillB && Math.random() < dsSkillB.v) hitsB++;
+      if (dsSkillB) {
+        const dsChanceB = dsSkillB.v + (d.b.dsBonus||0);
+        while (hitsB < 5 && Math.random() < dsChanceB) hitsB++;
+        if (hitsB===1) d.b.dsBonus = Math.min(0.5, (d.b.dsBonus||0)+0.10);
+        else d.b.dsBonus = 0;
+      }
       if (hitsB > 1) { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 连击${hitsB}次！`); for(let i=1;i<hitsB;i++) d.a.hp -= dmg; }
       // 专注射击：破甲弩手同一目标每次攻击攻速+6%
       if (d.b.def.skill3 && d.b.def.skill3.k==='focusFire') {
