@@ -254,8 +254,6 @@ function processPortrait(img, key) {
       const r = d[i], g = d[i+1], b = d[i+2];
       // 白色/浅色背景变透明
       if (r > 200 && g > 200 && b > 200) { d[i+3] = 0; }
-      // 深色/灰色背景变透明（野蛮人/格斗家跳过，避免棕色皮肤/黑裤子被误抠）
-      else if (key !== 'barbarian' && key !== 'fighter' && r < 120 && g < 120 && b < 120 && Math.abs(r-g)<30 && Math.abs(g-b)<30) { d[i+3] = 0; }
     }
     tctx.putImageData(data, 0, 0);
     const url = tmp.toDataURL();
