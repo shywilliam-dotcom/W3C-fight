@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.58';
+const VERSION = 'v8.59';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -483,7 +483,7 @@ function spawnUnit(b) {
     else if (s.k==='vulnerable') u.vulnerable = s.v*mul;
     else if (s.k==='dodgeCounter') u.dodgeCounter = !!s.v;
     else if (s.k==='execute') u.execute = s.v;
-    else if (s.k==='parryArcher') u.parryArcher = s.v*mul;
+    else if (s.k==='parryArcher') u.parryArcher = s.v; // 固定30%不成长
     else if (s.k==='electricField') u.electricField = s.v;
     else if (s.k==='summonSkeleton') u.summonSkeleton = s.v;
     else if (s.k==='burnStack') u.burnStack = 1;
@@ -1220,9 +1220,10 @@ function update(dt) {
   game.units.forEach(u => {
     if ((u.type==='skeleton'||u.type==='golem') && u.master && u.master.hp<=0) u.hp=0;
   });
-  // 死亡光环技能
+  // 死亡光环技能（仅基础兵种：刀盾手/弓手/法师/工程车）
+  const BASE_TYPES = ['melee','archer','mage','cannon'];
   game.units.forEach(u => {
-    if (u.hp<=0 && !u.deathAuraTriggered) {
+    if (u.hp<=0 && !u.deathAuraTriggered && BASE_TYPES.includes(u.type)) {
       u.deathAuraTriggered = true;
       const allies = game.units.filter(o => o.side===u.side && o.hp>0 && o.lane===u.lane && Math.abs(o.x-u.x)<80);
       if (u.type==='mage') {
@@ -1234,7 +1235,7 @@ function update(dt) {
       } else if (u.type==='archer') {
         // 不惧：80范围友方+20%攻速，8秒
         allies.forEach(o => { o.atkSpdBuff = 0.2; o.atkSpdBuffT = 8; });
-      } else if (u.type==='siege') {
+      } else if (u.type==='cannon') {
         // 坚强：80范围友方护盾，吸收工程车生命20%伤害，15秒
         const shieldVal = u.maxHp * 0.2;
         allies.forEach(o => { o.shield = (o.shield||0) + shieldVal; o.shieldT = 15; });
