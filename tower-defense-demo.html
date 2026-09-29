@@ -2170,6 +2170,12 @@ function updateDuel(dt) {
       if (d.b.def.skill2 && d.b.def.skill2.k==='execute' && d.a.hp/d.a.maxHp < d.b.def.skill2.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 斩杀！`); }
       dmg = Math.round(dmg);
       d.a.hp -= dmg;
+      // B连击
+      const dsSkillB = (d.b.def.skill1 && d.b.def.skill1.k==='doubleStrike') ? d.b.def.skill1 :
+                       (d.b.def.skill2 && d.b.def.skill2.k==='doubleStrike') ? d.b.def.skill2 : null;
+      let hitsB = 1;
+      while (hitsB < 5 && dsSkillB && Math.random() < dsSkillB.v) hitsB++;
+      if (hitsB > 1) { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 连击${hitsB}次！`); for(let i=1;i<hitsB;i++) d.a.hp -= dmg; }
       if (d.b.def.skill1 && d.b.def.skill1.k==='poison') { d.a.poison = 3; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施毒！`); }
       if (d.b.def.skill3 && d.b.def.skill3.k==='strikeStun' && Math.random() < d.b.def.skill3.v) { d.a.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 击晕目标！`); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='polymorph' && Math.random() < d.b.def.skill1.v) { d.a.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 变羊！目标无法行动！`); }
