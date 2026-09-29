@@ -310,6 +310,14 @@ for (const t in PORTRAITS) {
     spriteImgs[t] = img;
   }
 }
+// 再用EXTERNAL_PORTRAITS补充（11个外部兵种贴图）
+for (const t in EXTERNAL_PORTRAITS) {
+  if (!spriteImgs[t]) {
+    const img = new Image();
+    img.src = EXTERNAL_PORTRAITS[t];
+    spriteImgs[t] = img;
+  }
+}
 const typeToSprite = { paladin:'paladin', barbarian:'barbarian', fighter:'fighter',
   ice:'ice', mage:'mage', arcane:'arcane', fire:'darkfire',
   melee:'melee', archer:'archer', musketeer:'musketeer', ranger:'ranger', crossbow:'crossbow',
