@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v9.00';
+const VERSION = 'v9.01';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -1659,6 +1659,16 @@ function render() {
       const pKey = typeToPortrait[u.type];
       const pImg = pKey ? portraitImgs[pKey] : null;
       if (pImg && pImg.complete && pImg.naturalWidth > 0 && pImg._ready) {
+        // 阵营色：我方蓝，敌方红
+        const sideColor = u.side==='my' ? 'rgba(79,195,247,0.35)' : 'rgba(239,83,80,0.35)';
+        const sideBorder = u.side==='my' ? '#4FC3F7' : '#EF5350';
+        // 脚下阵营光环
+        ctx.save();
+        ctx.beginPath(); ctx.ellipse(u.x, u.y+8, 14, 5, 0, 0, Math.PI*2);
+        ctx.fillStyle = sideColor; ctx.fill();
+        ctx.strokeStyle = sideBorder; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.restore();
+
         ctx.save();
         ctx.translate(u.x + (doFlip?-animX:animX), u.y + animY);
         if (doFlip) ctx.scale(-1, 1); // 按flipTypes统一翻转
@@ -1667,15 +1677,20 @@ function render() {
         const sc = 1.4;
         const iw = 22 * sc, ih = 28 * sc * 0.8;
         ctx.drawImage(pImg, -iw/2, -ih + 4, iw, ih);
-        // 血条
+        // 血条 - 按阵营色：我方绿，敌方红
         if (u.hp < u.maxHp) {
-          const bw = 20;
-          ctx.fillStyle = 'rgba(0,0,0,0.6)';
-          ctx.fillRect(-bw/2, -ih + 2, bw, 3);
-          ctx.fillStyle = u.hp/u.maxHp > 0.5 ? '#4caf50' : u.hp/u.maxHp > 0.25 ? '#ff9800' : '#f44336';
-          ctx.fillRect(-bw/2, -ih + 2, bw * (u.hp/u.maxHp), 3);
+          const bw = 22;
+          ctx.fillStyle = 'rgba(0,0,0,0.7)';
+          ctx.fillRect(-bw/2, -ih + 1, bw, 4);
+          ctx.fillStyle = u.side==='my' ? '#4CAF50' : '#F44336';
+          ctx.fillRect(-bw/2, -ih + 1, bw * (u.hp/u.maxHp), 4);
         }
         ctx.restore();
+        // 名字 - 按阵营色
+        ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
+        ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y - 26);
+        ctx.textAlign = 'start';
         return;
       }
     }
@@ -1871,14 +1886,15 @@ function render() {
       }
       ctx.restore();
     }
-    // 血条
+    // 血条 - 按阵营色：我方绿，敌方红
     const pct=u.hp/u.maxHp;
-    ctx.fillStyle='#333'; ctx.fillRect(u.x-9,u.y-s-7,18,3);
-    ctx.fillStyle=pct>0.5?'#4CAF50':pct>0.25?'#FF9800':'#F44336';
-    ctx.fillRect(u.x-9,u.y-s-7,18*pct,3);
-    // 名字
-    ctx.fillStyle='#fff'; ctx.font='8px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(u.name||'', u.x, u.y-s-10); ctx.textAlign='start';
+    ctx.fillStyle='#333'; ctx.fillRect(u.x-10,u.y-s-8,20,4);
+    ctx.fillStyle = u.side==='my' ? '#4CAF50' : '#F44336';
+    ctx.fillRect(u.x-10,u.y-s-8,20*pct,4);
+    // 名字 - 按阵营色
+    ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
+    ctx.font='bold 8px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y-s-11); ctx.textAlign='start';
     // 选中框
     if (game.selectedUnit===u) {
       ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
