@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.42';
+const VERSION = 'v8.43';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -2565,21 +2565,27 @@ function drawCodex() {
         });
       });
     }
-    // 画兵种列表（对战中不画）
+    // 画兵种列表（对战中不画）—— 用统一函数getCodexButtonRect，确保与点击坐标严格一致
     if (duelPick === 2) return;
-    let idx = 0, by = 250;
+    const lx = 30;
+    let by2 = 30;
+    const titleH2 = 20;
+    const bw2 = 88, bh2 = 42;
+    const hGap2 = 10, vGap2 = 8, catGap2 = 8;
+    let btnIdx2 = 0;
     for (const cat of CODEX) {
-      ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 15px sans-serif';
-      ctx.fillText(cat.cat, 30, by); by += 24;
+      ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 17px sans-serif';
+      ctx.fillText(cat.cat, lx, by2);
+      by2 += titleH2;
       for (let i=0; i<cat.names.length; i++) {
-        const col = i % 2, row = Math.floor(i/2);
-        const bw=96, bh=40, bx=30+col*(bw+16), by2=by+row*(bh+8);
-        ctx.fillStyle = '#3a3a5a'; ctx.fillRect(bx, by2, bw, bh);
+        const rect = getCodexButtonRect(btnIdx2);
+        ctx.fillStyle = '#3a3a5a';
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
         ctx.fillStyle = '#ddd'; ctx.font='13px sans-serif';
-        ctx.fillText(cat.names[i], bx+6, by2+25);
-        idx++;
+        ctx.fillText(cat.names[i], rect.x+6, rect.y + rect.h*0.6);
+        btnIdx2++;
       }
-      by += 2*48 + 10;
+      by2 += 2*(bh2+vGap2) + catGap2;
     }
     return;
   }
