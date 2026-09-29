@@ -630,7 +630,7 @@ function applyDmg(att, tgt, dmg, def) {
   // 护甲值免伤（魔兽公式：免伤% = 护甲/(护甲+100)）
   if (!att.armorPierce) {
     const flatArmor = tgt.flatArmor || 0;
-    const reduce = flatArmor / (flatArmor + 100);
+    const reduce = flatArmor / (flatArmor + 15);
     fd = fd * (1 - reduce);
   }
   if (tgt.type===undefined || tgt.maxHp && tgt.unitType===undefined && tgt.side && !tgt.st) {
@@ -2071,7 +2071,7 @@ function updateDuel(dt) {
     } else {
       let dmg = d.a.atk * dmgMul(d.a.def.atkType, d.b.def.armorType);
       const targetArmor = d.b.def.armor || 0;
-      dmg = dmg * (1 - targetArmor/(targetArmor+100));
+      dmg = dmg * (1 - targetArmor/(targetArmor+15));
       // 即死
       if (d.a.def.skill1 && d.a.def.skill1.k==='instantKill' && Math.random() < d.a.def.skill1.v) {
         dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 触发即死！`);
@@ -2101,7 +2101,7 @@ function updateDuel(dt) {
     } else {
       let dmg = d.b.atk * dmgMul(d.b.def.atkType, d.a.def.armorType);
       const tArmor = d.a.def.armor || 0;
-      dmg = dmg * (1 - tArmor/(tArmor+100));
+      dmg = dmg * (1 - tArmor/(tArmor+15));
       if (d.b.def.skill1 && d.b.def.skill1.k==='instantKill' && Math.random() < d.b.def.skill1.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 触发即死！`); }
       if (d.b.def.skill2 && d.b.def.skill2.k==='execute' && d.a.hp/d.a.maxHp < d.b.def.skill2.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 斩杀！`); }
       dmg = Math.round(dmg);
