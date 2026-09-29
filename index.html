@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.44';
+const VERSION = 'v8.45';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -264,7 +264,8 @@ function processPortrait(img, key) {
 }
 for (const k in PORTRAITS) {
   portraitImgs[k] = new Image();
-  portraitImgs[k].onload = () => { processPortrait(portraitImgs[k], k); };
+  portraitImgs[k]._key = k;
+  portraitImgs[k].onload = function() { processPortrait(this, this._key); };
   portraitImgs[k].src = PORTRAITS[k];
 }
 // 外部URL立绘（新补的兵种）
@@ -283,7 +284,8 @@ const EXTERNAL_PORTRAITS = {
 };
 for (const k in EXTERNAL_PORTRAITS) {
   portraitImgs[k] = new Image();
-  portraitImgs[k].onload = () => { portraitImgs[k]._ready = true; };
+  portraitImgs[k]._key = k;
+  portraitImgs[k].onload = function() { processPortrait(this, this._key); };
   portraitImgs[k].src = EXTERNAL_PORTRAITS[k];
 }
 // 兵种到立绘的映射
@@ -308,7 +310,7 @@ for (const t in PORTRAITS) {
     spriteImgs[t] = img;
   }
 }
-const typeToSprite = { paladin:'paladin', barbarian:'paladin', fighter:'paladin',
+const typeToSprite = { paladin:'paladin', barbarian:'barbarian', fighter:'fighter',
   ice:'ice', mage:'mage', arcane:'arcane', fire:'darkfire',
   melee:'melee', archer:'archer', musketeer:'musketeer', ranger:'ranger', crossbow:'crossbow',
   cannon:'cannon', rocket:'rocket', tesla:'tesla', siege:'siege',
