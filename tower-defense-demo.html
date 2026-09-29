@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.49';
+const VERSION = 'v8.50';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -2254,12 +2254,14 @@ function startDuel(typeA, typeB, lv) {
   const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
   lv = lv || 6;
   const mul = Math.pow(1.1, lv-1);
+  // 战斗区域中心x=400，双方初始间距300，从两端入场
+  const centerX = 400, gap = 300;
   duelAnim = {
     typeA, typeB,
-    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0},
-    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0},
+    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0, x: centerX - gap/2, moving: true, st: {slow:0}},
+    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0, x: centerX + gap/2, moving: true, st: {slow:0}},
     time: 0, done: false, winner: null,
-    logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})`]
+    logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})，双方从两端入场！`]
   };
   duelLogScroll = 0;
   duelLogAutoScroll = true;
@@ -2282,15 +2284,33 @@ function updateDuel(dt) {
   d.a.ultCd -= dt; d.b.ultCd -= dt;
   d.a.stun = Math.max(0, d.a.stun - dt); d.b.stun = Math.max(0, d.b.stun - dt);
   d.a.poison = Math.max(0, d.a.poison - dt); d.b.poison = Math.max(0, d.b.poison - dt);
+  if (d.a.st) d.a.st.slow = Math.max(0, (d.a.st.slow||0) - dt);
+  if (d.b.st) d.b.st.slow = Math.max(0, (d.b.st.slow||0) - dt);
   d.a.anim = Math.max(0, d.a.anim - dt*3);
   d.b.anim = Math.max(0, d.b.anim - dt*3);
+  // 移动入场：双方向对方移动，进入射程后停止
+  const dist = Math.abs(d.b.x - d.a.x);
+  const aRange = d.a.def.range || 15;
+  const bRange = d.b.def.range || 15;
+  const moveSpeed = 80; // 像素/秒
+  // 减速效果：slow>0时移动速度降50%
+  const aSlow = (d.a.st && d.a.st.slow > 0) ? 0.5 : 1;
+  const bSlow = (d.b.st && d.b.st.slow > 0) ? 0.5 : 1;
+  if (d.a.hp > 0 && d.a.stun <= 0) {
+    if (dist > aRange) { d.a.x += moveSpeed * aSlow * dt; d.a.moving = true; }
+    else d.a.moving = false;
+  }
+  if (d.b.hp > 0 && d.b.stun <= 0) {
+    if (dist > bRange) { d.b.x -= moveSpeed * bSlow * dt; d.b.moving = true; }
+    else d.b.moving = false;
+  }
   // 毒dot每0.5秒触发
   d.a.poisonTick = (d.a.poisonTick || 0) - dt;
   d.b.poisonTick = (d.b.poisonTick || 0) - dt;
   if (d.a.poison > 0 && d.a.poisonTick <= 0) { d.a.poisonTick = 0.5; const pd = d.a.atk*0.2*(d.a.poisonStacks||1); d.a.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.a.poisonStacks||1}层)对${d.a.def.name}造成${Math.round(pd)}伤害`); }
   if (d.b.poison > 0 && d.b.poisonTick <= 0) { d.b.poisonTick = 0.5; const pd = d.b.atk*0.2*(d.b.poisonStacks||1); d.b.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.b.poisonStacks||1}层)对${d.b.def.name}造成${Math.round(pd)}伤害`); }
-  // A攻击
-  if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0) {
+  // A攻击（需要在射程内）
+  if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0 && dist <= aRange) {
     // 闪避
     if (d.b.def.skill1 && d.b.def.skill1.k==='dodge' && Math.random() < d.b.def.skill1.v) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避！`);
@@ -2335,7 +2355,7 @@ function updateDuel(dt) {
       // 变羊
       if (d.a.def.skill1 && d.a.def.skill1.k==='polymorph' && Math.random() < d.a.def.skill1.v) { d.b.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 变羊！目标无法行动！`); }
       // 易伤
-      if (d.a.def.skill2 && d.a.def.skill2.k==='vulnerable' && Math.random() < d.a.def.skill2.v) { dmg *= 1.3; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施加易伤！伤害+30%`); }
+      if (d.a.def.skill2 && d.a.def.skill2.k==='vulnerable' && Math.random() < d.a.def.skill2.v) { dmg *= 1.3; d.b.st.slow = 5; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施加易伤+减速！伤害+30%`); }
       // 连击已在上面处理
       // 群伤/溅射
       if (d.a.def.skill1 && d.a.def.skill1.k==='aoe') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 横扫！群伤！`); }
@@ -2347,8 +2367,8 @@ function updateDuel(dt) {
     }
     d.a.cd = 1/d.a.def.atkSpeed; d.a.anim = 1;
   }
-  // B攻击
-  if (d.b.cd <= 0 && d.b.hp > 0 && d.b.stun <= 0) {
+  // B攻击（需要在射程内）
+  if (d.b.cd <= 0 && d.b.hp > 0 && d.b.stun <= 0 && dist <= bRange) {
     if (d.a.def.skill1 && d.a.def.skill1.k==='dodge' && Math.random() < d.a.def.skill1.v) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避！`);
       const counterDmg = Math.round(d.b.atk * 1.0);
@@ -2381,7 +2401,7 @@ function updateDuel(dt) {
       if (d.b.def.skill1 && d.b.def.skill1.k==='poison') { d.a.poison = 3; d.a.poisonStacks = (d.a.poisonStacks||0)+1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施毒！(${d.a.poisonStacks}层)`); }
       if (d.b.def.skill3 && d.b.def.skill3.k==='strikeStun' && Math.random() < d.b.def.skill3.v) { d.a.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 击晕目标！`); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='polymorph' && Math.random() < d.b.def.skill1.v) { d.a.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 变羊！目标无法行动！`); }
-      if (d.b.def.skill2 && d.b.def.skill2.k==='vulnerable' && Math.random() < d.b.def.skill2.v) { dmg *= 1.3; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施加易伤！伤害+30%`); }
+      if (d.b.def.skill2 && d.b.def.skill2.k==='vulnerable' && Math.random() < d.b.def.skill2.v) { dmg *= 1.3; d.a.st.slow = 5; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施加易伤+减速！伤害+30%`); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='aoe') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 横扫！群伤！`); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='splashRange') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 溅射攻击！`); }
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 攻击 ${d.a.def.name}，造成${dmg}伤害`);
@@ -2619,15 +2639,17 @@ function drawCodex() {
       // 战场背景
       ctx.fillStyle='#3a3a5a'; ctx.fillRect(60, 80, 680, 450);
       ctx.strokeStyle='#888'; ctx.strokeRect(60, 80, 680, 450);
-      // A单位（左）- 用游戏里的sprite
-      const ax = 200 + d.a.anim*15;
+      // A单位（左）- 用游戏里的sprite，真实x坐标
+      const ax = d.a.x;
       const aSKey = typeToSprite[d.typeA];
       const aImg = aSKey ? spriteImgs[aSKey] : null;
       if (aImg && aImg.complete && aImg.naturalWidth > 0 && aImg._ready!==false) {
         ctx.save();
         ctx.translate(ax, 320);
+        // 移动时上下轻微晃动
+        const bob = d.a.moving ? Math.sin(d.time*10)*2 : 0;
         ctx.scale(2.5, 2.5);
-        ctx.drawImage(aImg, -15, -25, 30, 40);
+        ctx.drawImage(aImg, -15, -25+bob, 30, 40);
         ctx.restore();
       } else {
         // 画简单人形
@@ -2637,20 +2659,21 @@ function drawCodex() {
       }
       ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.textAlign='center';
       ctx.fillText(d.a.def.name, ax, 370);
-      // A血条
-      ctx.fillStyle='#333'; ctx.fillRect(120, 250, 160, 15);
-      ctx.fillStyle='#4CAF50'; ctx.fillRect(120, 250, 160*Math.max(0,d.a.hp/d.a.maxHp), 15);
+      // A血条（跟随单位）
+      ctx.fillStyle='#333'; ctx.fillRect(ax-50, 250, 100, 12);
+      ctx.fillStyle='#4CAF50'; ctx.fillRect(ax-50, 250, 100*Math.max(0,d.a.hp/d.a.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
-      ctx.fillText(`${Math.max(0,Math.round(d.a.hp))}/${d.a.maxHp}`, 200, 262);
-      // B单位（右）- 用游戏里的sprite
-      const bx = 580 - d.b.anim*15;
+      ctx.fillText(`${Math.max(0,Math.round(d.a.hp))}/${d.a.maxHp}`, ax, 260);
+      // B单位（右）- 用游戏里的sprite，真实x坐标
+      const bx = d.b.x;
       const bSKey = typeToSprite[d.typeB];
       const bImg = bSKey ? spriteImgs[bSKey] : null;
       if (bImg && bImg.complete && bImg.naturalWidth > 0 && bImg._ready!==false) {
         ctx.save();
         ctx.translate(bx, 320);
+        const bob = d.b.moving ? Math.sin(d.time*10)*2 : 0;
         ctx.scale(-2.5, 2.5);
-        ctx.drawImage(bImg, -15, -25, 30, 40);
+        ctx.drawImage(bImg, -15, -25+bob, 30, 40);
         ctx.restore();
       } else {
         ctx.fillStyle='#EF5350';
@@ -2659,45 +2682,41 @@ function drawCodex() {
       }
       ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
       ctx.fillText(d.b.def.name, bx, 370);
-      // B血条
-      ctx.fillStyle='#333'; ctx.fillRect(420, 250, 160, 15);
-      ctx.fillStyle='#F44336'; ctx.fillRect(420, 250, 160*Math.max(0,d.b.hp/d.b.maxHp), 15);
+      // B血条（跟随单位）
+      ctx.fillStyle='#333'; ctx.fillRect(bx-50, 250, 100, 12);
+      ctx.fillStyle='#F44336'; ctx.fillRect(bx-50, 250, 100*Math.max(0,d.b.hp/d.b.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
-      ctx.fillText(`${Math.max(0,Math.round(d.b.hp))}/${d.b.maxHp}`, 500, 262);
-      // 攻击特效：投射物
-      const ax2 = 350 + d.a.anim*20;
-      const bx2 = 850 - d.b.anim*20;
+      ctx.fillText(`${Math.max(0,Math.round(d.b.hp))}/${d.b.maxHp}`, bx, 260);
+      // 攻击特效：投射物（用真实坐标）
       // A攻击：从A飞向B
       if (d.a.anim > 0.3) {
         const prog = 1 - d.a.anim; // 0→1
-        const px = ax2 + (bx2 - ax2) * prog;
+        const px = ax + (bx - ax) * prog;
         const py = 320;
         // 根据攻击类型画不同投射物
         if (d.a.def.atkType === 'melee') {
-          // 近战：挥刀弧线
+          // 近战：挥刀弧线（在B身边）
           ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.arc(px, py, 25, -Math.PI/4, Math.PI/4); ctx.stroke();
+          ctx.beginPath(); ctx.arc(bx-10, py, 25, -Math.PI/4, Math.PI/4); ctx.stroke();
         } else if (d.a.def.atkType === 'pierce') {
-          // 穿刺：箭/子弹
           ctx.strokeStyle = '#FF6B6B'; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(px-10, py); ctx.lineTo(px+10, py); ctx.stroke();
         } else if (d.a.def.atkType === 'magic') {
-          // 魔法：光球
           ctx.fillStyle = '#FF00FF'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
           ctx.fillStyle = 'rgba(255,0,255,0.3)'; ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2); ctx.fill();
         } else if (d.a.def.atkType === 'siege') {
-          // 攻城：炮弹
-          ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI*2); ctx.fill();
+          const arch = Math.sin(prog*Math.PI)*30;
+          ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py-arch, 8, 0, Math.PI*2); ctx.fill();
         }
       }
       // B攻击：从B飞向A
       if (d.b.anim > 0.3) {
         const prog = 1 - d.b.anim;
-        const px = bx2 + (ax2 - bx2) * prog;
+        const px = bx + (ax - bx) * prog;
         const py = 320;
         if (d.b.def.atkType === 'melee') {
           ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.arc(px, py, 25, Math.PI*3/4, Math.PI*5/4); ctx.stroke();
+          ctx.beginPath(); ctx.arc(ax+10, py, 25, Math.PI*3/4, Math.PI*5/4); ctx.stroke();
         } else if (d.b.def.atkType === 'pierce') {
           ctx.strokeStyle = '#FF6B6B'; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(px+10, py); ctx.lineTo(px-10, py); ctx.stroke();
@@ -2705,7 +2724,8 @@ function drawCodex() {
           ctx.fillStyle = '#00BFFF'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
           ctx.fillStyle = 'rgba(0,191,255,0.3)'; ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2); ctx.fill();
         } else if (d.b.def.atkType === 'siege') {
-          ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI*2); ctx.fill();
+          const arch = Math.sin(prog*Math.PI)*30;
+          ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py-arch, 8, 0, Math.PI*2); ctx.fill();
         }
       }
       // 大招特效：金色闪光
