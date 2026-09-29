@@ -872,6 +872,7 @@ function update(dt) {
     }
     // 奥法召唤傀儡：CD15秒，血量随法师等级成长
     if (u.type==='arcane') {
+      if (u.golemCD===undefined) u.golemCD=0;
       if (u.golemCD>0) u.golemCD-=dt;
       else {
         const golemExists = game.units.some(o => o.side===u.side && o.type==='golem' && o.master===u);
@@ -879,9 +880,9 @@ function update(dt) {
         const golemMul = Math.pow(1.15, (u.level||1)-1);
         const golemHp = Math.round(360 * golemMul);
         game.units.push({
-          x:u.x - 15*u.dir, y:u.y + (Math.random()-0.5)*20, lane:u.lane, side:u.side, type:'golem',
+          x:u.x + 20*u.dir, y:u.y + (Math.random()-0.5)*20, lane:u.lane, side:u.side, type:'golem',
           dir:u.dir, level:u.level||1, atkType:'normal', armorType:'heavy', master:u,
-          hp:golemHp, maxHp:golemHp, atk:Math.round(12*golemMul), atkSpeed:1.0, range:15, speed:55, atkTimer:0,
+          hp:golemHp, maxHp:golemHp, atk:Math.round(12*golemMul), atkSpeed:1.0, range:15, speed:u.speed, atkTimer:0,
           dmgReduce:0.5, st:{}
         });
         u.golemCD = 15;
