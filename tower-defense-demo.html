@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.47';
+const VERSION = 'v8.48';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -206,7 +206,7 @@ const UNIT_TYPES = {
 
   // 攻城车升级（大招=弹幕）
   rocket:   { name:'火箭炮', armor:1, shape:'square', size:11, hp:350, atk:25, atkSpeed:0.3, range:220, speed:50, cost:494, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'rocketBarrage',
-    skill1:{k:'splashRange',v:150}, skill2:{k:'splash',v:0.25}, desc:'大范围溅射150+25%概率溅射 | 大招:每20秒发射1枚火箭全屏随机打击1个目标造成120%伤害(不占攻击CD)（中期强）' },
+    skill1:{k:'splashRange',v:150}, skill2:{k:'splash',v:0.25}, desc:'大范围溅射150+25%概率溅射 | 大招:每3倍攻击间隔发射1枚火箭全屏随机打击1个目标造成120%伤害(不占攻击CD)（中期强）' },
   tesla:    { name:'特斯拉', armor:1, shape:'square', size:11, hp:180, atk:25, atkSpeed:0.3, range:190, speed:50, cost:494, color:'#00FFFF', atkType:'siege', armorType:'fort', ult:'stunBlast',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标每单位15%概率晕1秒+电圈50范围20/s | 大招:下3次攻击必晕2秒并丢失目标CD40s（后期强）' },
   siege:    { name:'攻城炮', shape:'square', size:13, hp:400, atk:25, atkSpeed:0.35, range:170, speed:50, cost:494, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'airSlug',
@@ -875,7 +875,7 @@ function update(dt) {
       if (u.rocketCd===undefined) u.rocketCd=0;
       if (u.rocketCd>0) u.rocketCd-=dt;
       else {
-        u.rocketCd = 20;
+        u.rocketCd = 3 / u.atkSpeed; // 3倍攻击间隔
         // 全屏随机选一个敌方单位（包括防御塔/基地）
         const enemies = game.units.filter(o => o.side!==u.side && o.hp>0);
         const towers = game.towers.filter(t => t.side!==u.side && t.hp>0);
@@ -2433,7 +2433,7 @@ const CODEX = [
    skills:[
      '【无大招】\n被动1【溅射】：常驻，攻击时40范围溅射伤害\n被动2【击退】：被动，攻击时10%概率击退主要目标',
      '【大招·重力冲击】主动CD40s，下2次攻击造成200%伤害并击飞目标，受击单位丢失目标重新锁定\n被动1【攻城专长】：常驻buff，对塔/基地造成3倍伤害\n被动2【溅射】：常驻，攻击时50范围溅射',
-     '【大招·火箭突袭】被动CD20s不占攻击CD，发射1枚火箭全屏随机打击1个目标造成120%伤害\n被动1【大范围溅射】：常驻，攻击时150范围溅射60%伤害\n被动2【燃烧弹头】：被动，攻击时25%概率触发50范围额外溅射50%伤害',
+     '【大招·火箭突袭】被动CD=3倍攻击间隔(约10s)不占攻击CD，发射1枚火箭全屏随机打击1个目标造成120%伤害\n被动1【大范围溅射】：常驻，攻击时150范围溅射60%伤害\n被动2【燃烧弹头】：被动，攻击时25%概率触发50范围额外溅射50%伤害',
      '【大招·过载电击】主动CD40s，下3次攻击必然使目标昏迷2秒并丢失攻击目标\n被动1【连锁闪电】：被动，攻击时连锁8个目标，每单位15%概率昏迷1秒\n被动2【电磁力场】：常驻buff，身边50范围每秒造成20点伤害'
    ],
    desc:[
