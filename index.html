@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.94';
+const VERSION = 'v8.95';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -391,14 +391,14 @@ function initGame() {
   const myTowers = [
     [190, 295],  // 1号
     [190, 425],  // 2号
-    [190, 131],  // 3号
-    [190, 589],  // 4号
-    [340, 197],  // 5号
-    [340, 523],  // 6号
-    [450, 65],   // 7号
-    [450, 295],  // 8号
-    [450, 425],  // 9号
-    [450, 655],  // 10号
+    [180, 131],  // 3号 x-10
+    [180, 589],  // 4号 x-10
+    [330, 207],  // 5号 x-10 y+10
+    [330, 513],  // 6号 x-10 y-10
+    [440, 65],   // 7号 x-10
+    [440, 295],  // 8号 x-10
+    [440, 425],  // 9号 x-10
+    [440, 655],  // 10号 x-10
   ];
   myTowers.forEach(([tx, ty]) => {
     game.towers.push({ x:tx, y:ty, lane:0, side:'my', isBase:false,
