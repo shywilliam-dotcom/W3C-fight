@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.62';
+const VERSION = 'v8.63';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -250,12 +250,22 @@ function removeBg(img, key, target) {
     tctx.drawImage(img, 0, 0);
     const data = tctx.getImageData(0, 0, tmp.width, tmp.height);
     const d = data.data;
+    const w = tmp.width, h = tmp.height;
+    // 采样四角颜色作为背景色
+    const corners = [
+      [d[0],d[1],d[2]], [d[(w-1)*4],d[(w-1)*4+1],d[(w-1)*4+2]],
+      [d[(h-1)*w*4],d[(h-1)*w*4+1],d[(h-1)*w*4+2]],
+      [d[(h-1)*w*4+(w-1)*4],d[(h-1)*w*4+(w-1)*4+1],d[(h-1)*w*4+(w-1)*4+2]]
+    ];
+    const bgR = corners.reduce((s,c)=>s+c[0],0)/4;
+    const bgG = corners.reduce((s,c)=>s+c[1],0)/4;
+    const bgB = corners.reduce((s,c)=>s+c[2],0)/4;
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], g = d[i+1], b = d[i+2];
-      // 白色/浅色/近白色背景变透明（阈值降低到180，更彻底）
-      if (r > 180 && g > 180 && b > 180) { d[i+3] = 0; }
-      // 边缘半透明处理
-      else if (r > 200 && g > 200 && b > 200) { d[i+3] = Math.floor(d[i+3]*0.3); }
+      // 与背景色接近的像素变透明（色差<60）
+      const diff = Math.abs(r-bgR)+Math.abs(g-bgG)+Math.abs(b-bgB);
+      if (diff < 50) { d[i+3] = 0; }
+      else if (diff < 80) { d[i+3] = Math.floor(d[i+3] * (diff-50)/30); } // 边缘渐变
     }
     tctx.putImageData(data, 0, 0);
     const url = tmp.toDataURL();
@@ -1509,6 +1519,8 @@ function render() {
     const spriteKey = typeToSprite[u.type];
     const sprite = spriteKey ? spriteImgs[spriteKey] : null;
     const flip = u.side!=='my'; // my方朝右不翻转，enemy方朝左翻转
+    // 法师系原图朝左，需要额外翻转一次
+    const mageFlip = ['mage','ice','arcane','fire'].includes(u.type);
 
     // 动画偏移
     let animY = 0, animScale = 1, animRot = 0, animX = 0;
@@ -1541,7 +1553,7 @@ function render() {
       if (pImg && pImg.complete && pImg.naturalWidth > 0 && pImg._ready) {
         ctx.save();
         ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
-        if (flip) ctx.scale(-1, 1);
+        if (flip !== mageFlip) ctx.scale(-1, 1); // 法师系额外翻转一次
         ctx.rotate(animRot);
         ctx.scale(animScale, animScale);
         const sc = 1.4;
@@ -1566,7 +1578,7 @@ function render() {
       const sc = 1.8;
       ctx.save();
       ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
-      if (flip) ctx.scale(-1, 1);
+      if (flip !== mageFlip) ctx.scale(-1, 1); // 法师系额外翻转一次
       ctx.rotate(animRot);
       ctx.scale(animScale*sc, animScale*sc);
 
@@ -2896,7 +2908,9 @@ function drawCodex() {
       if (aImg && aImg.complete && aImg.naturalWidth > 0 && aImg._ready!==false) {
         ctx.save();
         ctx.translate(ax, 320);
-        ctx.scale(2.5, 2.5);
+        // A方朝右，法师系原图朝左需要翻转
+        if (['mage','ice','arcane','fire'].includes(d.typeA)) ctx.scale(-2.5, 2.5);
+        else ctx.scale(2.5, 2.5);
         ctx.drawImage(aImg, -15, -25, 30, 40);
         ctx.restore();
       } else {
@@ -2918,7 +2932,9 @@ function drawCodex() {
       if (bImg && bImg.complete && bImg.naturalWidth > 0 && bImg._ready!==false) {
         ctx.save();
         ctx.translate(bx, 320);
-        ctx.scale(-2.5, 2.5);
+        // B方朝左，法师系原图朝左不需要翻转
+        if (['mage','ice','arcane','fire'].includes(d.typeB)) ctx.scale(2.5, 2.5);
+        else ctx.scale(-2.5, 2.5);
         ctx.drawImage(bImg, -15, -25, 30, 40);
         ctx.restore();
       } else {
