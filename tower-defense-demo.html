@@ -2284,13 +2284,16 @@ function drawCodex() {
       }
       ctx.textAlign='start';
       // 日志面板
-      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(150, 540, 900, 100);
-      ctx.strokeStyle='#555'; ctx.strokeRect(150, 540, 900, 100);
+      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(1050, 80, 140, 450);
+      ctx.strokeStyle='#888'; ctx.strokeRect(1050, 80, 140, 450);
       ctx.fillStyle='#aaa'; ctx.font='11px monospace';
       const showLogs = d.logs.slice(-15);
       showLogs.forEach((log, i) => {
         ctx.fillStyle = log.includes('⭐') ? '#FFD700' : (log.includes(d.b.def.name) ? '#EF5350' : '#4FC3F7');
-        ctx.fillText(log, 165, 555 + i*7);
+        ctx.font='9px monospace';
+        // 每行拆短
+        const short = log.length>20 ? log.slice(0,20)+'…' : log;
+        ctx.fillText(short, 1055, 95 + i*10);
       });
     }
     // 画兵种列表
