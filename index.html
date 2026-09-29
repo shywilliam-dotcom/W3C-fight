@@ -2063,6 +2063,9 @@ function updateDuel(dt) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避了攻击！`);
     } else {
       let dmg = d.a.atk * dmgMul(d.a.def.atkType, d.b.def.armorType);
+      // 目标减伤
+      if (d.b.def.skill1 && d.b.def.skill1.k==='dmgReduce') { dmg *= (1 - d.b.def.skill1.v); d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 减伤${Math.round(d.b.def.skill1.v*100)}%`); }
+      if (d.b.def.skill2 && d.b.def.skill2.k==='dmgReduce') { dmg *= (1 - d.b.def.skill2.v); d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 减伤${Math.round(d.b.def.skill2.v*100)}%`); }
       // 即死
       if (d.a.def.skill1 && d.a.def.skill1.k==='instantKill' && Math.random() < d.a.def.skill1.v) {
         dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 触发即死！`);
@@ -2091,6 +2094,8 @@ function updateDuel(dt) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避了攻击！`);
     } else {
       let dmg = d.b.atk * dmgMul(d.b.def.atkType, d.a.def.armorType);
+      if (d.a.def.skill1 && d.a.def.skill1.k==='dmgReduce') { dmg *= (1 - d.a.def.skill1.v); }
+      if (d.a.def.skill2 && d.a.def.skill2.k==='dmgReduce') { dmg *= (1 - d.a.def.skill2.v); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='instantKill' && Math.random() < d.b.def.skill1.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 触发即死！`); }
       if (d.b.def.skill2 && d.b.def.skill2.k==='execute' && d.a.hp/d.a.maxHp < d.b.def.skill2.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 斩杀！`); }
       dmg = Math.round(dmg);
@@ -2103,7 +2108,7 @@ function updateDuel(dt) {
   }
   // 大招
   if (d.a.ultCd <= 0 && d.a.hp > 0 && d.a.def.ult) {
-    d.a.ultCd = 60;
+    d.a.ultCd = 20;
     d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.a.def.name} 释放大招【${d.a.def.ult}】！`);
     if (d.a.def.ult === 'holyUlt') { d.a.hp = d.a.maxHp; d.logs.push('回满血量！'); }
     else if (d.a.def.ult === 'whirlwind') { d.b.hp -= d.a.atk*3; d.logs.push(`旋风斩造成${Math.round(d.a.atk*3)}伤害！`); }
@@ -2111,7 +2116,7 @@ function updateDuel(dt) {
     else if (d.a.def.ult === 'pierceShot') { d.b.hp -= d.a.atk*3; d.logs.push(`穿透射击造成${Math.round(d.a.atk*3)}伤害！`); }
   }
   if (d.b.ultCd <= 0 && d.b.hp > 0 && d.b.def.ult) {
-    d.b.ultCd = 60;
+    d.b.ultCd = 20;
     d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.b.def.name} 释放大招【${d.b.def.ult}】！`);
     if (d.b.def.ult === 'holyUlt') { d.b.hp = d.b.maxHp; d.logs.push('回满血量！'); }
     else if (d.b.def.ult === 'whirlwind') { d.a.hp -= d.b.atk*3; d.logs.push(`旋风斩造成${Math.round(d.b.atk*3)}伤害！`); }
