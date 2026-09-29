@@ -2187,6 +2187,20 @@ function updateDuel(dt) {
     }
     d.b.cd = d.b.def.atkSpeed; d.b.anim = 1;
   }
+  // 奥法召唤傀儡
+  d.a.golemCd -= dt; d.b.golemCd -= dt;
+  if (d.a.def.name === '奥法' && d.a.golemCd <= 0 && d.a.hp > 0 && d.a.golemHp <= 0) {
+    d.a.golemCd = 15; d.a.golemHp = 180 * mul;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 召唤傀儡！HP=${Math.round(d.a.golemHp)}`);
+  }
+  if (d.b.def.name === '奥法' && d.b.golemCd <= 0 && d.b.hp > 0 && d.b.golemHp <= 0) {
+    d.b.golemCd = 15; d.b.golemHp = 180 * mul;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 召唤傀儡！HP=${Math.round(d.b.golemHp)}`);
+  }
+  // 傀儡攻击
+  if (d.a.golemHp > 0) { d.b.hp -= 10; }
+  if (d.b.golemHp > 0) { d.a.hp -= 10; }
+
   // 大招
   if (d.a.ultCd <= 0 && d.a.hp > 0 && d.a.def.ult) {
     d.a.ultCd = 20;
