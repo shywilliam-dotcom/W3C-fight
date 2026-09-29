@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.98';
+const VERSION = 'v8.99';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -1622,8 +1622,10 @@ function render() {
     const spriteKey = typeToSprite[u.type];
     const sprite = spriteKey ? spriteImgs[spriteKey] : null;
     const flip = u.side!=='my'; // my方朝右不翻转，enemy方朝左翻转
-    // 法师系原图朝左，需要额外翻转一次
-    const mageFlip = ['mage','ice','arcane','fire'].includes(u.type);
+    // 需要镜像翻转的兵种（原图朝左），与1v1统一
+    const flipTypes = ['mage','ice','arcane','fire','musketeer','melee','barbarian','archer','cannon','siege','rocket','tesla'];
+    const needFlip = flipTypes.includes(u.type);
+    const doFlip = (u.side==='my') === needFlip; // my方朝右需翻转，enemy方朝左不需翻转
 
     // 动画偏移
     let animY = 0, animScale = 1, animRot = 0, animX = 0;
@@ -1655,8 +1657,8 @@ function render() {
       const pImg = pKey ? portraitImgs[pKey] : null;
       if (pImg && pImg.complete && pImg.naturalWidth > 0 && pImg._ready) {
         ctx.save();
-        ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
-        if (flip !== mageFlip) ctx.scale(-1, 1); // 法师系额外翻转一次
+        ctx.translate(u.x + (doFlip?-animX:animX), u.y + animY);
+        if (doFlip) ctx.scale(-1, 1); // 按flipTypes统一翻转
         ctx.rotate(animRot);
         ctx.scale(animScale, animScale);
         const sc = 1.4;
@@ -1680,8 +1682,8 @@ function render() {
       const walkPhase = game.time*10 + u.x*0.15;
       const sc = 1.8;
       ctx.save();
-      ctx.translate(u.x + (flip?-animX:animX), u.y + animY);
-      if (flip !== mageFlip) ctx.scale(-1, 1); // 法师系额外翻转一次
+      ctx.translate(u.x + (doFlip?-animX:animX), u.y + animY);
+      if (doFlip) ctx.scale(-1, 1); // 按flipTypes统一翻转
       ctx.rotate(animRot);
       ctx.scale(animScale*sc, animScale*sc);
 
