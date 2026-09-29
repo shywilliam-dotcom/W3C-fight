@@ -411,7 +411,7 @@ function spawnUnit(b) {
     armorType: def.armorType || 'unarmored',
     flatArmor: def.armor || 0,
     hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
-    atk:Math.round(def.atk*mul*timeMul*2), atkSpeed:def.atkSpeed/2, // 攻击加倍，攻速减半
+    atk:Math.round(def.atk*mul*timeMul), atkSpeed:def.atkSpeed,
     range:def.range*rangeMul, speed:def.speed, atkTimer:0,
     crit:0, dodge:0, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
@@ -2088,8 +2088,8 @@ function startDuel(typeA, typeB, lv) {
   const mul = Math.pow(1.1, lv-1);
   duelAnim = {
     typeA, typeB,
-    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul*2), atkSpeed: defA.atkSpeed/2, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 5, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
-    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul*2), atkSpeed: defB.atkSpeed/2, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 5, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
+    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 5, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
+    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 5, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
     time: 0, done: false, winner: null,
     logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})`]
   };
@@ -2171,7 +2171,7 @@ function updateDuel(dt) {
       if (hits === 2) { d.b.hp -= dmg; }
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 攻击 ${d.b.def.name}，造成${dmg}伤害`);
     }
-    d.a.cd = d.a.def.atkSpeed/2; d.a.anim = 1;
+    d.a.cd = d.a.def.atkSpeed; d.a.anim = 1;
   }
   // B攻击
   if (d.b.cd <= 0 && d.b.hp > 0 && d.b.stun <= 0) {
@@ -2208,7 +2208,7 @@ function updateDuel(dt) {
       if (d.b.def.skill1 && d.b.def.skill1.k==='splashRange') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 溅射攻击！`); }
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 攻击 ${d.a.def.name}，造成${dmg}伤害`);
     }
-    d.b.cd = d.b.def.atkSpeed/2; d.b.anim = 1;
+    d.b.cd = d.b.def.atkSpeed; d.b.anim = 1;
   }
   // 奥法召唤傀儡
   d.a.golemCd -= dt; d.b.golemCd -= dt;
@@ -2645,7 +2645,7 @@ function drawCodex() {
       ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif';
       ctx.fillText(`血量: ${def.hp}`, tx, ty+250);
       ctx.fillText(`攻击: ${def.atk}`, tx, ty+272);
-      ctx.fillText(`攻速: ${(def.atkSpeed/2).toFixed(2)}`, tx, ty+294);
+      ctx.fillText(`攻速: ${def.atkSpeed}`, tx, ty+294);
       ctx.fillText(`射程: ${def.range}`, tx, ty+316);
       ctx.fillText(`移速: ${def.speed}`, tx, ty+338);
       ctx.fillText(`价格: ${def.cost}`, tx, ty+360);
