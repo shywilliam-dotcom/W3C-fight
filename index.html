@@ -2125,7 +2125,8 @@ function updateDuel(dt) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 反击！造成${counterDmg}伤害`);
     } else {
       let dmg = d.a.atk * dmgMul(d.a.def.atkType, d.b.def.armorType);
-      const targetArmor = d.b.def.armor || 0;
+      let targetArmor = d.b.def.armor || 0;
+      if (d.a.def.skill2 && d.a.def.skill2.k==='armorPierce') targetArmor = 0;
       dmg = dmg * (1 - targetArmor/(targetArmor+15));
       // 即死
       if (d.a.def.skill1 && d.a.def.skill1.k==='instantKill' && Math.random() < d.a.def.skill1.v) {
@@ -2166,7 +2167,8 @@ function updateDuel(dt) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 反击！造成${counterDmg}伤害`);
     } else {
       let dmg = d.b.atk * dmgMul(d.b.def.atkType, d.a.def.armorType);
-      const tArmor = d.a.def.armor || 0;
+      let tArmor = d.a.def.armor || 0;
+      if (d.b.def.skill2 && d.b.def.skill2.k==='armorPierce') tArmor = 0;
       dmg = dmg * (1 - tArmor/(tArmor+15));
       if (d.b.def.skill1 && d.b.def.skill1.k==='instantKill' && Math.random() < d.b.def.skill1.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 触发即死！`); }
       if (d.b.def.skill2 && d.b.def.skill2.k==='execute' && d.a.hp/d.a.maxHp < d.b.def.skill2.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 斩杀！`); }
@@ -2200,6 +2202,37 @@ function updateDuel(dt) {
   // 傀儡攻击
   if (d.a.golemHp > 0) { d.b.hp -= 10; }
   if (d.b.golemHp > 0) { d.a.hp -= 10; }
+
+  // 圣骑士低血回血（25%，CD15秒）
+  d.a.healCd -= dt; d.b.healCd -= dt;
+  if (d.a.def.name==='圣骑士' && d.a.hp < d.a.maxHp*0.5 && d.a.healCd <= 0 && d.a.hp > 0) {
+    d.a.hp = Math.min(d.a.maxHp, d.a.hp + d.a.maxHp*0.25);
+    d.a.healCd = 15;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 圣光回血25%！`);
+  }
+  if (d.b.def.name==='圣骑士' && d.b.hp < d.b.maxHp*0.5 && d.b.healCd <= 0 && d.b.hp > 0) {
+    d.b.hp = Math.min(d.b.maxHp, d.b.hp + d.b.maxHp*0.25);
+    d.b.healCd = 15;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 圣光回血25%！`);
+  }
+
+  // 暗火法召唤骷髅（5秒CD，最多3个）
+  d.a.skeletonCd -= dt; d.b.skeletonCd -= dt;
+  if (d.a.def.name==='暗火法' && d.a.skeletonCd <= 0 && d.a.hp > 0) {
+    d.a.skeletonCd = 5; d.a.skeletonHp = 50;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 召唤骷髅！`);
+  }
+  if (d.b.def.name==='暗火法' && d.b.skeletonCd <= 0 && d.b.hp > 0) {
+    d.b.skeletonCd = 5; d.b.skeletonHp = 50;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 召唤骷髅！`);
+  }
+  // 骷髅攻击
+  if (d.a.skeletonHp > 0) { d.b.hp -= 5; d.a.skeletonHp -= 0; }
+  if (d.b.skeletonHp > 0) { d.a.hp -= 5; }
+
+  // 奥法护盾（40%血上限，一次性）
+  if (d.a.def.name==='奥法' && d.a.shield <= 0) { d.a.shield = d.a.maxHp*0.4; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 群体护盾！+${Math.round(d.a.shield)}`); }
+  if (d.b.def.name==='奥法' && d.b.shield <= 0) { d.b.shield = d.b.maxHp*0.4; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 群体护盾！+${Math.round(d.b.shield)}`); }
 
   // 大招
   if (d.a.ultCd <= 0 && d.a.hp > 0 && d.a.def.ult) {
