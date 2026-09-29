@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.84';
+const VERSION = 'v8.85';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -393,8 +393,8 @@ function initGame() {
   const roadHalf = 65;
   // 我方塔：[lane, x, dy] dy=-65上方 dy=+65下方
   const myTowers = [
-    // 交汇处第1点 x=250：上路上方 + 下路下方
-    [0, 250, -roadHalf], [2, 250, roadHalf],
+    // 交汇处第1点 x=100：中路上方 + 中路下方
+    [1, 100, -roadHalf], [1, 100, roadHalf],
     // 交汇处第2点 x=300：上路上方 + 下路下方
     [0, 300, -roadHalf], [2, 300, roadHalf],
     // 中间 x=350：上路下方 + 下路上方
