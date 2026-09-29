@@ -1761,7 +1761,8 @@ function render() {
   const btns = [
     {x:0, y:0, label:'1x', color:'#607D8B'},
     {x:1, y:0, label:'设置', color:'#FF9800'},
-    {x:0, y:1, label:'图鉴', color:'#9C27B0'}
+    {x:0, y:1, label:'图鉴', color:'#9C27B0'},
+    {x:1, y:1, label:'模拟', color:'#4CAF50'}
   ];
   btns.forEach(b => {
     const bx = btnStartX + b.x*(btnW+5);
@@ -1775,6 +1776,16 @@ function render() {
     ctx.textAlign = 'start';
   });
 
+  // 模拟菜单
+  if (game.simOpen) {
+    ctx.fillStyle='rgba(0,0,0,0.9)';
+    ctx.fillRect(870, 500, 280, 80);
+    ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2;
+    ctx.strokeRect(870, 500, 280, 80);
+    ctx.fillStyle='#9C27B0'; ctx.font='bold 14px sans-serif';
+    ctx.fillText('1v1对战模拟', 890, 530);
+    ctx.fillStyle='#2196F3'; ctx.fillText('对局模拟（AI互打）', 890, 560);
+  }
   // 设置菜单
   if (game.settingsOpen) {
     ctx.fillStyle='rgba(0,0,0,0.9)';
@@ -1820,7 +1831,8 @@ canvas.addEventListener('click', e => {
   const btns = [
     {x:0, y:0, act:'speed'},
     {x:1, y:0, act:'settings'},
-    {x:0, y:1, act:'codex'}
+    {x:0, y:1, act:'codex'},
+    {x:1, y:1, act:'sim'}
   ];
   for (const b of btns) {
     const bx = btnStartX + b.x*(btnW+5);
@@ -1829,6 +1841,7 @@ canvas.addEventListener('click', e => {
       if (b.act==='speed') { game.speed = game.speed>=4?1:game.speed*2; }
       else if (b.act==='settings') { game.settingsOpen = !game.settingsOpen; }
       else if (b.act==='codex') { showCodex(); }
+      else if (b.act==='sim') { game.simOpen = !game.simOpen; }
       return;
     }
   }
@@ -1837,6 +1850,11 @@ canvas.addEventListener('click', e => {
   if (game.settingsOpen) {
     if (cx >= 900 && cx <= 1180 && cy >= 565 && cy <= 595) { game.settingsOpen=false; initGame(); return; }
     if (cx >= 900 && cx <= 1180 && cy >= 600 && cy <= 630) { game.settingsOpen=false; startSimulation(1); return; }
+  }
+  // 模拟菜单点击
+  if (game.simOpen) {
+    if (cx >= 870 && cx <= 1150 && cy >= 515 && cy <= 545) { game.simOpen=false; showCodex(); duelMode=true; duelPick=0; duelA=null; duelB=null; duelAnim=null; render(); return; }
+    if (cx >= 870 && cx <= 1150 && cy >= 545 && cy <= 575) { game.simOpen=false; startSimulation(1); return; }
   }
 
   // 兵营用屏幕坐标，战场内容需要反算缩放
