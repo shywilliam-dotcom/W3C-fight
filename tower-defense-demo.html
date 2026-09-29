@@ -2067,7 +2067,11 @@ function updateDuel(dt) {
   if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0) {
     // 闪避
     if (d.b.def.skill1 && d.b.def.skill1.k==='dodge' && Math.random() < d.b.def.skill1.v) {
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避了攻击！`);
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避！`);
+      // 闪避反击
+      const counterDmg = Math.round(d.a.atk * 1.0);
+      d.a.hp -= counterDmg;
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 反击！造成${counterDmg}伤害`);
     } else {
       let dmg = d.a.atk * dmgMul(d.a.def.atkType, d.b.def.armorType);
       const targetArmor = d.b.def.armor || 0;
@@ -2105,7 +2109,10 @@ function updateDuel(dt) {
   // B攻击
   if (d.b.cd <= 0 && d.b.hp > 0 && d.b.stun <= 0) {
     if (d.a.def.skill1 && d.a.def.skill1.k==='dodge' && Math.random() < d.a.def.skill1.v) {
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避了攻击！`);
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避！`);
+      const counterDmg = Math.round(d.b.atk * 1.0);
+      d.b.hp -= counterDmg;
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 反击！造成${counterDmg}伤害`);
     } else {
       let dmg = d.b.atk * dmgMul(d.b.def.atkType, d.a.def.armorType);
       const tArmor = d.a.def.armor || 0;
@@ -2119,7 +2126,7 @@ function updateDuel(dt) {
       if (d.b.def.skill1 && d.b.def.skill1.k==='polymorph' && Math.random() < d.b.def.skill1.v) { d.a.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 变羊！目标无法行动！`); }
       if (d.b.def.skill2 && d.b.def.skill2.k==='vulnerable' && Math.random() < d.b.def.skill2.v) { dmg *= 1.3; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施加易伤！伤害+30%`); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='aoe') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 横扫！群伤！`); }
-      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 反击 ${d.a.def.name}，造成${dmg}伤害`);
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 攻击 ${d.a.def.name}，造成${dmg}伤害`);
     }
     d.b.cd = d.b.def.atkSpeed; d.b.anim = 1;
   }
@@ -2282,7 +2289,7 @@ function drawCodex() {
       ctx.fillStyle='#aaa'; ctx.font='11px monospace';
       const showLogs = d.logs.slice(-15);
       showLogs.forEach((log, i) => {
-        ctx.fillStyle = log.includes('反击') ? '#EF5350' : '#4FC3F7';
+        ctx.fillStyle = log.includes('⭐') ? '#FFD700' : (log.includes(d.b.def.name) ? '#EF5350' : '#4FC3F7');
         ctx.fillText(log, 165, 555 + i*7);
       });
     }
