@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.63';
+const VERSION = 'v8.64';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -785,7 +785,8 @@ function applyDmg(att, tgt, dmg, def) {
     if (tgt.st.iceBlock>0) return;
     // 野蛮人格挡弓手类攻击（穿刺攻击）
     if (tgt.parryArcher && att.atkType==='pierce' && Math.random()<tgt.parryArcher) return;
-    if (tgt.dodge && Math.random()<tgt.dodge) {
+    // 眩晕时无法闪避
+    if (tgt.dodge && tgt.st.stun<=0 && Math.random()<tgt.dodge) {
       // 闪避反击：格斗家闪避后立刻反击，每秒最多一次
       if (tgt.dodgeCounter && att.hp>0 && (!tgt.counterCD || tgt.counterCD<=0)) {
         let counterDmg = tgt.atk * 1.0;
@@ -2524,7 +2525,7 @@ function updateDuel(dt) {
     }
     if (!aUltUsed) {
     // 闪避（使用单位的dodge属性，随等级成长）
-    if (d.b.dodge && Math.random() < d.b.dodge) {
+    if (d.b.dodge && d.b.stun<=0 && Math.random() < d.b.dodge) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避！(${Math.round(d.b.dodge*100)}%)`);
       // 闪避反击
       const counterDmg = Math.round(d.a.atk * 1.0);
@@ -2623,7 +2624,7 @@ function updateDuel(dt) {
       d.b.cd = 1/d.b.atkSpeed;
     }
     if (!bUltUsed) {
-    if (d.a.dodge && Math.random() < d.a.dodge) {
+    if (d.a.dodge && d.a.stun<=0 && Math.random() < d.a.dodge) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避！(${Math.round(d.a.dodge*100)}%)`);
       const counterDmg = Math.round(d.b.atk * 1.0);
       d.b.hp -= counterDmg;
