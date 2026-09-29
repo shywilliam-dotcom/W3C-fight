@@ -2523,7 +2523,8 @@ function drawCodex() {
         });
       });
     }
-    // 画兵种列表
+    // 画兵种列表（对战中不画）
+    if (duelPick === 2) return;
     let idx = 0, by = 250;
     for (const cat of CODEX) {
       ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 15px sans-serif';
