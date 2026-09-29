@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.45';
+const VERSION = 'v8.46';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -1811,13 +1811,21 @@ function render() {
   }
   // 设置菜单
   if (game.settingsOpen) {
-    ctx.fillStyle='rgba(0,0,0,0.9)';
-    ctx.fillRect(900, 550, 280, 100);
+    ctx.fillStyle='rgba(0,0,0,0.92)';
+    ctx.fillRect(900, 550, 280, 130);
     ctx.strokeStyle='#FF9800'; ctx.lineWidth=2;
-    ctx.strokeRect(900, 550, 280, 100);
+    ctx.strokeRect(900, 550, 280, 130);
+    // 关闭按钮
+    ctx.fillStyle='#666';
+    ctx.fillRect(1140, 555, 35, 25);
+    ctx.fillStyle='#fff'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('✕', 1157, 573);
+    ctx.textAlign='start';
     ctx.fillStyle='#F44336'; ctx.font='bold 16px sans-serif';
-    ctx.fillText('重开游戏', 920, 585);
-    ctx.fillStyle='#4CAF50'; ctx.fillText('模拟1局', 920, 620);
+    ctx.fillText('重开游戏', 920, 595);
+    ctx.fillStyle='#4CAF50'; ctx.fillText('模拟1局', 920, 630);
+    ctx.fillStyle='#888'; ctx.font='11px sans-serif';
+    ctx.fillText('点击空白处或✕关闭', 920, 665);
   }
 
   // 图鉴覆盖层
@@ -1890,8 +1898,14 @@ canvas.addEventListener('click', e => {
 
   // 设置菜单点击
   if (game.settingsOpen) {
-    if (cx >= 900 && cx <= 1180 && cy >= 565 && cy <= 595) { game.settingsOpen=false; initGame(); return; }
-    if (cx >= 900 && cx <= 1180 && cy >= 600 && cy <= 630) { game.settingsOpen=false; startSimulation(1); return; }
+    // 关闭按钮
+    if (cx >= 1140 && cx <= 1175 && cy >= 555 && cy <= 580) { game.settingsOpen=false; render(); return; }
+    // 重开游戏
+    if (cx >= 900 && cx <= 1180 && cy >= 575 && cy <= 610) { game.settingsOpen=false; initGame(); return; }
+    // 模拟1局
+    if (cx >= 900 && cx <= 1180 && cy >= 610 && cy <= 645) { game.settingsOpen=false; startSimulation(1); return; }
+    // 点击菜单外关闭
+    if (!(cx >= 900 && cx <= 1180 && cy >= 550 && cy <= 680)) { game.settingsOpen=false; render(); return; }
   }
   // 模拟菜单点击
   if (game.simOpen) {
@@ -2427,6 +2441,12 @@ function drawCodex() {
   ctx.fillStyle = 'rgba(0,0,0,0.9)';
   ctx.fillRect(0, 0, 1200, 720);
   if (duelMode) {
+    // 右上角关闭按钮
+    ctx.fillStyle = '#e94560';
+    ctx.fillRect(1130, 15, 40, 30);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('✕', 1150, 36);
+    ctx.textAlign = 'start';
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign='center';
     ctx.fillText(duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '1v1对战', 600, 35);
     ctx.textAlign='start';
