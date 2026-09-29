@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v9.01';
+const VERSION = 'v9.02';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -1974,26 +1974,26 @@ function render() {
     const types = ['melee','archer','mage','cannon'];
     const names = ['近战(60)','弓手(80)','法师(90)','攻城车(220)'];
     const costs = [60,80,90,220];
-    const mw=180, mh=types.length*36+10;
+    const mw=200, btnH=42, mh=types.length*btnH+30;
     const mx = Math.min(m.x, 1200-mw-10);
-    const my = Math.max(10, m.y-mh/2);
-    ctx.fillStyle='rgba(0,0,0,0.92)';
+    const my = Math.max(10, Math.min(m.y-mh/2, 720-mh-10));
+    ctx.fillStyle='rgba(0,0,0,0.95)';
     ctx.fillRect(mx, my, mw, mh);
     ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2;
     ctx.strokeRect(mx, my, mw, mh);
-    ctx.fillStyle='#4CAF50'; ctx.font='bold 13px sans-serif';
-    ctx.fillText('建造兵营', mx+10, my+18);
+    ctx.fillStyle='#4CAF50'; ctx.font='bold 15px sans-serif';
+    ctx.fillText('建造兵营', mx+12, my+22);
     m.hits = [];
     types.forEach((t,i) => {
-      const py = my+25+i*36;
+      const py = my+30+i*btnH;
       const cost = costs[i];
       const can = game.gold>=cost;
-      ctx.fillStyle = can?'#4CAF50':'#666';
-      ctx.fillRect(mx+5, py, mw-10, 30);
+      ctx.fillStyle = can?'#4CAF50':'#555';
+      ctx.fillRect(mx+8, py, mw-16, btnH-6);
       ctx.fillStyle = can?'#fff':'#999';
-      ctx.font='12px sans-serif';
-      ctx.fillText(names[i], mx+12, py+18);
-      m.hits.push({ x:mx+5, y:py, w:mw-10, h:30, key:t, cost:cost });
+      ctx.font='bold 14px sans-serif';
+      ctx.fillText(names[i], mx+15, py+24);
+      m.hits.push({ x:mx+5, y:py-3, w:mw-10, h:btnH, key:t, cost:cost });
     });
   }
 
@@ -2524,7 +2524,7 @@ canvas.addEventListener('click', e => {
   // 找兵营槽位（优先检测，避免被兵挡住）
   for (const slot of BARRACK_SLOTS) {
     const sy = slot.y || (LANE_Y[slot.lane] + (slot.dy||0));
-    if (Math.abs(cx-slot.x)<30 && Math.abs(cy-sy)<30) {
+    if (Math.abs(cx-slot.x)<40 && Math.abs(cy-sy)<40) {
       const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<5&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-sy)<5);
       if (ex) {
         game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
