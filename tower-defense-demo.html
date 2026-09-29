@@ -1914,12 +1914,14 @@ canvas.addEventListener('click', e => {
       return;
     }
     if (duelMode) {
-      let ci = 0, by = 250;
+      let ci = 0;
+      const lx = 30;
+      let by = 70;
       for (const cat of CODEX) {
-        by += 24; // 标题
+        by += 26; // 标题
         for (let i=0; i<cat.names.length; i++) {
           const col = i % 2, row = Math.floor(i/2);
-          const bw=96, bh=40, bx=30+col*(bw+16), by2=by+row*(bh+8);
+          const bw=96, bh=51, bx=lx+col*(bw+16), by2=by+row*(bh+12);
           if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
             if (duelPick === 0) { duelA = cat.types[i]; duelPick = 1; }
             else { duelB = cat.types[i]; duelPick = 2; duelLv = 6; }
@@ -1927,7 +1929,7 @@ canvas.addEventListener('click', e => {
           }
           ci++;
         }
-        by += 2*48 + 10;
+        by += 2*59 + 12;
       }
       return;
     }
