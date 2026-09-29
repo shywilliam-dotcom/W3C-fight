@@ -2184,7 +2184,7 @@ function updateDuel(dt) {
       if (hits === 2) { d.b.hp -= dmg; }
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 攻击 ${d.b.def.name}，造成${dmg}伤害`);
     }
-    d.a.cd = d.a.def.atkSpeed; d.a.anim = 1;
+    d.a.cd = 1/d.a.def.atkSpeed; d.a.anim = 1;
   }
   // B攻击
   if (d.b.cd <= 0 && d.b.hp > 0 && d.b.stun <= 0) {
@@ -2225,7 +2225,7 @@ function updateDuel(dt) {
       if (d.b.def.skill1 && d.b.def.skill1.k==='splashRange') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 溅射攻击！`); }
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 攻击 ${d.a.def.name}，造成${dmg}伤害`);
     }
-    d.b.cd = d.b.def.atkSpeed; d.b.anim = 1;
+    d.b.cd = 1/d.b.def.atkSpeed; d.b.anim = 1;
   }
   // 奥法召唤傀儡
   d.a.golemCd -= dt; d.b.golemCd -= dt;
