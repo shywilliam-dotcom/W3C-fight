@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.55';
+const VERSION = 'v8.56';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -975,14 +975,18 @@ function update(dt) {
     if (u.airSlugCD>0) u.airSlugCD-=dt;
     if (u.stunBlastCD>0) u.stunBlastCD-=dt;
     if (u.backJumpCD>0) u.backJumpCD-=dt;
-    // 野蛮人旋风斩持续伤害：每秒120%攻击，范围80
+    // 野蛮人旋风斩持续伤害：每0.5秒120%攻击，范围80，持续3秒
     if (u.whirlwindActive>0) {
       u.whirlwindActive -= dt;
-      game.units.forEach(o => {
-        if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<80) {
-          o.hp -= u.atk * 1.2 * dt;
-        }
-      });
+      u.whirlwindTick = (u.whirlwindTick||0) - dt;
+      if (u.whirlwindTick<=0) {
+        u.whirlwindTick = 0.5;
+        game.units.forEach(o => {
+          if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<80) {
+            applyDmg(u, o, u.atk * 1.2, null);
+          }
+        });
+      }
     }
     // 弓手后跳：敌人近身(<40)时后跳200并定身目标，CD8秒
     if (u.backJump>0 && u.backJumpCD<=0) {
@@ -2403,7 +2407,7 @@ function updateDuel(dt) {
     d.a.whirlwindActive -= dt;
     d.a.whirlwindTick = (d.a.whirlwindTick||0) - dt;
     if (d.a.whirlwindTick<=0) {
-      d.a.whirlwindTick = 1;
+      d.a.whirlwindTick = 0.5;
       const wd = d.a.atk*1.2;
       d.b.hp -= wd;
       d.logs.push(`[${d.time.toFixed(1)}s] 旋风斩造成${Math.round(wd)}伤害`);
@@ -2413,7 +2417,7 @@ function updateDuel(dt) {
     d.b.whirlwindActive -= dt;
     d.b.whirlwindTick = (d.b.whirlwindTick||0) - dt;
     if (d.b.whirlwindTick<=0) {
-      d.b.whirlwindTick = 1;
+      d.b.whirlwindTick = 0.5;
       const wd = d.b.atk*1.2;
       d.a.hp -= wd;
       d.logs.push(`[${d.time.toFixed(1)}s] 旋风斩造成${Math.round(wd)}伤害`);
