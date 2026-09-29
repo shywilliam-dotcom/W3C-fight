@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.51';
+const VERSION = 'v8.52';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -624,15 +624,14 @@ function doAttack(att, tgt, def) {
         att.dodgeUltCD = 15;
       }
     }
-    // 游侠大招：箭雨，目标周围150范围内造成4次攻击力120%伤害（40秒CD）
+    // 游侠大招：箭雨，目标周围150范围内4次伤害，每0.5秒一次（40秒CD）
     if (att.ultimate==='arrowRain') {
       if (!att.arrowRainCD || att.arrowRainCD<=0) {
-        for (let wave=0; wave<4; wave++) {
-          game.units.forEach(o => {
-            if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
-                Math.abs(o.x-tgt.x)<150) applyDmg(att,o,dmg*1.2,def);
-          });
-        }
+        att.arrowRainWaves = 4;
+        att.arrowRainWaveTimer = 0;
+        att.arrowRainX = tgt.x;
+        att.arrowRainLane = att.lane;
+        att.arrowRainDmg = dmg * 1.2;
         att.arrowRainCD = 40;
       }
     }
@@ -884,7 +883,15 @@ function update(dt) {
   game.units.forEach(u => {
     if (u.st.polymorphed>0) u.st.polymorphed-=dt;
     if (u.st.burn>0) { u.st.burn-=dt; u.hp-=u.st.burnDps*dt; }
-    if (u.st.poison>0) { u.st.poison-=dt; u.hp-=u.st.poisonDps*(u.st.poisonStacks||1)*dt; if(u.st.poison<=0) u.st.poisonStacks=0; }
+    if (u.st.poison>0) {
+      u.st.poison-=dt;
+      u.st.poisonTick = (u.st.poisonTick||0) - dt;
+      if (u.st.poisonTick<=0) {
+        u.st.poisonTick = 1; // 每秒生效一次
+        u.hp -= u.st.poisonDps*(u.st.poisonStacks||1); // 无视护甲，直接扣血
+      }
+      if(u.st.poison<=0) u.st.poisonStacks=0;
+    }
     if (u.st.iceBlock>0) { u.st.iceBlock-=dt; if(u.st.iceBlock<=0) u.st.iceBlockCD=10; }
     else if (u.iceBlock) { if(u.st.iceBlockCD>0){u.st.iceBlockCD-=dt; if(u.st.iceBlockCD<=0){u.st.iceBlock=2;u.hp=u.maxHp;}} }
     if (u.st.stun>0) u.st.stun-=dt;
@@ -928,6 +935,20 @@ function update(dt) {
     if (u.holyUltCD>0) u.holyUltCD-=dt;
     if (u.dodgeUltCD>0) u.dodgeUltCD-=dt;
     if (u.arrowRainCD>0) u.arrowRainCD-=dt;
+    // 游侠箭雨波次：每0.5秒一次，共4次
+    if (u.arrowRainWaves>0) {
+      u.arrowRainWaveTimer = (u.arrowRainWaveTimer||0) - dt;
+      if (u.arrowRainWaveTimer<=0) {
+        u.arrowRainWaveTimer = 0.5;
+        u.arrowRainWaves--;
+        game.units.forEach(o => {
+          if (o.lane===u.arrowRainLane && o.side!==u.side && o.hp>0 &&
+              Math.abs(o.x-u.arrowRainX)<150) {
+            o.hp -= u.arrowRainDmg; // 范围伤害
+          }
+        });
+      }
+    }
     if (u.rapidFireCD>0) u.rapidFireCD-=dt;
     if (u.fireBlastCD>0) u.fireBlastCD-=dt;
     if (u.arcaneBlinkCD>0) u.arcaneBlinkCD-=dt;
@@ -2268,8 +2289,8 @@ function startDuel(typeA, typeB, lv) {
   const centerX = 400, gap = 300;
   duelAnim = {
     typeA, typeB,
-    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0, x: centerX - gap/2, moving: true, slowT: 0},
-    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0, x: centerX + gap/2, moving: true, slowT: 0},
+    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0, x: centerX - gap/2, moving: true, slowT: 0, arrowRainWaves:0, arrowRainTimer:0},
+    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0, x: centerX + gap/2, moving: true, slowT: 0, arrowRainWaves:0, arrowRainTimer:0},
     time: 0, done: false, winner: null,
     logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})，双方从两端入场！`]
   };
@@ -2311,11 +2332,32 @@ function updateDuel(dt) {
   if (d.b.hp > 0 && d.b.stun <= 0) {
     if (dist > bRange) { d.b.x -= bSpd * dt; d.b.moving = true; } else d.b.moving = false;
   }
-  // 毒dot每0.5秒触发
+  // 毒dot每秒触发（无视护甲）
   d.a.poisonTick = (d.a.poisonTick || 0) - dt;
   d.b.poisonTick = (d.b.poisonTick || 0) - dt;
-  if (d.a.poison > 0 && d.a.poisonTick <= 0) { d.a.poisonTick = 0.5; const pd = d.a.atk*0.2*(d.a.poisonStacks||1); d.a.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.a.poisonStacks||1}层)对${d.a.def.name}造成${Math.round(pd)}伤害`); }
-  if (d.b.poison > 0 && d.b.poisonTick <= 0) { d.b.poisonTick = 0.5; const pd = d.b.atk*0.2*(d.b.poisonStacks||1); d.b.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.b.poisonStacks||1}层)对${d.b.def.name}造成${Math.round(pd)}伤害`); }
+  if (d.a.poison > 0 && d.a.poisonTick <= 0) { d.a.poisonTick = 1; const pd = d.a.atk*0.2*(d.a.poisonStacks||1); d.a.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.a.poisonStacks||1}层)对${d.a.def.name}造成${Math.round(pd)}伤害`); }
+  if (d.b.poison > 0 && d.b.poisonTick <= 0) { d.b.poisonTick = 1; const pd = d.b.atk*0.2*(d.b.poisonStacks||1); d.b.hp -= pd; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${d.b.poisonStacks||1}层)对${d.b.def.name}造成${Math.round(pd)}伤害`); }
+  // 箭雨波次：每0.5秒一次，共4次
+  if (d.a.arrowRainWaves>0) {
+    d.a.arrowRainTimer -= dt;
+    if (d.a.arrowRainTimer<=0) {
+      d.a.arrowRainTimer = 0.5;
+      d.a.arrowRainWaves--;
+      const wd = d.a.atk*1.2;
+      d.b.hp -= wd;
+      d.logs.push(`[${d.time.toFixed(1)}s] 箭雨第${4-d.a.arrowRainWaves}波，造成${Math.round(wd)}伤害`);
+    }
+  }
+  if (d.b.arrowRainWaves>0) {
+    d.b.arrowRainTimer -= dt;
+    if (d.b.arrowRainTimer<=0) {
+      d.b.arrowRainTimer = 0.5;
+      d.b.arrowRainWaves--;
+      const wd = d.b.atk*1.2;
+      d.a.hp -= wd;
+      d.logs.push(`[${d.time.toFixed(1)}s] 箭雨第${4-d.b.arrowRainWaves}波，造成${Math.round(wd)}伤害`);
+    }
+  }
   // A攻击（需要在射程内）
   if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0 && dist <= aRange) {
     // 闪避
@@ -2488,7 +2530,7 @@ function updateDuel(dt) {
     d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.a.def.name} 释放大招【${d.a.def.ult}】！`);
     if (d.a.def.ult === 'holyUlt') { d.a.hp = d.a.maxHp; d.logs.push('回满血量！'); }
     else if (d.a.def.ult === 'whirlwind') { d.b.hp -= d.a.atk*3; d.logs.push(`旋风斩造成${Math.round(d.a.atk*3)}伤害！`); }
-    else if (d.a.def.ult === 'arrowRain') { const arrowDmg = d.a.atk*1.2*4; d.b.hp -= arrowDmg; d.logs.push(`箭雨4波×120%，共造成${Math.round(arrowDmg)}伤害！`); }
+    else if (d.a.def.ult === 'arrowRain') { d.a.arrowRainWaves = 4; d.a.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); }
     else if (d.a.def.ult === 'pierceShot') { d.b.hp -= d.a.atk*3; d.logs.push(`穿透射击造成${Math.round(d.a.atk*3)}伤害！`); }
     else if (d.a.def.ult === 'arcaneBlink') { d.logs.push(`奥法闪现！回20%血！`); d.a.hp = Math.max(d.a.hp, d.a.maxHp*0.2); }
   }
@@ -2497,7 +2539,7 @@ function updateDuel(dt) {
     d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.b.def.name} 释放大招【${d.b.def.ult}】！`);
     if (d.b.def.ult === 'holyUlt') { d.b.hp = d.b.maxHp; d.logs.push('回满血量！'); }
     else if (d.b.def.ult === 'whirlwind') { d.a.hp -= d.b.atk*3; d.logs.push(`旋风斩造成${Math.round(d.b.atk*3)}伤害！`); }
-    else if (d.b.def.ult === 'arrowRain') { const arrowDmg = d.b.atk*1.2*4; d.a.hp -= arrowDmg; d.logs.push(`箭雨4波×120%，共造成${Math.round(arrowDmg)}伤害！`); }
+    else if (d.b.def.ult === 'arrowRain') { d.b.arrowRainWaves = 4; d.b.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); }
     else if (d.b.def.ult === 'pierceShot') { d.a.hp -= d.b.atk*3; d.logs.push(`穿透射击造成${Math.round(d.b.atk*3)}伤害！`); }
   }
   // 奥法濒死传送
