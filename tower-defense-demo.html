@@ -1796,6 +1796,27 @@ canvas.addEventListener('click', e => {
     cy = dy / rect.height * 720;
   }
 
+  // canvas右下角按钮检测
+  const btnW = 70, btnH = 30;
+  const btnStartX = 1020, btnStartY = 620;
+  const btns = [
+    {x:0, y:0, act:'speed'},
+    {x:1, y:0, act:'restart'},
+    {x:0, y:1, act:'sim'},
+    {x:1, y:1, act:'codex'}
+  ];
+  for (const b of btns) {
+    const bx = btnStartX + b.x*(btnW+5);
+    const by = btnStartY + b.y*(btnH+5);
+    if (cx >= bx && cx <= bx+btnW && cy >= by && cy <= by+btnH) {
+      if (b.act==='speed') { game.speed = game.speed>=4?1:game.speed*2; }
+      else if (b.act==='restart') { initGame(); }
+      else if (b.act==='sim') { startSimulation(1); }
+      else if (b.act==='codex') { showCodex(); }
+      return;
+    }
+  }
+
   // 兵营用屏幕坐标，战场内容需要反算缩放
   const fcX = (cx - 180) / 0.7;
   const fcY = (cy - 80) / 0.7;
