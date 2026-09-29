@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.59';
+const VERSION = 'v8.60';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -190,7 +190,7 @@ const UNIT_TYPES = {
 
   // 弓手升级（大招=穿透箭）
   musketeer:{ name:'火枪手', armor:3, shape:'triangle', size:9, hp:200, atk:10, atkSpeed:0.9, range:150, speed:70, cost:120, color:'#B8860B', atkType:'pierce', armorType:'medium', ult:'pierceShot',
-    skill1:{k:'instantKill',v:0.05}, skill2:{k:'splash',v:0.25}, desc:'5%即死(每级+0.5%)+25%溅射 | 大招穿透射击:直线400内5个单位CD35s（中期强）' },
+    skill1:{k:'instantKill',v:0.03}, skill2:{k:'splash',v:0.25}, desc:'3%即死(每级+0.5%)+25%溅射 | 大招穿透射击:直线400内5个单位CD35s（中期强）' },
   ranger:   { name:'游侠', armor:2, shape:'triangle', size:9, hp:220, atk:11, atkSpeed:1.0, range:220, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
     skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭(最多叠4层)+超远射程 | 大招箭雨：150范围4波×120%伤害，CD40s（初期强）' },
   crossbow: { name:'破甲弩手', armor:2, shape:'triangle', size:9, hp:200, atk:10, atkSpeed:1.1, range:145, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
@@ -550,8 +550,13 @@ function doAttack(att, tgt, def) {
     if (att.poison>0 && Math.random()<att.poison) { tgt.st.poison=3; tgt.st.poisonDps=att.poisonDps; tgt.st.poisonStacks=Math.min(4,(tgt.st.poisonStacks||0)+1); }
     // 特斯拉昏迷
     if (att.stun>0 && Math.random()<att.stun) tgt.st.stun=1.5;
-    // 冰法易伤debuff
-    if (att.vulnerable>0 && Math.random()<att.vulnerable) tgt.st.vulnerable=3;
+    // 冰法易伤debuff：对已有易伤目标再次施加时额外50%伤害
+    if (att.vulnerable>0 && Math.random()<att.vulnerable) {
+      if (tgt.st.vulnerable>0) {
+        applyDmg(att, tgt, att.atk*0.5, def); // 额外50%攻击伤害
+      }
+      tgt.st.vulnerable=3;
+    }
     // 圣骑士：10%概率击晕1秒
     if (att.strikeStun>0 && Math.random()<att.strikeStun) tgt.st.stun=1;
     // 攻城车：10%概率击退主要目标
@@ -619,13 +624,9 @@ function doAttack(att, tgt, def) {
         ultUsed = true;
       }
     }
-    // 圣骑士大招：回血100%（60秒CD）
+    // 圣骑士大招：被动，血量低于15%时触发，回血100%+减伤60%持续2秒（60秒CD）
     if (att.ultimate==='holyUlt') {
-      if (!att.holyUltCD || att.holyUltCD<=0) {
-        att.hp = att.maxHp;
-        att.holyUltCD = 60;
-        ultUsed = true;
-      }
+      // 被动触发在update里检测，这里不主动释放
     }
     // 格斗家大招：躲闪时50%概率无敌1秒+周围120范围100%伤害
     if (att.ultimate==='dodgeUlt') {
@@ -777,6 +778,8 @@ function applyDmg(att, tgt, dmg, def) {
       return;
     }
     if (tgt.dmgReduce && !att.armorPierce) fd *= (1-tgt.dmgReduce);
+    // 圣骑士被动大招减伤60%
+    if (tgt.holyShieldT && tgt.holyShieldT>0) fd *= 0.4;
     // 易伤debuff：受到伤害+30%
     if (tgt.st.vulnerable>0) fd *= 1.3;
     // 护盾吸收伤害
@@ -959,6 +962,13 @@ function update(dt) {
     if (u.targetSwitchTimer>0) u.targetSwitchTimer-=dt;
     // 圣骑士大招CD
     if (u.holyUltCD>0) u.holyUltCD-=dt;
+    // 圣骑士被动大招：血量低于15%时触发，回血100%+减伤60%持续2秒
+    if (u.ultimate==='holyUlt' && u.hp>0 && u.hp/u.maxHp<0.15 && (!u.holyUltCD || u.holyUltCD<=0)) {
+      u.hp = u.maxHp;
+      u.holyUltCD = 60;
+      u.holyShieldT = 2; // 减伤60%持续2秒
+    }
+    if (u.holyShieldT>0) u.holyShieldT-=dt;
     if (u.dodgeUltCD>0) u.dodgeUltCD-=dt;
     if (u.arrowRainCD>0) u.arrowRainCD-=dt;
     // 游侠箭雨波次：每0.5秒一次，共4次
@@ -2392,6 +2402,19 @@ function updateDuel(dt) {
   d.b.anim = Math.max(0, d.b.anim - dt*3);
   d.a.slowT = Math.max(0, d.a.slowT - dt);
   d.b.slowT = Math.max(0, d.b.slowT - dt);
+  // 圣骑士被动大招：血量低于15%时触发，回血100%+减伤60%持续2秒
+  if (d.a.def.ult === 'holyUlt' && d.a.hp>0 && d.a.hp/d.a.maxHp<0.15 && (!d.a.holyUltCD || d.a.holyUltCD<=0)) {
+    d.a.hp = d.a.maxHp; d.a.holyUltCD = 60; d.a.holyShieldT = 2;
+    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.a.def.name} 被动大招【圣光庇护】！回满血量+减伤60%持续2秒！`);
+  }
+  if (d.a.holyShieldT>0) d.a.holyShieldT -= dt;
+  if (d.a.holyUltCD>0) d.a.holyUltCD -= dt;
+  if (d.b.def.ult === 'holyUlt' && d.b.hp>0 && d.b.hp/d.b.maxHp<0.15 && (!d.b.holyUltCD || d.b.holyUltCD<=0)) {
+    d.b.hp = d.b.maxHp; d.b.holyUltCD = 60; d.b.holyShieldT = 2;
+    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.b.def.name} 被动大招【圣光庇护】！回满血量+减伤60%持续2秒！`);
+  }
+  if (d.b.holyShieldT>0) d.b.holyShieldT -= dt;
+  if (d.b.holyUltCD>0) d.b.holyUltCD -= dt;
   // 移动入场：双方向对方移动，进入射程后停止
   const dist = Math.abs(d.b.x - d.a.x);
   const aRange = d.a.def.range || 15;
@@ -2458,8 +2481,8 @@ function updateDuel(dt) {
     if (d.a.ultCd <= 0 && d.a.def.ult && d.a.def.ult !== 'arcaneBlink' && d.a.def.ult !== 'dodgeUlt') {
       d.a.ultCd = 20;
       d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.a.def.name} 释放大招【${d.a.def.ult}】！`);
-      if (d.a.def.ult === 'holyUlt') { d.a.hp = d.a.maxHp; d.logs.push('回满血量！'); aUltUsed=true; }
-      else if (d.a.def.ult === 'whirlwind') { d.a.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每秒120%伤害`); aUltUsed=true; }
+      if (d.a.def.ult === 'holyUlt') { /* 被动触发，不主动释放 */ }
+      else if (d.a.def.ult === 'whirlwind') { d.a.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每0.5秒120%伤害`); aUltUsed=true; }
       else if (d.a.def.ult === 'arrowRain') { d.a.arrowRainWaves = 4; d.a.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); aUltUsed=true; }
       else if (d.a.def.ult === 'pierceShot') { const pd = d.a.atk*3; d.b.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); aUltUsed=true; }
       else if (d.a.def.ult === 'fireBlast') { const fd = d.a.atk*9; d.b.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); aUltUsed=true; }
@@ -2508,8 +2531,10 @@ function updateDuel(dt) {
         d.b.stun = 2;
         d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪电风暴！目标昏迷2秒`);
       }
+      // 圣骑士被动减伤60%
+      if (d.b.holyShieldT && d.b.holyShieldT>0) dmg *= 0.4;
       d.b.hp -= dmg;
-      if (crit) d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 暴击！造成${dmg}伤害`);
+      if (crit) d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 暴击！造成${Math.round(dmg)}伤害`);
       // 法师自回血3%
       if (d.a.def.skill1 && d.a.def.skill1.k==='healAlly') {
         d.a.hp = Math.min(d.a.maxHp, d.a.hp + d.a.maxHp*0.03);
@@ -2527,8 +2552,16 @@ function updateDuel(dt) {
       if (d.a.def.skill3 && d.a.def.skill3.k==='strikeStun' && Math.random() < d.a.def.skill3.v) { d.b.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 击晕目标！`); }
       // 变羊
       if (d.a.def.skill1 && d.a.def.skill1.k==='polymorph' && Math.random() < d.a.def.skill1.v) { d.b.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 变羊！目标无法行动！`); }
-      // 易伤
-      if (d.a.def.skill2 && d.a.def.skill2.k==='vulnerable' && Math.random() < d.a.def.skill2.v) { dmg *= 1.3; d.b.slowT = 5; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施加易伤+减速！伤害+30%`); }
+      // 易伤：对已有易伤目标再次施加时额外50%伤害
+      if (d.a.def.skill2 && d.a.def.skill2.k==='vulnerable' && Math.random() < d.a.def.skill2.v) {
+        if (d.b.vulnerable > 0) {
+          const extraDmg = d.a.atk * 0.5;
+          d.b.hp -= extraDmg;
+          d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 易伤爆发！额外造成${Math.round(extraDmg)}伤害！`);
+        }
+        d.b.vulnerable = 3; d.b.slowT = 5;
+        d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施加易伤+减速！受到伤害+30%`);
+      }
       // 连击已在上面处理
       // 群伤/溅射
       if (d.a.def.skill1 && d.a.def.skill1.k==='aoe') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 横扫！群伤！`); }
@@ -2548,8 +2581,8 @@ function updateDuel(dt) {
     if (d.b.ultCd <= 0 && d.b.def.ult && d.b.def.ult !== 'arcaneBlink' && d.b.def.ult !== 'dodgeUlt') {
       d.b.ultCd = 20;
       d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.b.def.name} 释放大招【${d.b.def.ult}】！`);
-      if (d.b.def.ult === 'holyUlt') { d.b.hp = d.b.maxHp; d.logs.push('回满血量！'); bUltUsed=true; }
-      else if (d.b.def.ult === 'whirlwind') { d.b.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每秒120%伤害`); bUltUsed=true; }
+      if (d.b.def.ult === 'holyUlt') { /* 被动触发，不主动释放 */ }
+      else if (d.b.def.ult === 'whirlwind') { d.b.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每0.5秒120%伤害`); bUltUsed=true; }
       else if (d.b.def.ult === 'arrowRain') { d.b.arrowRainWaves = 4; d.b.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); bUltUsed=true; }
       else if (d.b.def.ult === 'pierceShot') { const pd = d.b.atk*3; d.a.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); bUltUsed=true; }
       else if (d.b.def.ult === 'fireBlast') { const fd = d.b.atk*9; d.a.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); bUltUsed=true; }
@@ -2590,8 +2623,10 @@ function updateDuel(dt) {
         d.a.stun = 2;
         d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪电风暴！目标昏迷2秒`);
       }
+      // 圣骑士被动减伤60%
+      if (d.a.holyShieldT && d.a.holyShieldT>0) dmg *= 0.4;
       d.a.hp -= dmg;
-      if (critB) d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 暴击！造成${dmg}伤害`);
+      if (critB) d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 暴击！造成${Math.round(dmg)}伤害`);
       // 法师自回血3%
       if (d.b.def.skill1 && d.b.def.skill1.k==='healAlly') {
         d.b.hp = Math.min(d.b.maxHp, d.b.hp + d.b.maxHp*0.03);
@@ -2606,7 +2641,16 @@ function updateDuel(dt) {
       if (d.b.def.skill1 && d.b.def.skill1.k==='poison') { d.a.poison = 3; d.a.poisonStacks = Math.min(4,(d.a.poisonStacks||0)+1); d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施毒！(${d.a.poisonStacks}层)`); }
       if (d.b.def.skill3 && d.b.def.skill3.k==='strikeStun' && Math.random() < d.b.def.skill3.v) { d.a.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 击晕目标！`); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='polymorph' && Math.random() < d.b.def.skill1.v) { d.a.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 变羊！目标无法行动！`); }
-      if (d.b.def.skill2 && d.b.def.skill2.k==='vulnerable' && Math.random() < d.b.def.skill2.v) { dmg *= 1.3; d.a.slowT = 5; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施加易伤+减速！伤害+30%`); }
+      // 易伤：对已有易伤目标再次施加时额外50%伤害
+      if (d.b.def.skill2 && d.b.def.skill2.k==='vulnerable' && Math.random() < d.b.def.skill2.v) {
+        if (d.a.vulnerable > 0) {
+          const extraDmg = d.b.atk * 0.5;
+          d.a.hp -= extraDmg;
+          d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 易伤爆发！额外造成${Math.round(extraDmg)}伤害！`);
+        }
+        d.a.vulnerable = 3; d.a.slowT = 5;
+        d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施加易伤+减速！受到伤害+30%`);
+      }
       if (d.b.def.skill1 && d.b.def.skill1.k==='aoe') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 横扫！群伤！`); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='splashRange') { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 溅射攻击！`); }
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 攻击 ${d.a.def.name}，造成${dmg}伤害`);
