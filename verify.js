@@ -32,6 +32,7 @@ try {
   
   // 1. initGame
   __initGame();
+  __getGame().started = true; // 模拟点开始
   globalThis.__game = __getGame();
   console.log('✓ initGame OK');
   

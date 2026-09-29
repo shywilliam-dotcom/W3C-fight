@@ -306,6 +306,7 @@ const typeToSprite = { paladin:'paladin', barbarian:'paladin', fighter:'paladin'
   ice:'ice', mage:'mage', arcane:'arcane', fire:'darkfire' };
 
 function initGame() {
+  game.started = false;
   game = { gold:500, time:0, speed:1, selectedType:null,
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
     goldAcc:0, upgradeMenu:null, selectedUnit:null,
@@ -716,9 +717,8 @@ function update(dt) {
   if (duelAnim && !duelAnim.done) updateDuel(dt);
   if (game.gameOver) return;
 
-  // AI决策：建兵营/升级（准备阶段也建）
-  aiDecide('my');
-  aiDecide('enemy');
+  // AI决策：只有开始后才运行
+  if (game.started) { aiDecide('my'); aiDecide('enemy'); }
 
   // 准备阶段：倒计时，不出兵不交战
   if (game.prepTime > 0) {
@@ -1755,6 +1755,16 @@ function render() {
   }
   ctx.restore();
 
+  // 开始对战按钮（未开始时显示）
+  if (!game.started) {
+    ctx.fillStyle='#4CAF50';
+    ctx.fillRect(450, 300, 300, 60);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=3;
+    ctx.strokeRect(450, 300, 300, 60);
+    ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('开始对战', 600, 340);
+    ctx.textAlign='start';
+  }
   // 右下角按钮 2x2
   const btnW = 70, btnH = 30;
   const btnStartX = 1020, btnStartY = 620;
@@ -1825,6 +1835,10 @@ canvas.addEventListener('click', e => {
     cy = dy / rect.height * 720;
   }
 
+  // 开始对战按钮
+  if (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) {
+    game.started = true; render(); return;
+  }
   // canvas右下角按钮检测
   const btnW = 70, btnH = 30;
   const btnStartX = 1020, btnStartY = 620;
