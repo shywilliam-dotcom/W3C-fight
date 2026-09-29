@@ -2113,9 +2113,11 @@ function updateDuel(dt) {
   d.a.poison = Math.max(0, d.a.poison - dt); d.b.poison = Math.max(0, d.b.poison - dt);
   d.a.anim = Math.max(0, d.a.anim - dt*3);
   d.b.anim = Math.max(0, d.b.anim - dt*3);
-  // 毒dot
-  if (d.a.poison > 0) { d.a.hp -= d.a.atk*0.2; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot对${d.a.def.name}造成${Math.round(d.a.atk*0.2)}伤害`); }
-  if (d.b.poison > 0) { d.b.hp -= d.b.atk*0.2; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot对${d.b.def.name}造成${Math.round(d.b.atk*0.2)}伤害`); }
+  // 毒dot每0.5秒触发
+  d.a.poisonTick = (d.a.poisonTick || 0) - dt;
+  d.b.poisonTick = (d.b.poisonTick || 0) - dt;
+  if (d.a.poison > 0 && d.a.poisonTick <= 0) { d.a.poisonTick = 0.5; d.a.hp -= d.a.atk*0.2; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot对${d.a.def.name}造成${Math.round(d.a.atk*0.2)}伤害`); }
+  if (d.b.poison > 0 && d.b.poisonTick <= 0) { d.b.poisonTick = 0.5; d.b.hp -= d.b.atk*0.2; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot对${d.b.def.name}造成${Math.round(d.b.atk*0.2)}伤害`); }
   // A攻击
   if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0) {
     // 闪避
