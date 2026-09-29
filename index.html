@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.48';
+const VERSION = 'v8.49';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -434,6 +434,9 @@ function spawnUnit(b) {
     shieldWall:0, shieldCD:0, shield:0,
     shieldAlly:0, shieldAllyCD:0, dmgReduce:0,
     golemCD:0, charge:0, chargeCD:0, rocketCd:0,
+    airSlugCD:0, airSlugStacks:0, stunBlastCD:0, stunBlastStacks:0,
+    pierceCD:0, blizzardCD:0, whirlwindCD:0, whirlwindActive:0,
+    backJumpCD:0, knockback:0, strikeStun:0, healAlly:0,
     ultimate: lv>=6 ? def.ult : null,
     st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 }
   };
@@ -470,6 +473,10 @@ function spawnUnit(b) {
     else if (s.k==='shieldWall') u.shieldWall = s.v;
     else if (s.k==='shieldAlly') u.shieldAlly = s.v;
     else if (s.k==='charge') u.charge = s.v;
+    else if (s.k==='backJump') u.backJump = s.v;
+    else if (s.k==='knockback') u.knockback = s.v;
+    else if (s.k==='strikeStun') u.strikeStun = s.v;
+    else if (s.k==='healAlly') u.healAlly = s.v;
   });
   // 格斗家专属：闪避随等级大幅成长（后期型）
   if (b.unitType==='fighter') u.dodge += (lv-1)*0.05;
@@ -526,6 +533,10 @@ function doAttack(att, tgt, def) {
     if (att.stun>0 && Math.random()<att.stun) tgt.st.stun=1.5;
     // 冰法易伤debuff
     if (att.vulnerable>0 && Math.random()<att.vulnerable) tgt.st.vulnerable=3;
+    // 圣骑士：10%概率击晕1秒
+    if (att.strikeStun>0 && Math.random()<att.strikeStun) tgt.st.stun=1;
+    // 攻城车：10%概率击退主要目标
+    if (att.knockback>0 && Math.random()<att.knockback) tgt.x += att.dir * 25;
   }
   if (att.splash && Math.random()<att.splash) {
     game.units.forEach(o => {
@@ -567,14 +578,25 @@ function doAttack(att, tgt, def) {
       hit.push(next); cur=next;
     }
   }
+  // 法师回血：攻击时100%给附近血量最低友方回3%血
+  if (att.healAlly>0) {
+    let lowest = null, lowestPct = 1.1;
+    game.units.forEach(o => {
+      if (o.side===att.side && o.hp>0 && o!==att && Math.abs(o.x-att.x)<150) {
+        const pct = o.hp/o.maxHp;
+        if (pct < lowestPct) { lowestPct = pct; lowest = o; }
+      }
+    });
+    if (lowest) lowest.hp = Math.min(lowest.maxHp, lowest.hp + lowest.maxHp * att.healAlly);
+  }
   // 6级大招
   if (att.ultimate && tgt.type!==undefined) {
-    // 旋风斩（野蛮人）
-    if (att.ultimate==='whirlwind' && Math.random()<0.5) {
-      game.units.forEach(o => {
-        if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
-            Math.abs(o.x-att.x)<80) applyDmg(att,o,dmg,def);
-      });
+    // 旋风斩（野蛮人）：CD60秒，持续3秒，每秒120%伤害范围80
+    if (att.ultimate==='whirlwind') {
+      if (!att.whirlwindCD || att.whirlwindCD<=0) {
+        att.whirlwindActive = 3; // 持续3秒
+        att.whirlwindCD = 60;
+      }
     }
     // 圣骑士大招：回血100%（60秒CD）
     if (att.ultimate==='holyUlt') {
@@ -594,14 +616,14 @@ function doAttack(att, tgt, def) {
         att.dodgeUltCD = 15;
       }
     }
-    // 游侠大招：箭雨150范围伤害（20秒CD）
+    // 游侠大招：箭雨150范围伤害（40秒CD）
     if (att.ultimate==='arrowRain') {
       if (!att.arrowRainCD || att.arrowRainCD<=0) {
         game.units.forEach(o => {
           if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
               Math.abs(o.x-tgt.x)<150) applyDmg(att,o,dmg,def);
         });
-        att.arrowRainCD = 20;
+        att.arrowRainCD = 40;
       }
     }
     // 弩手大招：连发3次，每次20%连击（15秒CD）
@@ -630,6 +652,57 @@ function doAttack(att, tgt, def) {
             Math.abs(o.x-att.x)<att.range+50) { applyDmg(att,o,dmg*0.7,def); extra++; }
       });
     }
+    // 火枪手大招：穿透射击，直线400内最多5个单位（35秒CD）
+    if (att.ultimate==='pierceShot') {
+      if (!att.pierceCD || att.pierceCD<=0) {
+        let hit=0;
+        game.units.forEach(o => {
+          if (hit>=5) return;
+          if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
+              Math.abs(o.x-att.x)<400) { applyDmg(att,o,dmg*3,def); hit++; }
+        });
+        att.pierceCD = 35;
+      }
+    }
+    // 冰法大招：暴风雪，180范围80伤害+冰冻3秒+减速5秒+易伤（60秒CD）
+    if (att.ultimate==='blizzardNova') {
+      if (!att.blizzardCD || att.blizzardCD<=0) {
+        game.units.forEach(o => {
+          if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
+              Math.abs(o.x-tgt.x)<180) {
+            applyDmg(att,o,80*Math.pow(1.1,(att.level||1)-1),def);
+            if (o.st) { o.st.stun=3; o.st.slow=5; o.st.vulnerable=5; }
+          }
+        });
+        att.blizzardCD = 60;
+      }
+    }
+    // 攻城炮大招：下2次攻击200%伤害+击飞+丢失目标（40秒CD）
+    if (att.ultimate==='airSlug') {
+      if (!att.airSlugCD || att.airSlugCD<=0) {
+        att.airSlugStacks = 2;
+        att.airSlugCD = 40;
+      }
+    }
+    // 特斯拉大招：下3次攻击必晕2秒+丢失目标（40秒CD）
+    if (att.ultimate==='stunBlast') {
+      if (!att.stunBlastCD || att.stunBlastCD<=0) {
+        att.stunBlastStacks = 3;
+        att.stunBlastCD = 40;
+      }
+    }
+  }
+  // 攻城炮大招层数：消耗层数造成200%伤害+击飞+丢失目标
+  if (att.airSlugStacks && att.airSlugStacks>0) {
+    att.airSlugStacks--;
+    applyDmg(att,tgt,dmg*2,def);
+    if (tgt.st) { tgt.st.stun=1; tgt.currentTarget=null; tgt.targetSwitchTimer=1.5; }
+    tgt.x += att.dir * 30; // 击飞
+  }
+  // 特斯拉大招层数：消耗层数必晕2秒+丢失目标
+  if (att.stunBlastStacks && att.stunBlastStacks>0) {
+    att.stunBlastStacks--;
+    if (tgt.st) { tgt.st.stun=2; tgt.currentTarget=null; tgt.targetSwitchTimer=2; }
   }
   spawnProj(att,tgt,def.color||'#fff');
 }
@@ -848,6 +921,36 @@ function update(dt) {
     if (u.rapidFireCD>0) u.rapidFireCD-=dt;
     if (u.fireBlastCD>0) u.fireBlastCD-=dt;
     if (u.arcaneBlinkCD>0) u.arcaneBlinkCD-=dt;
+    if (u.pierceCD>0) u.pierceCD-=dt;
+    if (u.blizzardCD>0) u.blizzardCD-=dt;
+    if (u.whirlwindCD>0) u.whirlwindCD-=dt;
+    if (u.airSlugCD>0) u.airSlugCD-=dt;
+    if (u.stunBlastCD>0) u.stunBlastCD-=dt;
+    if (u.backJumpCD>0) u.backJumpCD-=dt;
+    // 野蛮人旋风斩持续伤害：每秒120%攻击，范围80
+    if (u.whirlwindActive>0) {
+      u.whirlwindActive -= dt;
+      game.units.forEach(o => {
+        if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<80) {
+          o.hp -= u.atk * 1.2 * dt;
+        }
+      });
+    }
+    // 弓手后跳：敌人近身(<40)时后跳200并定身目标，CD8秒
+    if (u.backJump>0 && u.backJumpCD<=0) {
+      let nearest = null, nd = Infinity;
+      game.units.forEach(o => {
+        if (o.lane!==u.lane || o.side===u.side || o.hp<=0) return;
+        const d = Math.abs(o.x - u.x);
+        if (d < nd && d < 40) { nd = d; nearest = o; }
+      });
+      if (nearest) {
+        u.x -= u.dir * 200; // 后跳
+        if (nearest.st) nearest.st.stun = 1.5; // 定身
+        u.backJumpCD = 8;
+      }
+    }
+    // 法师回血：攻击时给附近血量最低友方回3%血（在攻击逻辑里触发，这里不做）
     // 格斗家冲锋：200范围内直接冲到敌人面前，CD5秒
     if (u.charge>0 && (u.chargeCD<=0)) {
       let nearest = null, nd = Infinity;
