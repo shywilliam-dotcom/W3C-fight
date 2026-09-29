@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.70';
+const VERSION = 'v8.71';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -486,8 +486,8 @@ function spawnUnit(b) {
     ultimate: lv>=6 ? def.ult : null,
     st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, poisonStacks:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 }
   };
-  // 自动应用skill1和skill2（按等级缩放）
-  [def.skill1, def.skill2].forEach(s => {
+  // 自动应用skill1/skill2/skill3（按等级缩放）
+  [def.skill1, def.skill2, def.skill3].forEach(s => {
     if (!s) return;
     if (s.k==='dmgReduce') u.dmgReduce = s.v*mul;
     else if (s.k==='crit') u.crit = Math.max(u.crit, s.v*mul);
