@@ -1812,16 +1812,12 @@ canvas.addEventListener('click', e => {
       render(); return;
     }
     if (duelMode) {
-      // 选第一个兵种
-      let ci = 0;
+      let ci = 0, by = 250;
       for (const cat of CODEX) {
+        by += 24; // 标题
         for (let i=0; i<cat.names.length; i++) {
-          const ni = ci;
-          const col = i % 2;
-          const row = Math.floor(i / 2);
-          const bw = 96, bh = 51;
-          const bx = 30 + col * (bw + 16);
-          const by2 = 70 + row * (bh + 12);
+          const col = i % 2, row = Math.floor(i/2);
+          const bw=96, bh=40, bx=30+col*(bw+16), by2=by+row*(bh+8);
           if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
             if (duelPick === 0) { duelA = cat.types[i]; duelPick = 1; }
             else { duelB = cat.types[i]; duelResult = runDuel(duelA, duelB); duelPick = 2; }
@@ -1829,6 +1825,7 @@ canvas.addEventListener('click', e => {
           }
           ci++;
         }
+        by += 2*48 + 10;
       }
       return;
     }
