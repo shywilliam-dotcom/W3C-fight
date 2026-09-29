@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.57';
+const VERSION = 'v8.58';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -416,16 +416,9 @@ function spawnUnit(b) {
   const def = UNIT_TYPES[b.unitType];
   const lv = b.level || 1;
   // 兵种分类
-  const isMelee = ['melee','barbarian','paladin','fighter'].includes(b.unitType);
-  const isArcher = ['archer','musketeer','ranger','crossbow'].includes(b.unitType);
   const isMage = ['mage','arcane','ice','fire'].includes(b.unitType);
-  const isSiege = ['cannon','rocket','tesla','siege'].includes(b.unitType);
-  // 专项成长系数
-  const hpMul = isMelee ? Math.pow(1.2, lv-1) : Math.pow(1.1, lv-1);
-  const atkMul = isSiege ? Math.pow(1.2, lv-1) : Math.pow(1.1, lv-1);
-  const dodgeMul = isArcher ? Math.pow(1.2, lv-1) : Math.pow(1.1, lv-1);
-  const critMul = isMage ? Math.pow(1.2, lv-1) : Math.pow(1.1, lv-1);
-  const mul = Math.pow(1.1, lv-1);  // 其他属性通用1.1
+  // 统一成长系数1.1
+  const mul = Math.pow(1.1, lv-1);
   const rangeMul = 1 + (lv-1)*0.05;
   // 后期rush：300秒后新出兵攻击每60秒+15%
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
@@ -443,10 +436,10 @@ function spawnUnit(b) {
     atkType: def.atkType || 'normal',
     armorType: def.armorType || 'unarmored',
     flatArmor: def.armor || 0,
-    hp:Math.round(def.hp*hpMul), maxHp:Math.round(def.hp*hpMul),
-    atk:Math.round(def.atk*atkMul*timeMul), atkSpeed:def.atkSpeed,
+    hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
+    atk:Math.round(def.atk*mul*timeMul), atkSpeed:def.atkSpeed,
     range:def.range*rangeMul, speed:def.speed*speedMul, atkTimer:0,
-    crit:0.05*critMul, dodge:(b.unitType==='fighter'?0.15:0.05)*dodgeMul, instantKill:0, polymorpth:0,
+    crit:(b.unitType==='fighter'?0.10:0.05)*mul, dodge:(b.unitType==='fighter'?0.15:0.05)*mul, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
     doubleStrike:0, multiTarget:0, splashRange:0,
     aoe:0, dmgReduce:0, buildingDamage:0,
@@ -468,8 +461,8 @@ function spawnUnit(b) {
   [def.skill1, def.skill2].forEach(s => {
     if (!s) return;
     if (s.k==='dmgReduce') u.dmgReduce = s.v*mul;
-    else if (s.k==='crit') u.crit = Math.max(u.crit, s.v*critMul);
-    else if (s.k==='dodge') u.dodge = Math.max(u.dodge, s.v*dodgeMul);
+    else if (s.k==='crit') u.crit = Math.max(u.crit, s.v*mul);
+    else if (s.k==='dodge') u.dodge = Math.max(u.dodge, s.v*mul);
     else if (s.k==='instantKill') u.instantKill = s.v + 0.005*(lv-1);
     else if (s.k==='polymorph') u.polymorpth = s.v*mul;
     else if (s.k==='burn') u.burnDps = 20*mul;
@@ -2344,18 +2337,8 @@ let duelLogAutoScroll = true; // 是否自动滚动到底部
 function startDuel(typeA, typeB, lv) {
   const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
   lv = lv || 6;
-  // 跟主游戏一致的成长系数
-  const calcMul = (type, stat) => {
-    const isMelee = ['melee','barbarian','paladin','fighter'].includes(type);
-    const isArcher = ['archer','musketeer','ranger','crossbow'].includes(type);
-    const isMage = ['mage','arcane','ice','fire'].includes(type);
-    const isSiege = ['cannon','rocket','tesla','siege'].includes(type);
-    if (stat==='hp' && isMelee) return Math.pow(1.2, lv-1);
-    if (stat==='atk' && isSiege) return Math.pow(1.2, lv-1);
-    if (stat==='dodge' && isArcher) return Math.pow(1.2, lv-1);
-    if (stat==='crit' && isMage) return Math.pow(1.2, lv-1);
-    return Math.pow(1.1, lv-1);
-  };
+  // 统一成长系数1.1
+  const mul = Math.pow(1.1, lv-1);
   const calcSpeed = (def, type) => {
     let m = 1.0;
     if (def.armorType === 'fort') m = 0.8;
@@ -2364,15 +2347,15 @@ function startDuel(typeA, typeB, lv) {
     if (['mage','arcane','ice','fire'].includes(type)) m = 0.9;
     return def.speed * m;
   };
-  const hpA = Math.round(defA.hp * calcMul(typeA,'hp'));
-  const atkA = Math.round(defA.atk * calcMul(typeA,'atk'));
-  const critA = 0.05 * calcMul(typeA,'crit');
-  const dodgeA = (typeA==='fighter'?0.15:0.05) * calcMul(typeA,'dodge');
+  const hpA = Math.round(defA.hp * mul);
+  const atkA = Math.round(defA.atk * mul);
+  const critA = (typeA==='fighter'?0.10:0.05) * mul;
+  const dodgeA = (typeA==='fighter'?0.15:0.05) * mul;
   const spdA = calcSpeed(defA, typeA);
-  const hpB = Math.round(defB.hp * calcMul(typeB,'hp'));
-  const atkB = Math.round(defB.atk * calcMul(typeB,'atk'));
-  const critB = 0.05 * calcMul(typeB,'crit');
-  const dodgeB = (typeB==='fighter'?0.15:0.05) * calcMul(typeB,'dodge');
+  const hpB = Math.round(defB.hp * mul);
+  const atkB = Math.round(defB.atk * mul);
+  const critB = (typeB==='fighter'?0.10:0.05) * mul;
+  const dodgeB = (typeB==='fighter'?0.15:0.05) * mul;
   const spdB = calcSpeed(defB, typeB);
   // 战斗区域中心x=400，双方初始间距300，从两端入场
   const centerX = 400, gap = 300;
