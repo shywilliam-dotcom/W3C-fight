@@ -2087,8 +2087,8 @@ function startDuel(typeA, typeB, lv) {
   const mul = Math.pow(1.1, lv-1);
   duelAnim = {
     typeA, typeB,
-    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 0},
-    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 0},
+    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 5, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
+    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 5, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
     time: 0, done: false, winner: null,
     logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})`]
   };
