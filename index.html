@@ -91,9 +91,9 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.77';
+const VERSION = 'v8.78';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-const LANE_Y = [140, 360, 580];
+const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
 const MY_BASE_X = 50;
 const EN_BASE_X = 1150;
@@ -366,18 +366,18 @@ function initGame() {
   game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
     atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
-  // 每条路的塔：正三角形（两上一下，在道路两侧，近战走到路边可打）
+  // 每条路的塔：正三角形（两上一下，紧挨道路两侧，道路半宽60，塔在路边±65）
   for (let lane=0; lane<3; lane++) {
     const y = LANE_Y[lane];
     const isMid = lane===1;
     const tRange = 220;
-    // 我方：上边2个(y-40)，下边1个(y+40)，间距略大于射程
-    [[130,-40],[360,-40],[245,40]].forEach(([tx,dy]) => {
+    // 我方：上边2个(y-65)，下边1个(y+65)，间距略大于射程
+    [[130,-65],[360,-65],[245,65]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'my', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
     // 敌方镜像
-    [[1070,-40],[840,-40],[955,40]].forEach(([tx,dy]) => {
+    [[1070,-65],[840,-65],[955,65]].forEach(([tx,dy]) => {
       game.towers.push({ x:tx, y:y+dy, lane, side:'enemy', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
@@ -455,9 +455,9 @@ function spawnUnit(b) {
   else if (def.armorType === 'light') speedMul = 1.3; // 轻甲+30%
   else if (def.armorType === 'unarmored') speedMul = 0.9; // 无甲-10%
   if (isMage) speedMul = 0.9; // 法师类都-10%
-  const yOff = (Math.random()-0.5)*70; // 每路6单位并行，y偏移±35
+  const yOff = (Math.random()-0.5)*100; // 道路加宽后y偏移±50
   const u = {
-    x:b.side==='my'?120:1080, y:LANE_Y[b.lane]+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
+    x:b.side==='my'?MY_BASE_X+40:EN_BASE_X-40, y:LANE_Y[b.lane]+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
     name:getUnitName(b.unitType),
     dir: b.side==='my'?1:-1, level:lv,
     atkType: def.atkType || 'normal',
@@ -1323,6 +1323,10 @@ function update(dt) {
       u.animState = 'walk';
       if (u.x<30) u.x=30;
       if (u.x>1170) u.x=1170;
+      // 单位不离开道路：限制y在道路范围内（半宽60，留5px余量）
+      const laneCenter = LANE_Y[u.lane];
+      if (u.y < laneCenter - 55) u.y = laneCenter - 55;
+      if (u.y > laneCenter + 55) u.y = laneCenter + 55;
     }
   });
   // 召唤者死亡时召唤物也死亡
@@ -1472,8 +1476,8 @@ function render() {
   }
   ctx.textAlign='start';
 
-  // 路：三条独立直路
-  ctx.lineWidth = 80;
+  // 路：三条独立直路（加宽50%：80→120）
+  ctx.lineWidth = 120;
   ctx.lineCap = 'round';
   LANE_Y.forEach((y,i) => {
     ctx.strokeStyle = '#1e1e4a';
@@ -1495,9 +1499,9 @@ function render() {
   });
   ctx.lineCap = 'butt';
   ctx.fillStyle='#555'; ctx.font='11px sans-serif';
-  ctx.fillText('上路', 380, LANE_Y[0]-50);
-  ctx.fillText('中路', 600, LANE_Y[1]-50);
-  ctx.fillText('下路', 380, LANE_Y[2]-50);
+  ctx.fillText('上路', 380, LANE_Y[0]-65);
+  ctx.fillText('中路', 600, LANE_Y[1]-65);
+  ctx.fillText('下路', 380, LANE_Y[2]-65);
 
   // 中间交战区标记（虚线）
   ctx.strokeStyle='#2a2a5a'; ctx.setLineDash([8,8]); ctx.lineWidth=1;
