@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.76';
+const VERSION = 'v8.77';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -2025,64 +2025,141 @@ function render() {
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
-    const pw = 800, ph = 120;
-    const px = 200, py = 600;
-    ctx.fillStyle='rgba(0,0,0,0.85)';
+    const pw = 800, ph = 130;
+    const px = 200, py = 590;
+    ctx.fillStyle='rgba(0,0,0,0.9)';
     ctx.fillRect(px, py, pw, ph);
-    ctx.strokeStyle='#555'; ctx.lineWidth=1;
+    ctx.strokeStyle='#666'; ctx.lineWidth=1;
     ctx.strokeRect(px, py, pw, ph);
 
-    // 左侧大头像区域
-    const ax = px+10, ay = py+10, aw = 100, ah = 100;
-    ctx.fillStyle = '#4a4a6e';
+    // 左侧头像
+    const ax = px+8, ay = py+8, aw = 80, ah = ph-16;
+    ctx.fillStyle = '#3a3a5a';
     ctx.fillRect(ax, ay, aw, ah);
-    ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
-    ctx.strokeRect(ax, ay, aw, ah);
-
-    // 画立绘图片
     const pKey = typeToPortrait[u.type];
     const pImg = pKey ? portraitImgs[pKey] : null;
-    // 图鉴背景
-    ctx.fillStyle = '#3a3a5a';
-    ctx.fillRect(ax+5, ay+5, aw-10, ah-10);
     if (pImg && pImg.complete && pImg.naturalWidth > 0) {
-      ctx.drawImage(pImg, ax+5, ay+5, aw-10, ah-10);
+      ctx.drawImage(pImg, ax+4, ay+4, aw-8, ah-8);
     } else {
       ctx.fillStyle = def.color;
-      ctx.beginPath(); ctx.arc(ax+aw/2, ay+ah/2, 20, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ax+aw/2, ay+ah/2, 18, 0, Math.PI*2); ctx.fill();
     }
 
+    // 右侧信息区 - 紧凑多列布局
+    const tx = px + aw + 14;
+    const col1 = tx, col2 = tx+180, col3 = tx+360, col4 = tx+520;
+    const lineH = 15;
 
-    // 右侧属性文字
-    const tx = px + aw + 25;
-    ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
-    ctx.fillText(`${def.name} · Lv.${u.level}`, tx, py+20);
-    ctx.fillStyle='#aaa'; ctx.font='11px sans-serif';
-    ctx.fillText(`姓名: ${u.name||'未命名'}`, tx, py+38);
+    // 标题行
+    ctx.fillStyle='#FFD700'; ctx.font='bold 13px sans-serif';
+    ctx.fillText(`${def.name} Lv.${u.level}`, col1, py+16);
+    ctx.fillStyle='#888'; ctx.font='10px sans-serif';
+    ctx.fillText(`${u.name||''}`, col1+90, py+16);
+
+    // 属性行1
     ctx.fillStyle='#fff'; ctx.font='11px sans-serif';
-    ctx.fillText(`HP: ${Math.round(u.hp)}/${u.maxHp}  ATK: ${Math.round(u.atk)}`, tx, py+56);
-    ctx.fillText(`攻速: ${u.atkSpeed.toFixed(2)}  射程: ${Math.round(u.range)}`, tx, py+72);
-    ctx.fillText(`移速: ${u.speed}  攻击: ${u.atkType}  护甲: ${u.armorType}`, tx, py+88);
-    let skillText = '';
-    if (u.dodge) skillText += `闪避${Math.round(u.dodge*100)}% `;
-    if (u.crit) skillText += `暴击${Math.round(u.crit*100)}% `;
-    if (u.doubleStrike) skillText += `连击${Math.round(u.doubleStrike*100)}% `;
-    if (u.focusFire) skillText += `专注射击(每次+${Math.round(u.focusFire*100)}%攻速最高300%) `;
-    if (u.armorReduce) skillText += `护甲撕裂(每次-${u.armorReduce}护甲) `;
-    if (u.instantKill) skillText += `即死${Math.round(u.instantKill*100)}% `;
-    ctx.fillStyle='#4CAF50'; ctx.fillText(`被动: ${skillText||'无'}`, tx, py+106);
-    // Buff/DeBuff状态
+    ctx.fillText(`HP ${Math.round(u.hp)}/${u.maxHp}`, col1, py+32);
+    ctx.fillText(`ATK ${Math.round(u.atk)}`, col2, py+32);
+    ctx.fillText(`攻速 ${u.atkSpeed.toFixed(2)}`, col3, py+32);
+    ctx.fillText(`射程 ${Math.round(u.range)}`, col4, py+32);
+
+    // 属性行2
+    ctx.fillStyle='#aaa'; ctx.font='10px sans-serif';
+    ctx.fillText(`移速 ${u.speed}`, col1, py+46);
+    ctx.fillText(`护甲值 ${(u.flatArmor!==undefined?u.flatArmor:(def.armor||0)).toFixed(1)}`, col2, py+46);
+    ctx.fillText(`护甲类型 ${u.armorType}`, col3, py+46);
+    ctx.fillText(`攻击类型 ${u.atkType}`, col4, py+46);
+
+    // 属性行3 - 暴击闪避
+    ctx.fillStyle='#FF9800'; ctx.font='10px sans-serif';
+    ctx.fillText(`暴击 ${Math.round((u.crit||0)*100)}%`, col1, py+60);
+    ctx.fillText(`闪避 ${Math.round((u.dodge||0)*100)}%`, col2, py+60);
+    ctx.fillStyle='#4CAF50';
+    // 被动技能列表 - 紧凑
+    let skills = [];
+    if (u.doubleStrike) skills.push(`连击${Math.round(u.doubleStrike*100)}%`);
+    if (u.focusFire) skills.push(`专注+${Math.round(u.focusFire*100)}%/次`);
+    if (u.focusStacks>0) skills.push(`专注${u.focusStacks}层`);
+    if (u.armorReduce) skills.push(`破甲-${u.armorReduce}/次`);
+    if (u.instantKill) skills.push(`即死${Math.round(u.instantKill*100)}%`);
+    if (u.polymorpth) skills.push(`变羊${Math.round(u.polymorpth*100)}%`);
+    if (u.burnDps>0) skills.push(`灼烧${u.burnDps}/s`);
+    if (u.poison>0) skills.push(`毒${Math.round(u.poison*100)}%`);
+    if (u.splash>0) skills.push(`溅射${Math.round(u.splash*100)}%`);
+    if (u.chainLightning>0) skills.push(`连锁${u.chainLightning}目标`);
+    if (u.stun>0) skills.push(`眩晕${Math.round(u.stun*100)}%`);
+    if (u.vulnerable>0) skills.push(`易伤${Math.round(u.vulnerable*100)}%`);
+    if (u.dmgReduce>0) skills.push(`减伤${Math.round(u.dmgReduce*100)}%`);
+    if (u.parryArcher>0) skills.push(`招架弓${Math.round(u.parryArcher*100)}%`);
+    if (u.execute>0) skills.push(`斩杀回血`);
+    if (u.healAlly>0) skills.push(`回血光环`);
+    if (u.shieldWall>0) skills.push(`护盾墙`);
+    if (u.shieldAlly>0) skills.push(`群体护盾`);
+    if (u.charge>0) skills.push(`冲锋`);
+    if (u.backJump>0) skills.push(`后跳`);
+    if (u.knockback>0) skills.push(`击退`);
+    if (u.strikeStun>0) skills.push(`击晕`);
+    if (u.berserk) skills.push(`狂战`);
+    if (u.holyHeal) skills.push(`圣疗`);
+    if (u.iceBlock) skills.push(`冰棺`);
+    if (u.summonGolem>0) skills.push(`召唤傀儡`);
+    if (u.summonSkeleton>0) skills.push(`召唤骷髅`);
+    if (u.dodgeCounter) skills.push(`闪避反击`);
+    if (u.electricField>0) skills.push(`电场${u.electricField}/s`);
+    if (u.longRange>0) skills.push(`远射`);
+    if (u.buildingDamage>0) skills.push(`建筑伤+${Math.round(u.buildingDamage*100)}%`);
+    if (u.armorPierce) skills.push(`无视护甲`);
+    if (u.aoe>0) skills.push(`范围${u.aoe}`);
+    ctx.fillText(`被动: ${skills.join(' ')||'无'}`, col3, py+60);
+
+    // 大招
+    if (def.ult) {
+      ctx.fillStyle='#E91E63'; ctx.font='10px sans-serif';
+      const ultNames = {rapidFire:'连发5次',rocketBarrage:'火箭突袭',stunBlast:'眩晕3连',airSlug:'重击2连',blizzard:'暴风雪',whirlwind:'旋风斩',holyUlt:'圣盾',arrowRain:'箭雨',pierceShot:'穿透射击'};
+      ctx.fillText(`大招: ${ultNames[def.ult]||def.ult}`, col1, py+74);
+    }
+
+    // Buff/Debuff状态 - 紧凑一行
     let buffs = [];
-    if (u.rampageCD && u.rampageCD>0) buffs.push(`狂战(攻+10%/攻速+70%) ${u.rampageCD.toFixed(1)}s`);
-    if (u.st && u.st.burn>0) buffs.push(`灼烧dot ${u.st.burn.toFixed(1)}s`);
-    if (u.st && u.st.vulnerable>0) buffs.push(`易伤 ${u.st.vulnerable.toFixed(1)}s`);
-    if (u.st && u.st.slow>0) buffs.push(`减速 ${u.st.slow.toFixed(1)}s`);
-    if (u.st && u.st.stun>0) buffs.push(`眩晕 ${u.st.stun.toFixed(1)}s`);
-    if (u.st && u.st.iceBlock) buffs.push(`无敌/冰冻 ${u.st.iceBlock.toFixed(1)}s`);
-    if (u.shield && u.shield>0) buffs.push(`护盾 ${Math.round(u.shield)}`);
+    if (u.rampageCD && u.rampageCD>0) buffs.push(`狂战${u.rampageCD.toFixed(1)}s`);
+    if (u.st && u.st.burn>0) buffs.push(`灼烧${u.st.burn.toFixed(1)}s`);
+    if (u.st && u.st.poison>0) buffs.push(`毒${u.st.poison.toFixed(1)}s${u.st.poisonStacks?u.st.poisonStacks+'层':''}`);
+    if (u.st && u.st.vulnerable>0) buffs.push(`易伤${u.st.vulnerable.toFixed(1)}s`);
+    if (u.st && u.st.slow>0) buffs.push(`减速${u.st.slow.toFixed(1)}s`);
+    if (u.st && u.st.stun>0) buffs.push(`眩晕${u.st.stun.toFixed(1)}s`);
+    if (u.st && u.st.iceBlock) buffs.push(`冰棺`);
+    if (u.st && u.st.polymorphed>0) buffs.push(`变羊${u.st.polymorphed.toFixed(1)}s`);
+    if (u.st && u.st.armorReduceT>0) buffs.push(`破甲${u.st.armorReduceT.toFixed(1)}s`);
+    if (u.shield && u.shield>0) buffs.push(`护盾${Math.round(u.shield)}`);
+    if (u.holyShieldT>0) buffs.push(`圣盾${u.holyShieldT.toFixed(1)}s`);
     if (buffs.length) {
-      ctx.fillStyle='#FFD700';
-      buffs.forEach((b,i) => ctx.fillText(b, tx, py+122+i*16));
+      ctx.fillStyle='#00BCD4'; ctx.font='10px sans-serif';
+      ctx.fillText(`状态: ${buffs.join(' ')}`, col1, py+88);
+    }
+
+    // 大招CD
+    let cds = [];
+    if (u.rapidFireCD>0) cds.push(`连发CD${u.rapidFireCD.toFixed(0)}s`);
+    if (u.rocketCd>0) cds.push(`火箭CD${u.rocketCd.toFixed(0)}s`);
+    if (u.stunBlastCD>0) cds.push(`眩晕CD${u.stunBlastCD.toFixed(0)}s`);
+    if (u.airSlugCD>0) cds.push(`重击CD${u.airSlugCD.toFixed(0)}s`);
+    if (u.blizzardCD>0) cds.push(`暴风雪CD${u.blizzardCD.toFixed(0)}s`);
+    if (u.whirlwindCD>0) cds.push(`旋风CD${u.whirlwindCD.toFixed(0)}s`);
+    if (u.holyUltCD>0) cds.push(`圣盾CD${u.holyUltCD.toFixed(0)}s`);
+    if (u.pierceCD>0) cds.push(`穿透CD${u.pierceCD.toFixed(0)}s`);
+    if (u.backJumpCD>0) cds.push(`后跳CD${u.backJumpCD.toFixed(0)}s`);
+    if (u.chargeCD>0) cds.push(`冲锋CD${u.chargeCD.toFixed(0)}s`);
+    if (u.golemCD>0) cds.push(`傀儡CD${u.golemCD.toFixed(0)}s`);
+    if (cds.length) {
+      ctx.fillStyle='#9C27B0'; ctx.font='10px sans-serif';
+      ctx.fillText(cds.join(' '), col1, py+102);
+    }
+
+    // 攻击目标
+    if (u.currentTarget && u.currentTarget.hp>0) {
+      const tdef = UNIT_TYPES[u.currentTarget.type];
+      ctx.fillStyle='#F44336'; ctx.font='10px sans-serif';
+      ctx.fillText(`目标: ${tdef?tdef.name:u.currentTarget.type} HP${Math.round(u.currentTarget.hp)}`, col1, py+116);
     }
   }
 
