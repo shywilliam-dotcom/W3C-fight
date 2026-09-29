@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.53';
+const VERSION = 'v8.54';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -597,13 +597,15 @@ function doAttack(att, tgt, def) {
     });
     if (lowest) lowest.hp = Math.min(lowest.maxHp, lowest.hp + lowest.maxHp * att.healAlly);
   }
-  // 6级大招
+  // 6级大招（攻击时释放，占用1次攻击）
+  let ultUsed = false;
   if (att.ultimate && tgt.type!==undefined) {
     // 旋风斩（野蛮人）：CD60秒，持续3秒，每秒120%伤害范围80
     if (att.ultimate==='whirlwind') {
       if (!att.whirlwindCD || att.whirlwindCD<=0) {
         att.whirlwindActive = 3; // 持续3秒
         att.whirlwindCD = 60;
+        ultUsed = true;
       }
     }
     // 圣骑士大招：回血100%（60秒CD）
@@ -611,6 +613,7 @@ function doAttack(att, tgt, def) {
       if (!att.holyUltCD || att.holyUltCD<=0) {
         att.hp = att.maxHp;
         att.holyUltCD = 60;
+        ultUsed = true;
       }
     }
     // 格斗家大招：躲闪时50%概率无敌1秒+周围120范围100%伤害
@@ -622,6 +625,7 @@ function doAttack(att, tgt, def) {
               Math.abs(o.x-att.x)<120) applyDmg(att,o,dmg,def);
         });
         att.dodgeUltCD = 15;
+        ultUsed = true;
       }
     }
     // 游侠大招：箭雨，目标周围150范围内4次伤害，每0.5秒一次（40秒CD）
@@ -633,6 +637,7 @@ function doAttack(att, tgt, def) {
         att.arrowRainLane = att.lane;
         att.arrowRainDmg = dmg * 1.2;
         att.arrowRainCD = 40;
+        ultUsed = true;
       }
     }
     // 弩手大招：连发3次，每次20%连击（15秒CD）
@@ -643,6 +648,7 @@ function doAttack(att, tgt, def) {
           if (Math.random()<0.20) applyDmg(att,tgt,dmg,def);
         }
         att.rapidFireCD = 15;
+        ultUsed = true;
       }
     }
     // 火法大招：对目标500%伤害（20秒CD）
@@ -650,6 +656,7 @@ function doAttack(att, tgt, def) {
       if (!att.fireBlastCD || att.fireBlastCD<=0) {
         applyDmg(att,tgt,dmg*5,def);
         att.fireBlastCD = 20;
+        ultUsed = true;
       }
     }
     // 弹幕（攻城车基础）
@@ -671,6 +678,7 @@ function doAttack(att, tgt, def) {
               Math.abs(o.x-att.x)<400) { applyDmg(att,o,dmg*3,def); hit++; }
         });
         att.pierceCD = 35;
+        ultUsed = true;
       }
     }
     // 冰法大招：暴风雪，180范围80伤害+冰冻3秒+减速5秒+易伤（60秒CD）
@@ -684,6 +692,7 @@ function doAttack(att, tgt, def) {
           }
         });
         att.blizzardCD = 60;
+        ultUsed = true;
       }
     }
     // 攻城炮大招：下2次攻击200%伤害+击飞+丢失目标（40秒CD）
@@ -713,6 +722,8 @@ function doAttack(att, tgt, def) {
     att.stunBlastStacks--;
     if (tgt.st) { tgt.st.stun=2; tgt.currentTarget=null; tgt.targetSwitchTimer=2; }
   }
+  // 主动大招占用1次攻击，不执行普通攻击
+  if (ultUsed) return;
   spawnProj(att,tgt,def.color||'#fff');
 }
 
@@ -1153,8 +1164,8 @@ function update(dt) {
         u.firstAttackDone = true;
         u.atkTimer = Math.min(u.atkTimer, 0.3);
       }
-      // 换目标后需要等
-      if (u.targetSwitchTimer<=0 && u.atkTimer<=0) {
+      // 换目标后需要等；持续大招期间不能普攻
+      if (u.targetSwitchTimer<=0 && u.atkTimer<=0 && u.whirlwindActive<=0 && (u.arrowRainWaves||0)<=0) {
         // 火法dot叠加：连续攻击同一目标时，burn层数+1
         if (u.burnStack && bestT.st) {
           bestT.st.burnStacks = (bestT.st.burnStacks||0) + 1;
@@ -2379,8 +2390,26 @@ function updateDuel(dt) {
       d.logs.push(`[${d.time.toFixed(1)}s] 旋风斩造成${Math.round(wd)}伤害`);
     }
   }
-  // A攻击（需要在射程内）
-  if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0 && dist <= aRange) {
+  // A攻击（需要在射程内，持续大招期间不能普攻）
+  if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0 && dist <= aRange && d.a.whirlwindActive<=0 && d.a.arrowRainWaves<=0) {
+    // 大招：攻击时释放，占用1次攻击
+    let aUltUsed = false;
+    if (d.a.ultCd <= 0 && d.a.def.ult && d.a.def.ult !== 'arcaneBlink' && d.a.def.ult !== 'dodgeUlt') {
+      d.a.ultCd = 20;
+      d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.a.def.name} 释放大招【${d.a.def.ult}】！`);
+      if (d.a.def.ult === 'holyUlt') { d.a.hp = d.a.maxHp; d.logs.push('回满血量！'); aUltUsed=true; }
+      else if (d.a.def.ult === 'whirlwind') { d.a.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每秒120%伤害`); aUltUsed=true; }
+      else if (d.a.def.ult === 'arrowRain') { d.a.arrowRainWaves = 4; d.a.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); aUltUsed=true; }
+      else if (d.a.def.ult === 'pierceShot') { const pd = d.a.atk*3; d.b.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); aUltUsed=true; }
+      else if (d.a.def.ult === 'fireBlast') { const fd = d.a.atk*5; d.b.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); aUltUsed=true; }
+      else if (d.a.def.ult === 'blizzardNova') { const bd = 80*Math.pow(1.1,(duelLv||6)-1); d.b.hp -= bd; d.b.stun = 3; d.b.slowT = 5; d.b.vulnerable = 5; d.logs.push(`暴风雪造成${Math.round(bd)}伤害！冰冻3秒+减速5秒+易伤！`); aUltUsed=true; }
+      else if (d.a.def.ult === 'rapidFire') { for(let i=0;i<3;i++){ const rd=d.a.atk; d.b.hp-=rd; if(Math.random()<0.2) d.b.hp-=rd; } d.logs.push(`连发3次！每次20%连击`); aUltUsed=true; }
+      else if (d.a.def.ult === 'airSlug') { d.a.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
+      else if (d.a.def.ult === 'stunBlast') { d.a.stunBlastStacks = 3; d.logs.push(`闪电风暴装填！下3次攻击必晕2秒`); }
+      else if (d.a.def.ult === 'rocketBarrage') { const rd = d.a.atk*1.2; d.b.hp -= rd; d.logs.push(`火箭突袭造成${Math.round(rd)}伤害！`); aUltUsed=true; }
+      d.a.cd = 1/d.a.atkSpeed;
+    }
+    if (!aUltUsed) {
     // 闪避
     if (d.b.def.skill1 && d.b.def.skill1.k==='dodge' && Math.random() < d.b.def.skill1.v) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避！`);
@@ -2449,9 +2478,28 @@ function updateDuel(dt) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 攻击 ${d.b.def.name}，造成${dmg}伤害`);
     }
     d.a.cd = 1/d.a.def.atkSpeed; d.a.anim = 1;
+    } // end if (!aUltUsed)
   }
-  // B攻击（需要在射程内）
-  if (d.b.cd <= 0 && d.b.hp > 0 && d.b.stun <= 0 && dist <= bRange) {
+  // B攻击（需要在射程内，持续大招期间不能普攻）
+  if (d.b.cd <= 0 && d.b.hp > 0 && d.b.stun <= 0 && dist <= bRange && d.b.whirlwindActive<=0 && d.b.arrowRainWaves<=0) {
+    // 大招：攻击时释放，占用1次攻击
+    let bUltUsed = false;
+    if (d.b.ultCd <= 0 && d.b.def.ult && d.b.def.ult !== 'arcaneBlink' && d.b.def.ult !== 'dodgeUlt') {
+      d.b.ultCd = 20;
+      d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.b.def.name} 释放大招【${d.b.def.ult}】！`);
+      if (d.b.def.ult === 'holyUlt') { d.b.hp = d.b.maxHp; d.logs.push('回满血量！'); bUltUsed=true; }
+      else if (d.b.def.ult === 'whirlwind') { d.b.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每秒120%伤害`); bUltUsed=true; }
+      else if (d.b.def.ult === 'arrowRain') { d.b.arrowRainWaves = 4; d.b.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); bUltUsed=true; }
+      else if (d.b.def.ult === 'pierceShot') { const pd = d.b.atk*3; d.a.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); bUltUsed=true; }
+      else if (d.b.def.ult === 'fireBlast') { const fd = d.b.atk*5; d.a.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); bUltUsed=true; }
+      else if (d.b.def.ult === 'blizzardNova') { const bd = 80*Math.pow(1.1,(duelLv||6)-1); d.a.hp -= bd; d.a.stun = 3; d.a.slowT = 5; d.a.vulnerable = 5; d.logs.push(`暴风雪造成${Math.round(bd)}伤害！冰冻3秒+减速5秒+易伤！`); bUltUsed=true; }
+      else if (d.b.def.ult === 'rapidFire') { for(let i=0;i<3;i++){ const rd=d.b.atk; d.a.hp-=rd; if(Math.random()<0.2) d.a.hp-=rd; } d.logs.push(`连发3次！每次20%连击`); bUltUsed=true; }
+      else if (d.b.def.ult === 'airSlug') { d.b.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
+      else if (d.b.def.ult === 'stunBlast') { d.b.stunBlastStacks = 3; d.logs.push(`闪电风暴装填！下3次攻击必晕2秒`); }
+      else if (d.b.def.ult === 'rocketBarrage') { const rd = d.b.atk*1.2; d.a.hp -= rd; d.logs.push(`火箭突袭造成${Math.round(rd)}伤害！`); bUltUsed=true; }
+      d.b.cd = 1/d.b.atkSpeed;
+    }
+    if (!bUltUsed) {
     if (d.a.def.skill1 && d.a.def.skill1.k==='dodge' && Math.random() < d.a.def.skill1.v) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避！`);
       const counterDmg = Math.round(d.b.atk * 1.0);
@@ -2503,6 +2551,7 @@ function updateDuel(dt) {
       d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 攻击 ${d.a.def.name}，造成${dmg}伤害`);
     }
     d.b.cd = 1/d.b.def.atkSpeed; d.b.anim = 1;
+    } // end if (!bUltUsed)
   }
   // 奥法召唤傀儡
   d.a.golemCd -= dt; d.b.golemCd -= dt;
@@ -2571,37 +2620,7 @@ function updateDuel(dt) {
   if (d.a.def.name==='奥法' && d.a.shield <= 0) { d.a.shield = d.a.maxHp*0.4; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 群体护盾！+${Math.round(d.a.shield)}`); }
   if (d.b.def.name==='奥法' && d.b.shield <= 0) { d.b.shield = d.b.maxHp*0.4; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 群体护盾！+${Math.round(d.b.shield)}`); }
 
-  // 大招
-  if (d.a.ultCd <= 0 && d.a.hp > 0 && d.a.def.ult) {
-    d.a.ultCd = 20;
-    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.a.def.name} 释放大招【${d.a.def.ult}】！`);
-    if (d.a.def.ult === 'holyUlt') { d.a.hp = d.a.maxHp; d.logs.push('回满血量！'); }
-    else if (d.a.def.ult === 'whirlwind') { d.a.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每秒120%伤害`); }
-    else if (d.a.def.ult === 'arrowRain') { d.a.arrowRainWaves = 4; d.a.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); }
-    else if (d.a.def.ult === 'pierceShot') { const pd = d.a.atk*3; d.b.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); }
-    else if (d.a.def.ult === 'arcaneBlink') { d.logs.push(`奥法闪现！回20%血！`); d.a.hp = Math.max(d.a.hp, d.a.maxHp*0.2); }
-    else if (d.a.def.ult === 'fireBlast') { const fd = d.a.atk*5; d.b.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); }
-    else if (d.a.def.ult === 'blizzardNova') { const bd = 80*Math.pow(1.1,(duelLv||6)-1); d.b.hp -= bd; d.b.stun = 3; d.b.slowT = 5; d.b.vulnerable = 5; d.logs.push(`暴风雪造成${Math.round(bd)}伤害！冰冻3秒+减速5秒+易伤！`); }
-    else if (d.a.def.ult === 'rapidFire') { for(let i=0;i<3;i++){ const rd=d.a.atk; d.b.hp-=rd; if(Math.random()<0.2) d.b.hp-=rd; } d.logs.push(`连发3次！每次20%连击`); }
-    else if (d.a.def.ult === 'airSlug') { d.a.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
-    else if (d.a.def.ult === 'stunBlast') { d.a.stunBlastStacks = 3; d.logs.push(`闪电风暴装填！下3次攻击必晕2秒`); }
-    else if (d.a.def.ult === 'rocketBarrage') { const rd = d.a.atk*1.2; d.b.hp -= rd; d.logs.push(`火箭突袭造成${Math.round(rd)}伤害！`); }
-  }
-  if (d.b.ultCd <= 0 && d.b.hp > 0 && d.b.def.ult) {
-    d.b.ultCd = 20;
-    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.b.def.name} 释放大招【${d.b.def.ult}】！`);
-    if (d.b.def.ult === 'holyUlt') { d.b.hp = d.b.maxHp; d.logs.push('回满血量！'); }
-    else if (d.b.def.ult === 'whirlwind') { d.b.whirlwindActive = 3; d.logs.push(`旋风斩启动！持续3秒，每秒120%伤害`); }
-    else if (d.b.def.ult === 'arrowRain') { d.b.arrowRainWaves = 4; d.b.arrowRainTimer = 0; d.logs.push(`箭雨启动！4波×120%，每0.5秒一波`); }
-    else if (d.b.def.ult === 'pierceShot') { const pd = d.b.atk*3; d.a.hp -= pd; d.logs.push(`穿透射击造成${Math.round(pd)}伤害！`); }
-    else if (d.b.def.ult === 'arcaneBlink') { d.logs.push(`奥法闪现！回20%血！`); d.b.hp = Math.max(d.b.hp, d.b.maxHp*0.2); }
-    else if (d.b.def.ult === 'fireBlast') { const fd = d.b.atk*5; d.a.hp -= fd; d.logs.push(`烈焰风暴造成${Math.round(fd)}伤害！`); }
-    else if (d.b.def.ult === 'blizzardNova') { const bd = 80*Math.pow(1.1,(duelLv||6)-1); d.a.hp -= bd; d.a.stun = 3; d.a.slowT = 5; d.a.vulnerable = 5; d.logs.push(`暴风雪造成${Math.round(bd)}伤害！冰冻3秒+减速5秒+易伤！`); }
-    else if (d.b.def.ult === 'rapidFire') { for(let i=0;i<3;i++){ const rd=d.b.atk; d.a.hp-=rd; if(Math.random()<0.2) d.a.hp-=rd; } d.logs.push(`连发3次！每次20%连击`); }
-    else if (d.b.def.ult === 'airSlug') { d.b.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
-    else if (d.b.def.ult === 'stunBlast') { d.b.stunBlastStacks = 3; d.logs.push(`闪电风暴装填！下3次攻击必晕2秒`); }
-    else if (d.b.def.ult === 'rocketBarrage') { const rd = d.b.atk*1.2; d.a.hp -= rd; d.logs.push(`火箭突袭造成${Math.round(rd)}伤害！`); }
-  }
+  // 大招已移到攻击时触发
   // 奥法濒死传送
   if (d.a.def.ult === 'arcaneBlink' && d.a.hp > 0 && d.a.hp < d.a.maxHp*0.15 && d.a.ultCd <= 0) {
     d.a.ultCd = 60; d.a.hp = d.a.maxHp*0.2;
