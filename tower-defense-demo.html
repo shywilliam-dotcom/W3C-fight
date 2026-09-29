@@ -91,12 +91,31 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.78';
+const VERSION = 'v8.79';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
 const MY_BASE_X = 50;
 const EN_BASE_X = 1150;
+
+// 计算道路上任意x处的中心y坐标（处理弯道）
+function getRoadY(lane, x) {
+  const laneY = LANE_Y[lane];
+  if (x >= 380 && x <= 820) return laneY; // 直道
+  if (x < 380) {
+    // 我方弯道：P0(50,360) P1(200,laneY) P2(380,laneY)
+    // x(t) = 50 + 300t + 30t²，解t
+    const t = (-300 + Math.sqrt(84000 + 120*x)) / 60;
+    // y(t) = 360 + t*(2*laneY-720) + t²*(360-laneY)
+    return 360 + t*(2*laneY-720) + t*t*(360-laneY);
+  } else {
+    // 敌方弯道：P0(820,laneY) P1(1000,laneY) P2(1150,360)
+    // x(t) = 820 + 360t - 30t²，解t
+    const t = (360 - Math.sqrt(228000 - 120*x)) / 60;
+    // y(t) = laneY + t²*(360-laneY)
+    return laneY + t*t*(360-laneY);
+  }
+}
 
 // 兵营槽位（田字格，密集在基地前方）
 const BARRACK_SLOTS = [
@@ -366,19 +385,20 @@ function initGame() {
   game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
     atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
-  // 每条路的塔：正三角形（两上一下，紧挨道路两侧，道路半宽60，塔在路边±65）
+  // 每条路的塔：正三角形（两上一下，紧挨道路两侧，用getRoadY计算弯道真实y）
   for (let lane=0; lane<3; lane++) {
-    const y = LANE_Y[lane];
-    const isMid = lane===1;
     const tRange = 220;
-    // 我方：上边2个(y-65)，下边1个(y+65)，间距略大于射程
-    [[130,-65],[360,-65],[245,65]].forEach(([tx,dy]) => {
-      game.towers.push({ x:tx, y:y+dy, lane, side:'my', isBase:false,
+    const roadHalf = 65; // 道路半宽+塔偏移
+    // 我方：上边2个，下边1个
+    [[130,-roadHalf],[360,-roadHalf],[245,roadHalf]].forEach(([tx,dy]) => {
+      const ry = getRoadY(lane, tx);
+      game.towers.push({ x:tx, y:ry+dy, lane, side:'my', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
     // 敌方镜像
-    [[1070,-65],[840,-65],[955,65]].forEach(([tx,dy]) => {
-      game.towers.push({ x:tx, y:y+dy, lane, side:'enemy', isBase:false,
+    [[1070,-roadHalf],[840,-roadHalf],[955,roadHalf]].forEach(([tx,dy]) => {
+      const ry = getRoadY(lane, tx);
+      game.towers.push({ x:tx, y:ry+dy, lane, side:'enemy', isBase:false,
         hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
     });
   }
@@ -1323,8 +1343,8 @@ function update(dt) {
       u.animState = 'walk';
       if (u.x<30) u.x=30;
       if (u.x>1170) u.x=1170;
-      // 单位不离开道路：限制y在道路范围内（半宽60，留5px余量）
-      const laneCenter = LANE_Y[u.lane];
+      // 单位不离开道路：限制y在道路范围内（半宽60，留5px余量，弯道用getRoadY）
+      const laneCenter = getRoadY(u.lane, u.x);
       if (u.y < laneCenter - 55) u.y = laneCenter - 55;
       if (u.y > laneCenter + 55) u.y = laneCenter + 55;
     }
