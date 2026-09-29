@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.69';
+const VERSION = 'v8.70';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -194,7 +194,7 @@ const UNIT_TYPES = {
   ranger:   { name:'游侠', armor:2, shape:'triangle', size:9, hp:220, atk:11, atkSpeed:1.0, range:220, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
     skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭(最多叠4层)+超远射程 | 大招箭雨：150范围4波×120%伤害，CD40s（初期强）' },
   crossbow: { name:'破甲弩手', armor:2, shape:'triangle', size:9, hp:200, atk:10, atkSpeed:0.5, range:145, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
-    skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, skill3:{k:'focusFire',v:0.06}, skill4:{k:'armorReduce',v:0.5}, desc:'20%连锁连击+无视护甲+专注射击+护甲撕裂(每次-0.5护甲可叠加)（后期强）' },
+    skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'focusFire',v:0.06}, skill3:{k:'armorReduce',v:0.5}, desc:'20%连锁连击+专注射击+护甲撕裂(每次-0.5护甲最多50层)（后期强）' },
 
   // 法师升级（大招=暴风雪）
   arcane:   { name:'奥法', armor:2, shape:'diamond', size:9, hp:200, atk:18, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'medium', ult:'arcaneBlink',
@@ -588,9 +588,9 @@ function doAttack(att, tgt, def) {
     }
     att.focusStacks += strikes; // 连击也加快叠加
   }
-  // 护甲撕裂：每次攻击降低目标0.5护甲，持续5秒，可叠加，下限-5
+  // 护甲撕裂：每次攻击降低目标0.5护甲，持续5秒，可叠加50层（下限-25）
   if (att.armorReduce>0 && tgt.type!==undefined && tgt.st) {
-    tgt.flatArmor = Math.max(-5, (tgt.flatArmor||0) - att.armorReduce * strikes);
+    tgt.flatArmor = Math.max(-25, (tgt.flatArmor||0) - att.armorReduce * strikes);
     tgt.st.armorReduceT = 5; // 5秒后恢复
   }
   targets.forEach(t => { for(let i=0;i<strikes;i++) applyDmg(att,t,dmg,def); });
@@ -718,7 +718,7 @@ function doAttack(att, tgt, def) {
           att.focusStacks += 5;
         }
         if (att.armorReduce>0 && tgt.st) {
-          tgt.flatArmor = Math.max(-5, (tgt.flatArmor||0) - att.armorReduce * 5);
+          tgt.flatArmor = Math.max(-25, (tgt.flatArmor||0) - att.armorReduce * 5);
           tgt.st.armorReduceT = 5;
         }
         att.rapidFireCD = 15;
@@ -806,11 +806,17 @@ function applyDmg(att, tgt, dmg, def) {
   const tgtArmor = tgt.armorType || (tgt.type===undefined ? 'fort' : 'unarmored');
   let mul = (ATK_MUL[att.atkType] && ATK_MUL[att.atkType][tgtArmor]) || 1.0;
   let fd = dmg * mul;
-  // 护甲值免伤（护甲下限-5，负数增伤最多50%）
+  // 护甲值免伤（魔兽争霸3公式）
+  // 护甲>=0: 减伤% = armor*0.06/(1+armor*0.06)
+  // 护甲<0: 受到伤害 = 2 - 0.94^(-armor)
   if (!att.armorPierce) {
-    const flatArmor = Math.max(-5, tgt.flatArmor || 0);
-    const reduce = flatArmor / (flatArmor + 15);
-    fd = fd * (1 - reduce);
+    const flatArmor = tgt.flatArmor || 0;
+    if (flatArmor >= 0) {
+      const reduce = (flatArmor * 0.06) / (1 + flatArmor * 0.06);
+      fd = fd * (1 - reduce);
+    } else {
+      fd = fd * (2 - Math.pow(0.94, -flatArmor));
+    }
   }
   if (tgt.type===undefined || tgt.maxHp && tgt.unitType===undefined && tgt.side && !tgt.st) {
     // 防御塔/基地/兵营（建筑类，无st属性）
@@ -2752,7 +2758,7 @@ const CODEX = [
      '【无大招】\n被动1【毒箭】：debuff，攻击时20%概率附加持续毒伤3秒\n被动2【后跳】：被动，敌人近身时向后跳200并定身近身目标',
      '【大招·穿透射击】主动CD35s占用1次攻击，直线400内最多攻击5个单位\n被动1【即死】：debuff，攻击时8%概率直接秒杀目标\n被动2【霰弹】：被动，攻击时25%概率对目标周围造成范围伤害',
      '【大招·箭雨】主动CD40s占用1次攻击，150范围造成伤害\n被动1【毒箭】：debuff，攻击时25%概率附加毒伤+5%毒伤加成3秒\n被动2【长弓精通】：常驻buff，射程+15%',
-     '【大招·连发】主动CD15s占用1次攻击，连续攻击5次，每次20%概率触发连击\n被动1【连锁连击】：被动，攻击时20%概率连击，最多连锁5次\n被动2【破甲】：常驻，无视目标护甲值\n被动3【专注射击】：同一目标每次攻击攻速+6%最高300%，换目标清零\n被动4【护甲撕裂】：每次攻击降低目标0.5护甲，持续5秒可叠加，下限-5(增伤50%)'
+     '【大招·连发】主动CD15s占用1次攻击，连续攻击5次，每次20%概率触发连击\n被动1【连锁连击】：被动，攻击时20%概率连击，最多连锁5次\n被动2【专注射击】：同一目标每次攻击攻速+6%最高300%，换目标清零\n被动3【护甲撕裂】：每次攻击降低目标0.5护甲，持续5秒可叠加50层(下限-25)'
    ],
    desc:[
      '轻甲 | 血120 攻7 攻速0.9 射程140 移速70 | 造价80\n穿刺攻击→轻甲',
