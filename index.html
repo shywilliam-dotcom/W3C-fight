@@ -2174,6 +2174,10 @@ function updateDuel(dt) {
       if (d.b.def.skill2 && d.b.def.skill2.k==='execute' && d.a.hp/d.a.maxHp < d.b.def.skill2.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 斩杀！`); }
       dmg = Math.round(dmg);
       d.a.hp -= dmg;
+      // 法师自回血3%
+      if (d.b.def.skill1 && d.b.def.skill1.k==='healAlly') {
+        d.b.hp = Math.min(d.b.maxHp, d.b.hp + d.b.maxHp*0.03);
+      }
       // B连击
       const dsSkillB = (d.b.def.skill1 && d.b.def.skill1.k==='doubleStrike') ? d.b.def.skill1 :
                        (d.b.def.skill2 && d.b.def.skill2.k==='doubleStrike') ? d.b.def.skill2 : null;
