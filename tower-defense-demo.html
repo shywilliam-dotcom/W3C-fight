@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.72';
+const VERSION = 'v8.73';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -590,16 +590,19 @@ function doAttack(att, tgt, def) {
   }
   // 护甲撕裂：每次攻击降低目标0.5护甲，持续5秒，可叠加50层（下限-25）
   if (att.armorReduce>0 && tgt.type!==undefined && tgt.st) {
-    const beforeArmor = tgt.flatArmor || 0;
     tgt.flatArmor = Math.max(-25, (tgt.flatArmor||0) - att.armorReduce * strikes);
     tgt.st.armorReduceT = 5; // 5秒后恢复
-    // 每叠加5层打印一次
+    // 每跨越5层打印一次（处理连击跳层）
     const layers = Math.round(((tgt.baseArmor||0) - tgt.flatArmor) / 0.5);
-    if (layers > 0 && layers % 5 === 0 && layers !== (att._lastArmorLogLayer||-1)) {
-      att._lastArmorLogLayer = layers;
+    const nextThreshold = (att._armorLogThreshold || 5);
+    if (layers >= nextThreshold && layers <= 50) {
+      att._armorLogThreshold = nextThreshold + 5;
       const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'目标');
       const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'攻击者');
-      pushCombatLog(`【护甲撕裂】${attName} 将 ${tgtName} 护甲降到 ${tgt.flatArmor.toFixed(1)}（${layers}层），受到伤害${tgt.flatArmor<0?('+'+Math.round((2-Math.pow(0.94,-tgt.flatArmor)-1)*100)+'%'):(Math.round((1-(tgt.flatArmor*0.06)/(1+tgt.flatArmor*0.06))*100)+'%减伤')}`);
+      const dmgPct = tgt.flatArmor < 0
+        ? '+' + Math.round((2-Math.pow(0.94,-tgt.flatArmor)-1)*100) + '%'
+        : Math.round((1-(tgt.flatArmor*0.06)/(1+tgt.flatArmor*0.06))*100) + '%减伤';
+      pushCombatLog(`【护甲撕裂】${attName} 将 ${tgtName} 护甲降到 ${tgt.flatArmor.toFixed(1)}（${layers}层），受到伤害${dmgPct}`);
     }
   }
   targets.forEach(t => { for(let i=0;i<strikes;i++) applyDmg(att,t,dmg,def); });
@@ -729,6 +732,17 @@ function doAttack(att, tgt, def) {
         if (att.armorReduce>0 && tgt.st) {
           tgt.flatArmor = Math.max(-25, (tgt.flatArmor||0) - att.armorReduce * 5);
           tgt.st.armorReduceT = 5;
+          const layers = Math.round(((tgt.baseArmor||0) - tgt.flatArmor) / 0.5);
+          const nextThreshold = (att._armorLogThreshold || 5);
+          if (layers >= nextThreshold && layers <= 50) {
+            att._armorLogThreshold = nextThreshold + 5;
+            const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'目标');
+            const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'攻击者');
+            const dmgPct = tgt.flatArmor < 0
+              ? '+' + Math.round((2-Math.pow(0.94,-tgt.flatArmor)-1)*100) + '%'
+              : Math.round((1-(tgt.flatArmor*0.06)/(1+tgt.flatArmor*0.06))*100) + '%减伤';
+            pushCombatLog(`【护甲撕裂】${attName} 将 ${tgtName} 护甲降到 ${tgt.flatArmor.toFixed(1)}（${layers}层），受到伤害${dmgPct}`);
+          }
         }
         att.rapidFireCD = 15;
         ultUsed = true;
