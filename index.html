@@ -1886,8 +1886,11 @@ canvas.addEventListener('click', e => {
       duelMode = !duelMode; duelPick = 0; duelA = null; duelB = null; duelResult = null;
       render(); return;
     }
-    if (duelAnim && duelAnim.done && cx >= 480 && cx <= 720 && cy >= 225 && cy <= 260) {
+    if (duelAnim && duelAnim.done && cx >= 380 && cx <= 560 && cy >= 225 && cy <= 260) {
       startDuel(duelA, duelB, duelLv); render(); return;
+    }
+    if (duelAnim && duelAnim.done && cx >= 580 && cx <= 760 && cy >= 225 && cy <= 260) {
+      duelAnim = null; duelPick = 0; duelA = null; duelB = null; render(); return;
     }
     if (duelMode && duelPick===2 && !duelAnim) {
       // 等级选择
@@ -2400,9 +2403,13 @@ function drawCodex() {
         ctx.fillStyle='#fff'; ctx.font='14px sans-serif';
         ctx.fillText(`用时: ${d.time.toFixed(1)}秒`, 600, 210);
         // 再模拟一场按钮
-        ctx.fillStyle='#4CAF50'; ctx.fillRect(480, 225, 240, 35);
+        ctx.fillStyle='#4CAF50'; ctx.fillRect(380, 225, 180, 35);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
-        ctx.fillText('再模拟一场', 600, 248);
+        ctx.fillText('再模拟一场', 470, 248);
+        // 重选兵种按钮
+        ctx.fillStyle='#FF9800'; ctx.fillRect(580, 225, 180, 35);
+        ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
+        ctx.fillText('重选兵种', 670, 248);
       }
       ctx.textAlign='start';
       // 日志面板
