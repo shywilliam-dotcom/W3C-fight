@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.97';
+const VERSION = 'v8.98';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -2878,6 +2878,8 @@ function updateDuel(dt) {
     d.done = true;
     d.winner = a.hp <= 0 && b.hp <= 0 ? '平局' : a.hp > b.hp ? UNIT_TYPES[d.typeA].name : UNIT_TYPES[d.typeB].name;
     d.logs.push(`战斗结束！胜者：${d.winner}，用时${d.time.toFixed(1)}秒`);
+    duelLogAutoScroll = false; // 战斗结束后停止自动滚动，允许用户回看首行
+    duelLogScroll = 0; // 重置到顶部，显示首行
   }
 }
 
@@ -3131,6 +3133,8 @@ function drawCodex() {
       const visibleTop = logY + 25;
       const visibleH = logH - 30;
       if (duelLogAutoScroll) duelLogScroll = Math.max(0, contentH - visibleH);
+      // 限制滚动范围，确保首行和末行都能看到
+      duelLogScroll = Math.max(0, Math.min(duelLogScroll, Math.max(0, contentH - visibleH)));
       ctx.save();
       ctx.beginPath();
       ctx.rect(logX+5, visibleTop, logW-10, visibleH);
