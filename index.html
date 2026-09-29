@@ -2097,8 +2097,8 @@ function startDuel(typeA, typeB, lv) {
   const mul = Math.pow(1.1, lv-1);
   duelAnim = {
     typeA, typeB,
-    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
-    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
+    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0},
+    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, golemAtkCd: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, skeletonAtkCd: 0, shield: 0},
     time: 0, done: false, winner: null,
     logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})`]
   };
@@ -2237,9 +2237,20 @@ function updateDuel(dt) {
     d.b.golemCd = 15; d.b.golemHp = 180 * mul;
     d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 召唤傀儡！HP=${Math.round(d.b.golemHp)}`);
   }
-  // 傀儡攻击
-  if (d.a.golemHp > 0) { d.b.hp -= 10; }
-  if (d.b.golemHp > 0) { d.a.hp -= 10; }
+  // 傀儡攻击（2秒1次，攻击力20）
+  d.a.golemAtkCd -= dt; d.b.golemAtkCd -= dt;
+  if (d.a.golemHp > 0 && d.a.golemAtkCd <= 0 && d.b.hp > 0) {
+    d.a.golemAtkCd = 2;
+    const gdmg = Math.round(20 * mul);
+    d.b.hp -= gdmg;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name}的傀儡攻击，造成${gdmg}伤害`);
+  }
+  if (d.b.golemHp > 0 && d.b.golemAtkCd <= 0 && d.a.hp > 0) {
+    d.b.golemAtkCd = 2;
+    const gdmg = Math.round(20 * mul);
+    d.a.hp -= gdmg;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name}的傀儡攻击，造成${gdmg}伤害`);
+  }
 
   // 圣骑士低血回血（25%，CD15秒）
   d.a.healCd -= dt; d.b.healCd -= dt;
@@ -2264,9 +2275,20 @@ function updateDuel(dt) {
     d.b.skeletonCd = 5; d.b.skeletonHp = 50;
     d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 召唤骷髅！`);
   }
-  // 骷髅攻击
-  if (d.a.skeletonHp > 0) { d.b.hp -= 5; d.a.skeletonHp -= 0; }
-  if (d.b.skeletonHp > 0) { d.a.hp -= 5; }
+  // 骷髅攻击（1秒1次，攻击力4*mul*0.85）
+  d.a.skeletonAtkCd -= dt; d.b.skeletonAtkCd -= dt;
+  if (d.a.skeletonHp > 0 && d.a.skeletonAtkCd <= 0 && d.b.hp > 0) {
+    d.a.skeletonAtkCd = 1;
+    const sdmg = Math.round(4 * mul * 0.85);
+    d.b.hp -= sdmg;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name}的骷髅攻击，造成${sdmg}伤害`);
+  }
+  if (d.b.skeletonHp > 0 && d.b.skeletonAtkCd <= 0 && d.a.hp > 0) {
+    d.b.skeletonAtkCd = 1;
+    const sdmg = Math.round(4 * mul * 0.85);
+    d.a.hp -= sdmg;
+    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name}的骷髅攻击，造成${sdmg}伤害`);
+  }
 
   // 奥法护盾（40%血上限，一次性）
   if (d.a.def.name==='奥法' && d.a.shield <= 0) { d.a.shield = d.a.maxHp*0.4; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 群体护盾！+${Math.round(d.a.shield)}`); }
