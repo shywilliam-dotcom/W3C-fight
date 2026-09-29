@@ -2088,8 +2088,8 @@ function startDuel(typeA, typeB, lv) {
   const mul = Math.pow(1.1, lv-1);
   duelAnim = {
     typeA, typeB,
-    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 5, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
-    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 5, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
+    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
+    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 3, golemCd: 0, golemHp: 0, healCd: 0, skeletonCd: 0, skeletonHp: 0, shield: 0},
     time: 0, done: false, winner: null,
     logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})`]
   };
@@ -2141,8 +2141,12 @@ function updateDuel(dt) {
       if (d.a.def.skill2 && d.a.def.skill2.k==='execute' && d.b.hp/d.b.maxHp < d.a.def.skill2.v) {
         dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 斩杀！`);
       }
+      // 暴击（基础5%，2倍伤害）
+      let crit = false;
+      if (Math.random() < 0.05) { dmg *= 2; crit = true; }
       dmg = Math.round(dmg);
       d.b.hp -= dmg;
+      if (crit) d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 暴击！造成${dmg}伤害`);
       // 法师自回血3%
       if (d.a.def.skill1 && d.a.def.skill1.k==='healAlly') {
         d.a.hp = Math.min(d.a.maxHp, d.a.hp + d.a.maxHp*0.03);
@@ -2187,8 +2191,12 @@ function updateDuel(dt) {
       dmg = dmg * (1 - tArmor/(tArmor+15));
       if (d.b.def.skill1 && d.b.def.skill1.k==='instantKill' && Math.random() < d.b.def.skill1.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 触发即死！`); }
       if (d.b.def.skill2 && d.b.def.skill2.k==='execute' && d.a.hp/d.a.maxHp < d.b.def.skill2.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 斩杀！`); }
+      // 暴击（基础5%，2倍伤害）
+      let critB = false;
+      if (Math.random() < 0.05) { dmg *= 2; critB = true; }
       dmg = Math.round(dmg);
       d.a.hp -= dmg;
+      if (critB) d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 暴击！造成${dmg}伤害`);
       // 法师自回血3%
       if (d.b.def.skill1 && d.b.def.skill1.k==='healAlly') {
         d.b.hp = Math.min(d.b.maxHp, d.b.hp + d.b.maxHp*0.03);
