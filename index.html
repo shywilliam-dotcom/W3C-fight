@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.89';
+const VERSION = 'v8.90';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -385,33 +385,28 @@ function initGame() {
   game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
     atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
-  // 每边10个塔，用[lane, x, dy]方式，x变化时y自动跟着道路弯
-  // lane: 0=上路 1=中路 2=下路, dy: -65=上方 +65=下方
+  // 每边10个塔，绝对坐标[x, y]，用户给什么坐标就用什么
   const tRange = 220;
-  const roadHalf = 65;
-  // 我方塔：[lane, x, dy]
+  // 我方塔：[x, y] 绝对坐标
   const myTowers = [
-    [0, 250, roadHalf],   // 1号 上路下方
-    [2, 250, -roadHalf],  // 2号 下路上方
-    [0, 250, -roadHalf],  // 3号 上路上方
-    [2, 250, roadHalf],   // 4号 下路下方
-    [0, 350, roadHalf],   // 5号 上路下方
-    [2, 350, -roadHalf],  // 6号 下路上方
-    [0, 450, -roadHalf],  // 7号 上路上方
-    [1, 450, -roadHalf],  // 8号 中路上方
-    [1, 450, roadHalf],   // 9号 中路下方
-    [2, 450, roadHalf],   // 10号 下路下方
+    [250, 197],  // 1号
+    [250, 523],  // 2号
+    [250, 137],  // 3号
+    [250, 595],  // 4号
+    [350, 197],  // 5号
+    [350, 523],  // 6号
+    [450, 65],   // 7号
+    [450, 295],  // 8号
+    [450, 425],  // 9号
+    [450, 655],  // 10号
   ];
-  myTowers.forEach(([lane, tx, dy]) => {
-    const ry = getRoadY(lane, tx);
-    game.towers.push({ x:tx, y:ry+dy, lane, side:'my', isBase:false,
+  myTowers.forEach(([tx, ty]) => {
+    game.towers.push({ x:tx, y:ty, lane:0, side:'my', isBase:false,
       hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
-  // 敌方镜像：x=1200-tx，lane和dy相同
-  myTowers.forEach(([lane, tx, dy]) => {
-    const ex = 1200 - tx;
-    const ry = getRoadY(lane, ex);
-    game.towers.push({ x:ex, y:ry+dy, lane, side:'enemy', isBase:false,
+  // 敌方镜像：x=1200-tx，y相同
+  myTowers.forEach(([tx, ty]) => {
+    game.towers.push({ x:1200-tx, y:ty, lane:0, side:'enemy', isBase:false,
       hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
 
