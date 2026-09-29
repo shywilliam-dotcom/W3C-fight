@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.41';
+const VERSION = 'v8.42';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -2599,7 +2599,7 @@ function drawCodex() {
   ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
   ctx.fillText(duelMode ? '返回图鉴' : '⚔️ 1v1对战', 1010, 36);
 
-  // 左半区：4类，每类2x2网格按钮（用统一函数计算位置，确保与点击严格一致）
+  // 左半区：4类纵向排列，每类2x2网格按钮（用统一函数计算位置，确保与点击严格一致）
   const lx = 30;
   let by = duelMode ? 30 : 70;
   const titleH = duelMode ? 20 : 26;
