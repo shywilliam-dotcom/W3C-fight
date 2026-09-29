@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.64';
+const VERSION = 'v8.65';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [140, 360, 580];
 const LANE_NAMES = ['上路','中路','下路'];
@@ -194,7 +194,7 @@ const UNIT_TYPES = {
   ranger:   { name:'游侠', armor:2, shape:'triangle', size:9, hp:220, atk:11, atkSpeed:1.0, range:220, speed:70, cost:120, color:'#228B22', atkType:'pierce', armorType:'light', ult:'arrowRain',
     skill1:{k:'poison',v:0.25}, skill2:{k:'longRange',v:1}, desc:'25%毒箭(最多叠4层)+超远射程 | 大招箭雨：150范围4波×120%伤害，CD40s（初期强）' },
   crossbow: { name:'破甲弩手', armor:2, shape:'triangle', size:9, hp:200, atk:10, atkSpeed:1.1, range:145, speed:70, cost:120, color:'#4682B4', atkType:'pierce', armorType:'light', ult:'rapidFire',
-    skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, desc:'20%连锁连击(最多5次)+无视护甲（后期强）' },
+    skill1:{k:'doubleStrike',v:0.20}, skill2:{k:'armorPierce',v:1}, skill3:{k:'focusFire',v:0.06}, desc:'20%连锁连击(最多5次)+无视护甲+专注射击(同一目标每次攻击攻速+6%最高300%)（后期强）' },
 
   // 法师升级（大招=暴风雪）
   arcane:   { name:'奥法', armor:2, shape:'diamond', size:9, hp:200, atk:18, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'medium', ult:'arcaneBlink',
@@ -469,6 +469,7 @@ function spawnUnit(b) {
     crit:['cannon','rocket','tesla','siege'].includes(b.unitType)?0:(b.unitType==='fighter'?0.10:0.05)*mul, dodge:['cannon','rocket','tesla','siege'].includes(b.unitType)?0:(b.unitType==='fighter'?0.15:0.05)*mul, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
     doubleStrike:0, multiTarget:0, splashRange:0,
+    focusFire:0, focusStacks:0, focusTarget:null,
     aoe:0, dmgReduce:0, buildingDamage:0,
     iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
     armorPierce:false, summonGolem:0, chainLightning:0, longRange:0,
@@ -497,6 +498,7 @@ function spawnUnit(b) {
     else if (s.k==='splash') u.splash = s.v*mul;
     else if (s.k==='splashRange') u.splashRange = s.v*rangeMul;
     else if (s.k==='doubleStrike') u.doubleStrike = s.v*mul;
+    else if (s.k==='focusFire') u.focusFire = s.v;
     else if (s.k==='armorPierce') u.armorPierce = !!s.v;
     else if (s.k==='aoe') u.aoe = s.v;
     else if (s.k==='berserk') u.berserk = !!s.v;
@@ -566,6 +568,14 @@ function doAttack(att, tgt, def) {
   let strikes = 1;
   if (att.doubleStrike>0) {
     while (strikes<5 && Math.random()<att.doubleStrike) strikes++;
+  }
+  // 破甲弩手专注射击：同一目标每次攻击（含连击）叠加攻速，换目标清零
+  if (att.focusFire>0 && tgt.type!==undefined) {
+    if (att.focusTarget !== tgt) {
+      att.focusTarget = tgt;
+      att.focusStacks = 0;
+    }
+    att.focusStacks += strikes; // 连击也加快叠加
   }
   targets.forEach(t => { for(let i=0;i<strikes;i++) applyDmg(att,t,dmg,def); });
 
@@ -685,6 +695,11 @@ function doAttack(att, tgt, def) {
         for (let i=0;i<3;i++) {
           applyDmg(att,tgt,dmg,def);
           if (Math.random()<0.20) applyDmg(att,tgt,dmg,def);
+        }
+        // 大招连发也叠加专注射击
+        if (att.focusFire>0) {
+          if (att.focusTarget !== tgt) { att.focusTarget = tgt; att.focusStacks = 0; }
+          att.focusStacks += 3;
         }
         att.rapidFireCD = 15;
         ultUsed = true;
@@ -1171,6 +1186,8 @@ function update(dt) {
     if (u.side==='my' && game.myBuffs.archerMaster) atkSpd *= 1.1;
     // 死亡光环：不惧 → 攻速+20%
     if (u.atkSpdBuff && u.atkSpdBuffT>0) atkSpd *= (1 + u.atkSpdBuff);
+    // 破甲弩手专注射击：同一目标每次攻击攻速+6%，最高300%
+    if (u.focusFire>0 && u.focusStacks>0) atkSpd *= (1 + Math.min(3.0, u.focusStacks * u.focusFire));
 
     // 找目标：优先攻击移动单位，其次塔
     let bestT=null, bestD=Infinity;
@@ -1996,6 +2013,7 @@ function render() {
     if (u.dodge) skillText += `闪避${Math.round(u.dodge*100)}% `;
     if (u.crit) skillText += `暴击${Math.round(u.crit*100)}% `;
     if (u.doubleStrike) skillText += `连击${Math.round(u.doubleStrike*100)}% `;
+    if (u.focusFire) skillText += `专注射击(每次+${Math.round(u.focusFire*100)}%攻速最高300%) `;
     if (u.instantKill) skillText += `即死${Math.round(u.instantKill*100)}% `;
     ctx.fillStyle='#4CAF50'; ctx.fillText(`被动: ${skillText||'无'}`, tx, py+106);
     // Buff/DeBuff状态
@@ -2521,7 +2539,10 @@ function updateDuel(dt) {
       else if (d.a.def.ult === 'airSlug') { d.a.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
       else if (d.a.def.ult === 'stunBlast') { d.a.stunBlastStacks = 3; d.logs.push(`闪电风暴装填！下3次攻击必晕2秒`); }
       else if (d.a.def.ult === 'rocketBarrage') { const rd = d.a.atk*1.2; d.b.hp -= rd; d.logs.push(`火箭突袭造成${Math.round(rd)}伤害！`); aUltUsed=true; }
-      d.a.cd = 1/d.a.atkSpeed;
+      // 专注射击攻速加成
+      let aAtkSpd = d.a.atkSpeed;
+      if (d.a.focusStacks > 0) aAtkSpd *= (1 + Math.min(3.0, d.a.focusStacks * 0.06));
+      d.a.cd = 1/aAtkSpd;
     }
     if (!aUltUsed) {
     // 闪避（使用单位的dodge属性，随等级成长）
@@ -2576,6 +2597,11 @@ function updateDuel(dt) {
       let hits = 1;
       while (hits < 5 && dsSkill && Math.random() < dsSkill.v) hits++;
       if (hits > 1) { d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 连击${hits}次！`); for(let i=1;i<hits;i++) d.b.hp -= dmg; }
+      // 专注射击：破甲弩手同一目标每次攻击攻速+6%
+      if (d.a.def.skill3 && d.a.def.skill3.k==='focusFire') {
+        d.a.focusStacks = (d.a.focusStacks||0) + hits;
+        if (d.a.focusStacks > 0) d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 专注射击${d.a.focusStacks}层！攻速+${Math.min(300, d.a.focusStacks*6)}%`);
+      }
       // 毒
       if (d.a.def.skill1 && d.a.def.skill1.k==='poison') { d.b.poison = 3; d.b.poisonStacks = Math.min(4,(d.b.poisonStacks||0)+1); d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施毒！(${d.b.poisonStacks}层)`); }
       // 晕
@@ -2621,7 +2647,10 @@ function updateDuel(dt) {
       else if (d.b.def.ult === 'airSlug') { d.b.airSlugStacks = 2; d.logs.push(`空气弹装填！下2次攻击200%伤害+击飞`); }
       else if (d.b.def.ult === 'stunBlast') { d.b.stunBlastStacks = 3; d.logs.push(`闪电风暴装填！下3次攻击必晕2秒`); }
       else if (d.b.def.ult === 'rocketBarrage') { const rd = d.b.atk*1.2; d.a.hp -= rd; d.logs.push(`火箭突袭造成${Math.round(rd)}伤害！`); bUltUsed=true; }
-      d.b.cd = 1/d.b.atkSpeed;
+      // 专注射击攻速加成
+      let bAtkSpd = d.b.atkSpeed;
+      if (d.b.focusStacks > 0) bAtkSpd *= (1 + Math.min(3.0, d.b.focusStacks * 0.06));
+      d.b.cd = 1/bAtkSpd;
     }
     if (!bUltUsed) {
     if (d.a.dodge && d.a.stun<=0 && Math.random() < d.a.dodge) {
@@ -2668,6 +2697,11 @@ function updateDuel(dt) {
       let hitsB = 1;
       while (hitsB < 5 && dsSkillB && Math.random() < dsSkillB.v) hitsB++;
       if (hitsB > 1) { d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 连击${hitsB}次！`); for(let i=1;i<hitsB;i++) d.a.hp -= dmg; }
+      // 专注射击：破甲弩手同一目标每次攻击攻速+6%
+      if (d.b.def.skill3 && d.b.def.skill3.k==='focusFire') {
+        d.b.focusStacks = (d.b.focusStacks||0) + hitsB;
+        if (d.b.focusStacks > 0) d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 专注射击${d.b.focusStacks}层！攻速+${Math.min(300, d.b.focusStacks*6)}%`);
+      }
       if (d.b.def.skill1 && d.b.def.skill1.k==='poison') { d.a.poison = 3; d.a.poisonStacks = Math.min(4,(d.a.poisonStacks||0)+1); d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施毒！(${d.a.poisonStacks}层)`); }
       if (d.b.def.skill3 && d.b.def.skill3.k==='strikeStun' && Math.random() < d.b.def.skill3.v) { d.a.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 击晕目标！`); }
       if (d.b.def.skill1 && d.b.def.skill1.k==='polymorph' && Math.random() < d.b.def.skill1.v) { d.a.stun = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 变羊！目标无法行动！`); }
