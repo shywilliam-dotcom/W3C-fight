@@ -2025,12 +2025,13 @@ let duelAnim = null; // {a:{hp,maxHp,cd,anim}, b:{...}, time, done}
 
 function startDuel(typeA, typeB) {
   const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
+  const lv = 6, mul = Math.pow(1.1, lv-1); // 6级
   duelAnim = {
     typeA, typeB,
-    a: {hp: defA.hp, maxHp: defA.hp, atk: defA.atk, atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA},
-    b: {hp: defB.hp, maxHp: defB.hp, atk: defB.atk, atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB},
+    a: {hp: Math.round(defA.hp*mul), maxHp: Math.round(defA.hp*mul), atk: Math.round(defA.atk*mul), atkSpeed: defA.atkSpeed, cd: 0.5, anim: 0, def: defA, stun: 0, poison: 0, ultCd: 0},
+    b: {hp: Math.round(defB.hp*mul), maxHp: Math.round(defB.hp*mul), atk: Math.round(defB.atk*mul), atkSpeed: defB.atkSpeed, cd: 0.5, anim: 0, def: defB, stun: 0, poison: 0, ultCd: 0},
     time: 0, done: false, winner: null,
-    logs: [`战斗开始！${defA.name} vs ${defB.name}`]
+    logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})`]
   };
 }
 
@@ -2047,19 +2048,75 @@ function updateDuel(dt) {
     return (table[atkType] && table[atkType][armorType]) || 1.0;
   };
   d.a.cd -= dt; d.b.cd -= dt;
+  d.a.ultCd -= dt; d.b.ultCd -= dt;
+  d.a.stun = Math.max(0, d.a.stun - dt); d.b.stun = Math.max(0, d.b.stun - dt);
+  d.a.poison = Math.max(0, d.a.poison - dt); d.b.poison = Math.max(0, d.b.poison - dt);
   d.a.anim = Math.max(0, d.a.anim - dt*3);
   d.b.anim = Math.max(0, d.b.anim - dt*3);
-  if (d.a.cd <= 0 && d.a.hp > 0) {
-    const dmg = Math.round(d.a.atk * dmgMul(d.a.def.atkType, d.b.def.armorType));
-    d.b.hp -= dmg;
+  // 毒dot
+  if (d.a.poison > 0) { d.a.hp -= d.a.atk*0.2; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot对${d.a.def.name}造成${Math.round(d.a.atk*0.2)}伤害`); }
+  if (d.b.poison > 0) { d.b.hp -= d.b.atk*0.2; d.logs.push(`[${d.time.toFixed(1)}s] 毒dot对${d.b.def.name}造成${Math.round(d.b.atk*0.2)}伤害`); }
+  // A攻击
+  if (d.a.cd <= 0 && d.a.hp > 0 && d.a.stun <= 0) {
+    // 闪避
+    if (d.b.def.skill1 && d.b.def.skill1.k==='dodge' && Math.random() < d.b.def.skill1.v) {
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 闪避了攻击！`);
+    } else {
+      let dmg = d.a.atk * dmgMul(d.a.def.atkType, d.b.def.armorType);
+      // 即死
+      if (d.a.def.skill1 && d.a.def.skill1.k==='instantKill' && Math.random() < d.a.def.skill1.v) {
+        dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 触发即死！`);
+      }
+      // 斩杀
+      if (d.a.def.skill2 && d.a.def.skill2.k==='execute' && d.b.hp/d.b.maxHp < d.a.def.skill2.v) {
+        dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 斩杀！`);
+      }
+      dmg = Math.round(dmg);
+      d.b.hp -= dmg;
+      // 毒
+      if (d.a.def.skill1 && d.a.def.skill1.k==='poison') { d.b.poison = 3; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 施毒！`); }
+      // 晕
+      if (d.a.def.skill3 && d.a.def.skill3.k==='strikeStun' && Math.random() < d.a.def.skill3.v) { d.b.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 击晕目标！`); }
+      // 双击
+      let hits = 1;
+      if (d.a.def.skill2 && d.a.def.skill2.k==='doubleStrike' && Math.random() < d.a.def.skill2.v) { hits = 2; d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 双击！`); }
+      if (hits === 2) { d.b.hp -= dmg; }
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 攻击 ${d.b.def.name}，造成${dmg}伤害`);
+    }
     d.a.cd = d.a.def.atkSpeed; d.a.anim = 1;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 攻击 ${d.b.def.name}，造成${dmg}伤害`);
   }
-  if (d.b.cd <= 0 && d.b.hp > 0) {
-    const dmg = Math.round(d.b.atk * dmgMul(d.b.def.atkType, d.a.def.armorType));
-    d.a.hp -= dmg;
+  // B攻击
+  if (d.b.cd <= 0 && d.b.hp > 0 && d.b.stun <= 0) {
+    if (d.a.def.skill1 && d.a.def.skill1.k==='dodge' && Math.random() < d.a.def.skill1.v) {
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.a.def.name} 闪避了攻击！`);
+    } else {
+      let dmg = d.b.atk * dmgMul(d.b.def.atkType, d.a.def.armorType);
+      if (d.b.def.skill1 && d.b.def.skill1.k==='instantKill' && Math.random() < d.b.def.skill1.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 触发即死！`); }
+      if (d.b.def.skill2 && d.b.def.skill2.k==='execute' && d.a.hp/d.a.maxHp < d.b.def.skill2.v) { dmg = 9999; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 斩杀！`); }
+      dmg = Math.round(dmg);
+      d.a.hp -= dmg;
+      if (d.b.def.skill1 && d.b.def.skill1.k==='poison') { d.a.poison = 3; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 施毒！`); }
+      if (d.b.def.skill3 && d.b.def.skill3.k==='strikeStun' && Math.random() < d.b.def.skill3.v) { d.a.stun = 1; d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 击晕目标！`); }
+      d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 反击 ${d.a.def.name}，造成${dmg}伤害`);
+    }
     d.b.cd = d.b.def.atkSpeed; d.b.anim = 1;
-    d.logs.push(`[${d.time.toFixed(1)}s] ${d.b.def.name} 反击 ${d.a.def.name}，造成${dmg}伤害`);
+  }
+  // 大招
+  if (d.a.ultCd <= 0 && d.a.hp > 0 && d.a.def.ult) {
+    d.a.ultCd = 60;
+    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.a.def.name} 释放大招【${d.a.def.ult}】！`);
+    if (d.a.def.ult === 'holyUlt') { d.a.hp = d.a.maxHp; d.logs.push('回满血量！'); }
+    else if (d.a.def.ult === 'whirlwind') { d.b.hp -= d.a.atk*3; d.logs.push(`旋风斩造成${Math.round(d.a.atk*3)}伤害！`); }
+    else if (d.a.def.ult === 'arrowRain') { d.b.hp -= d.a.atk*2; d.logs.push(`箭雨造成${Math.round(d.a.atk*2)}伤害！`); }
+    else if (d.a.def.ult === 'pierceShot') { d.b.hp -= d.a.atk*3; d.logs.push(`穿透射击造成${Math.round(d.a.atk*3)}伤害！`); }
+  }
+  if (d.b.ultCd <= 0 && d.b.hp > 0 && d.b.def.ult) {
+    d.b.ultCd = 60;
+    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${d.b.def.name} 释放大招【${d.b.def.ult}】！`);
+    if (d.b.def.ult === 'holyUlt') { d.b.hp = d.b.maxHp; d.logs.push('回满血量！'); }
+    else if (d.b.def.ult === 'whirlwind') { d.a.hp -= d.b.atk*3; d.logs.push(`旋风斩造成${Math.round(d.b.atk*3)}伤害！`); }
+    else if (d.b.def.ult === 'arrowRain') { d.a.hp -= d.b.atk*2; d.logs.push(`箭雨造成${Math.round(d.b.atk*2)}伤害！`); }
+    else if (d.b.def.ult === 'pierceShot') { d.a.hp -= d.b.atk*3; d.logs.push(`穿透射击造成${Math.round(d.b.atk*3)}伤害！`); }
   }
   if (d.a.hp <= 0 || d.b.hp <= 0 || d.time > 60) {
     d.done = true;
