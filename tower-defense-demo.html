@@ -2637,15 +2637,14 @@ function drawCodex() {
       ctx.fillStyle='#3a3a5a'; ctx.fillRect(60, 80, 680, 450);
       ctx.strokeStyle='#888'; ctx.strokeRect(60, 80, 680, 450);
       // A单位（左）- 真实x坐标
-      const ax = d.a.x;
+      const ax = d.a.x + d.a.anim*15;
       const aSKey = typeToSprite[d.typeA];
       const aImg = aSKey ? spriteImgs[aSKey] : null;
       if (aImg && aImg.complete && aImg.naturalWidth > 0 && aImg._ready!==false) {
         ctx.save();
         ctx.translate(ax, 320);
-        const bob = d.a.moving ? Math.sin(d.time*10)*2 : 0;
         ctx.scale(2.5, 2.5);
-        ctx.drawImage(aImg, -15, -25+bob, 30, 40);
+        ctx.drawImage(aImg, -15, -25, 30, 40);
         ctx.restore();
       } else {
         ctx.fillStyle='#4FC3F7';
@@ -2660,15 +2659,14 @@ function drawCodex() {
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.a.hp))}/${d.a.maxHp}`, ax, 260);
       // B单位（右）- 真实x坐标
-      const bx = d.b.x;
+      const bx = d.b.x - d.b.anim*15;
       const bSKey = typeToSprite[d.typeB];
       const bImg = bSKey ? spriteImgs[bSKey] : null;
       if (bImg && bImg.complete && bImg.naturalWidth > 0 && bImg._ready!==false) {
         ctx.save();
         ctx.translate(bx, 320);
-        const bob = d.b.moving ? Math.sin(d.time*10)*2 : 0;
         ctx.scale(-2.5, 2.5);
-        ctx.drawImage(bImg, -15, -25+bob, 30, 40);
+        ctx.drawImage(bImg, -15, -25, 30, 40);
         ctx.restore();
       } else {
         ctx.fillStyle='#EF5350';
@@ -2683,7 +2681,6 @@ function drawCodex() {
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.b.hp))}/${d.b.maxHp}`, bx, 260);
       // 攻击特效：用真实坐标
-      // A攻击：从A飞向B
       if (d.a.anim > 0.3) {
         const prog = 1 - d.a.anim;
         const px = ax + (bx - ax) * prog;
@@ -2702,7 +2699,6 @@ function drawCodex() {
           ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py-arch, 8, 0, Math.PI*2); ctx.fill();
         }
       }
-      // B攻击：从B飞向A
       if (d.b.anim > 0.3) {
         const prog = 1 - d.b.anim;
         const px = bx + (ax - bx) * prog;
@@ -2721,15 +2717,6 @@ function drawCodex() {
           ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py-arch, 8, 0, Math.PI*2); ctx.fill();
         }
       }
-      // 大招特效：金色闪光
-      if (d.time < 5 && d.a.def.ult) {
-        ctx.fillStyle = 'rgba(255,215,0,' + (0.3 + Math.sin(d.time*10)*0.2) + ')';
-        ctx.beginPath(); ctx.arc(ax2, 320, 50, 0, Math.PI*2); ctx.fill();
-      }
-      if (d.time < 5 && d.b.def.ult) {
-        ctx.fillStyle = 'rgba(255,215,0,' + (0.3 + Math.sin(d.time*10)*0.2) + ')';
-        ctx.beginPath(); ctx.arc(bx2, 320, 50, 0, Math.PI*2); ctx.fill();
-      }
       // 结果
       if (d.done) {
         ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(200, 150, 400, 120);
@@ -2737,11 +2724,9 @@ function drawCodex() {
         ctx.fillText(`胜者: ${d.winner}`, 400, 185);
         ctx.fillStyle='#fff'; ctx.font='14px sans-serif';
         ctx.fillText(`用时: ${d.time.toFixed(1)}秒`, 400, 210);
-        // 再模拟一场按钮
         ctx.fillStyle='#4CAF50'; ctx.fillRect(240, 225, 160, 35);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
         ctx.fillText('再模拟一场', 320, 248);
-        // 重选兵种按钮
         ctx.fillStyle='#FF9800'; ctx.fillRect(420, 225, 160, 35);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
         ctx.fillText('重选兵种', 500, 248);
@@ -2751,10 +2736,8 @@ function drawCodex() {
       const logX = 760, logY = 80, logW = 400, logH = 500;
       ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(logX, logY, logW, logH);
       ctx.strokeStyle='#888'; ctx.strokeRect(logX, logY, logW, logH);
-      // 标题
       ctx.fillStyle='#FFD700'; ctx.font='bold 12px sans-serif';
       ctx.fillText('⚔️ 战斗日志', logX+10, logY+18);
-      // 把所有日志展开成显示行（长日志换行）
       const allLines = [];
       d.logs.forEach(log => {
         let s = log;
@@ -2765,9 +2748,7 @@ function drawCodex() {
       const contentH = allLines.length * lineH;
       const visibleTop = logY + 25;
       const visibleH = logH - 30;
-      // 自动滚动到底部
       if (duelLogAutoScroll) duelLogScroll = Math.max(0, contentH - visibleH);
-      // 裁剪绘制区域
       ctx.save();
       ctx.beginPath();
       ctx.rect(logX+5, visibleTop, logW-10, visibleH);
@@ -2780,14 +2761,12 @@ function drawCodex() {
         ctx.fillText(line.text, logX+10, ly);
       });
       ctx.restore();
-      // 滚动条
       if (contentH > visibleH) {
         const barH = Math.max(20, visibleH * visibleH / contentH);
         const barY = visibleTop + (duelLogScroll / contentH) * (visibleH - barH);
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.fillRect(logX+logW-8, barY, 4, barH);
       }
-      // 提示
       ctx.fillStyle='#666'; ctx.font='10px sans-serif';
       ctx.fillText('滚轮滚动查看历史', logX+10, logY+logH-8);
     }
