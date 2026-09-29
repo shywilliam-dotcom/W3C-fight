@@ -1914,44 +1914,44 @@ canvas.addEventListener('click', e => {
       return;
     }
     if (duelMode) {
-      let ci = 0;
+      let ci2 = 0;
       const lx = 30;
-      let by = 70;
-      for (const cat of CODEX) {
-        by += 26; // 标题
+      const catW = 180;
+      for (let ci=0; ci<CODEX.length; ci++) {
+        const cat = CODEX[ci];
+        const cx2 = lx + ci * catW;
         for (let i=0; i<cat.names.length; i++) {
           const col = i % 2, row = Math.floor(i/2);
-          const bw=96, bh=51, bx=lx+col*(bw+16), by2=by+row*(bh+12);
+          const bw=80, bh=44, bx=cx2+col*(bw+10), by2=95+row*(bh+10);
           if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
             if (duelPick === 0) { duelA = cat.types[i]; duelPick = 1; }
             else { duelB = cat.types[i]; duelPick = 2; duelLv = 6; }
             render(); return;
           }
-          ci++;
+          ci2++;
         }
-        by += 2*59 + 12;
       }
       return;
     }
-    // 左侧按钮 2x2网格
+    // 左侧按钮 4类横向排列，每类2x2网格
     const lx = 30;
     let idx = 0;
-    let by = 70;
-    for (const cat of CODEX) {
-      by += 26;
+    const catW = 180;
+    for (let ci=0; ci<CODEX.length; ci++) {
+      const cat = CODEX[ci];
+      const cx2 = lx + ci * catW;
       for (let i=0; i<cat.names.length; i++) {
         const ni = idx;
         const col = i % 2;
         const row = Math.floor(i / 2);
-        const bw = 96, bh = 51;
-        const bx = lx + col * (bw + 16);
-        const by2 = by + row * (bh + 12);
+        const bw = 80, bh = 44;
+        const bx = cx2 + col * (bw + 10);
+        const by2 = 95 + row * (bh + 10);
         if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
           codexSel = ni; render(); return;
         }
         idx++;
       }
-      by += 2 * 59 + 12;
     }
     // 其他位置不退出
     return;
@@ -2596,22 +2596,23 @@ function drawCodex() {
   ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
   ctx.fillText(duelMode ? '返回图鉴' : '⚔️ 1v1对战', 1010, 36);
 
-  // 左半区：4类，每类2x2网格按钮
+  // 左半区：4类横向排列，每类2x2网格按钮
   const lx = 30;
   let idx = 0;
-  let by = 70;
-  for (const cat of CODEX) {
+  const catW = 180; // 每类宽度
+  for (let ci=0; ci<CODEX.length; ci++) {
+    const cat = CODEX[ci];
+    const cx = lx + ci * catW;
     // 分类标题
     ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 17px sans-serif';
-    ctx.fillText(cat.cat, lx, by);
-    by += 26;
+    ctx.fillText(cat.cat, cx, 85);
     for (let i=0; i<cat.names.length; i++) {
       const ni = idx;
       const col = i % 2;
       const row = Math.floor(i / 2);
-      const bw = 96, bh = 51;
-      const bx = lx + col * (bw + 16);
-      const by2 = by + row * (bh + 12);
+      const bw = 80, bh = 44;
+      const bx = cx + col * (bw + 10);
+      const by2 = 95 + row * (bh + 10);
       if (codexSel === ni) {
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(bx, by2, bw, bh);
@@ -2622,10 +2623,9 @@ function drawCodex() {
         ctx.fillStyle = '#ddd';
       }
       ctx.font = '13px sans-serif';
-      ctx.fillText(cat.names[i], bx+6, by2+30);
+      ctx.fillText(cat.names[i], bx+6, by2+27);
       idx++;
     }
-    by += 2 * 59 + 12;
   }
 
   // 右半区：详情
@@ -2638,10 +2638,10 @@ function drawCodex() {
     }
   }
   if (selName) {
-    // 大图
+    // 大图（放下方左侧）
     const pKey = typeToPortrait[selType];
     const pImg = pKey ? portraitImgs[pKey] : null;
-    const dx = 480, dy = 70, dw = 280, dh = 440;
+    const dx = 40, dy = 210, dw = 260, dh = 440;
     ctx.fillStyle = '#0d0d1a';
     ctx.fillRect(dx, dy, dw, dh);
     ctx.strokeStyle = '#444'; ctx.lineWidth = 2;
@@ -2653,8 +2653,8 @@ function drawCodex() {
       ctx.fillText('立绘待补', dx+dw/2, dy+dh/2);
       ctx.textAlign='start';
     }
-    // 文字区
-    const tx = 790, ty = 80;
+    // 文字区（放下方右侧）
+    const tx = 330, ty = 220;
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 26px sans-serif';
     ctx.fillText(selName, tx, ty+10);
     ctx.fillStyle = '#9b59b6'; ctx.font = '15px sans-serif';
