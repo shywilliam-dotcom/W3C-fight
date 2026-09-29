@@ -2271,9 +2271,59 @@ function drawCodex() {
       ctx.fillStyle='#F44336'; ctx.fillRect(750, 250, 200*Math.max(0,d.b.hp/d.b.maxHp), 15);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.b.hp))}/${d.b.maxHp}`, 850, 262);
-      // 攻击特效
-      if (d.a.anim > 0.5) { ctx.fillStyle='#FFD700'; ctx.font='20px sans-serif'; ctx.fillText('⚔️', 500, 300); }
-      if (d.b.anim > 0.5) { ctx.fillStyle='#FFD700'; ctx.font='20px sans-serif'; ctx.fillText('⚔️', 700, 300); }
+      // 攻击特效：投射物
+      const ax2 = 350 + d.a.anim*20;
+      const bx2 = 850 - d.b.anim*20;
+      // A攻击：从A飞向B
+      if (d.a.anim > 0.3) {
+        const prog = 1 - d.a.anim; // 0→1
+        const px = ax2 + (bx2 - ax2) * prog;
+        const py = 320;
+        // 根据攻击类型画不同投射物
+        if (d.a.def.atkType === 'melee') {
+          // 近战：挥刀弧线
+          ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(px, py, 25, -Math.PI/4, Math.PI/4); ctx.stroke();
+        } else if (d.a.def.atkType === 'pierce') {
+          // 穿刺：箭/子弹
+          ctx.strokeStyle = '#FF6B6B'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(px-10, py); ctx.lineTo(px+10, py); ctx.stroke();
+        } else if (d.a.def.atkType === 'magic') {
+          // 魔法：光球
+          ctx.fillStyle = '#FF00FF'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = 'rgba(255,0,255,0.3)'; ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2); ctx.fill();
+        } else if (d.a.def.atkType === 'siege') {
+          // 攻城：炮弹
+          ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      // B攻击：从B飞向A
+      if (d.b.anim > 0.3) {
+        const prog = 1 - d.b.anim;
+        const px = bx2 + (ax2 - bx2) * prog;
+        const py = 320;
+        if (d.b.def.atkType === 'melee') {
+          ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(px, py, 25, Math.PI*3/4, Math.PI*5/4); ctx.stroke();
+        } else if (d.b.def.atkType === 'pierce') {
+          ctx.strokeStyle = '#FF6B6B'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(px+10, py); ctx.lineTo(px-10, py); ctx.stroke();
+        } else if (d.b.def.atkType === 'magic') {
+          ctx.fillStyle = '#00BFFF'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = 'rgba(0,191,255,0.3)'; ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2); ctx.fill();
+        } else if (d.b.def.atkType === 'siege') {
+          ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      // 大招特效：金色闪光
+      if (d.time < 5 && d.a.def.ult) {
+        ctx.fillStyle = 'rgba(255,215,0,' + (0.3 + Math.sin(d.time*10)*0.2) + ')';
+        ctx.beginPath(); ctx.arc(ax2, 320, 50, 0, Math.PI*2); ctx.fill();
+      }
+      if (d.time < 5 && d.b.def.ult) {
+        ctx.fillStyle = 'rgba(255,215,0,' + (0.3 + Math.sin(d.time*10)*0.2) + ')';
+        ctx.beginPath(); ctx.arc(bx2, 320, 50, 0, Math.PI*2); ctx.fill();
+      }
       // 结果
       if (d.done) {
         ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(400, 150, 400, 80);
