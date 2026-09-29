@@ -385,19 +385,22 @@ function initGame() {
   game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
     atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
-  // 每边9个塔，严格按用户红点位置：上路上方2+中路上方1+中路下方3+下路下方3
+  // 每边10个塔，按用户描述布局：
+  // 交汇处2个x点各上下延伸(上路上方+下路下方)=4个
+  // 向右150处从上到下4个(上路上方+中路上方+中路下方+下路下方)
+  // 中间2个(上路下方+下路上方)
   const tRange = 220;
   const roadHalf = 65;
   // 我方塔：[lane, x, dy] dy=-65上方 dy=+65下方
   const myTowers = [
-    // 上路上方2个
-    [0, 420, -roadHalf], [0, 620, -roadHalf],
-    // 中路上方1个
-    [1, 500, -roadHalf],
-    // 中路下方3个
-    [1, 280, roadHalf], [1, 480, roadHalf], [1, 680, roadHalf],
-    // 下路下方3个
-    [2, 380, roadHalf], [2, 550, roadHalf], [2, 720, roadHalf],
+    // 交汇处第1点 x=250：上路上方 + 下路下方
+    [0, 250, -roadHalf], [2, 250, roadHalf],
+    // 交汇处第2点 x=300：上路上方 + 下路下方
+    [0, 300, -roadHalf], [2, 300, roadHalf],
+    // 中间 x=350：上路下方 + 下路上方
+    [0, 350, roadHalf], [2, 350, -roadHalf],
+    // 向右150 x=450：上路上方+中路上方+中路下方+下路下方
+    [0, 450, -roadHalf], [1, 450, -roadHalf], [1, 450, roadHalf], [2, 450, roadHalf],
   ];
   myTowers.forEach(([lane, tx, dy]) => {
     const ry = getRoadY(lane, tx);
