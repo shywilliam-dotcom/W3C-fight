@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v8.80';
+const VERSION = 'v8.81';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -385,23 +385,31 @@ function initGame() {
   game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
     atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
-  // 每条路的塔：正三角形（两上一下，紧挨道路两侧，用getRoadY计算弯道真实y）
-  for (let lane=0; lane<3; lane++) {
-    const tRange = 220;
-    const roadHalf = 65; // 道路半宽+塔偏移
-    // 我方：上边2个，下边1个
-    [[130,-roadHalf],[360,-roadHalf],[245,roadHalf]].forEach(([tx,dy]) => {
-      const ry = getRoadY(lane, tx);
-      game.towers.push({ x:tx, y:ry+dy, lane, side:'my', isBase:false,
-        hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
-    });
-    // 敌方镜像
-    [[1070,-roadHalf],[840,-roadHalf],[955,roadHalf]].forEach(([tx,dy]) => {
-      const ry = getRoadY(lane, tx);
-      game.towers.push({ x:tx, y:ry+dy, lane, side:'enemy', isBase:false,
-        hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
-    });
-  }
+  // 每边10个塔，沿道路外侧边缘摆放：上路放上方、中路上下都放、下路放下方
+  const tRange = 220;
+  const roadHalf = 65;
+  // 我方10个塔：[lane, x, dy] dy=-65上方 dy=+65下方
+  const myTowers = [
+    // 上路（lane=0）：上方3个
+    [0, 200, -roadHalf], [0, 400, -roadHalf], [0, 600, -roadHalf],
+    // 中路（lane=1）：上方3个 + 下方2个
+    [1, 180, -roadHalf], [1, 380, -roadHalf], [1, 580, -roadHalf],
+    [1, 280, roadHalf], [1, 480, roadHalf],
+    // 下路（lane=2）：下方2个
+    [2, 380, roadHalf], [2, 580, roadHalf],
+  ];
+  myTowers.forEach(([lane, tx, dy]) => {
+    const ry = getRoadY(lane, tx);
+    game.towers.push({ x:tx, y:ry+dy, lane, side:'my', isBase:false,
+      hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+  });
+  // 敌方镜像10个塔：x=1200-tx，dy相同
+  myTowers.forEach(([lane, tx, dy]) => {
+    const ex = 1200 - tx;
+    const ry = getRoadY(lane, ex);
+    game.towers.push({ x:ex, y:ry+dy, lane, side:'enemy', isBase:false,
+      hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+  });
 
   // AI兵营：空槽位，游戏过程中AI自动建和升级
   document.getElementById('game-over').style.display = 'none';
