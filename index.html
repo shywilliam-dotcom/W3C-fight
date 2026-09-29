@@ -2277,8 +2277,8 @@ function drawCodex() {
     ctx.textAlign='start';
     if (duelPick===2 && !duelAnim) {
       // 等级选择界面
-      ctx.fillStyle='#3a3a5a'; ctx.fillRect(150, 80, 880, 450);
-      ctx.strokeStyle='#888'; ctx.strokeRect(150, 80, 880, 450);
+      ctx.fillStyle='#3a3a5a'; ctx.fillRect(120, 80, 880, 450);
+      ctx.strokeStyle='#888'; ctx.strokeRect(120, 80, 880, 450);
       ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
       ctx.fillText(`选择等级: ${duelLv}级`, 600, 150);
       ctx.font='16px sans-serif';
@@ -2300,8 +2300,8 @@ function drawCodex() {
     if (duelAnim && duelPick===2) {
       const d = duelAnim;
       // 战场背景
-      ctx.fillStyle='#3a3a5a'; ctx.fillRect(150, 80, 880, 450);
-      ctx.strokeStyle='#888'; ctx.strokeRect(150, 80, 880, 450);
+      ctx.fillStyle='#3a3a5a'; ctx.fillRect(120, 80, 880, 450);
+      ctx.strokeStyle='#888'; ctx.strokeRect(120, 80, 880, 450);
       // A单位（左）- 立绘
       const ax = 350 + d.a.anim*20;
       const aKey = typeToPortrait[d.typeA];
@@ -2413,16 +2413,16 @@ function drawCodex() {
       }
       ctx.textAlign='start';
       // 日志面板
-      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(1050, 80, 280, 450);
-      ctx.strokeStyle='#888'; ctx.strokeRect(1050, 80, 280, 450);
+      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(1030, 80, 350, 450);
+      ctx.strokeStyle='#888'; ctx.strokeRect(1030, 80, 350, 450);
       ctx.fillStyle='#aaa'; ctx.font='11px monospace';
-      const showLogs = d.logs.slice(-15);
+      const showLogs = d.logs.slice(-20);
       showLogs.forEach((log, i) => {
         ctx.fillStyle = log.includes('⭐') ? '#FFD700' : (log.includes(d.b.def.name) ? '#EF5350' : '#4FC3F7');
         ctx.font='9px monospace';
         // 每行拆短
         const short = log.length>20 ? log.slice(0,20)+'…' : log;
-        ctx.font='10px monospace'; ctx.fillText(short, 1060, 95 + i*10);
+        ctx.font='11px monospace'; ctx.fillText(short, 1040, 95 + i*11);
       });
     }
     // 画兵种列表
