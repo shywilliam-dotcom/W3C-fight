@@ -2645,7 +2645,7 @@ function drawCodex() {
       ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif';
       ctx.fillText(`血量: ${def.hp}`, tx, ty+250);
       ctx.fillText(`攻击: ${def.atk}`, tx, ty+272);
-      ctx.fillText(`攻速: ${def.atkSpeed}`, tx, ty+294);
+      ctx.fillText(`攻速: ${(def.atkSpeed/2).toFixed(2)}`, tx, ty+294);
       ctx.fillText(`射程: ${def.range}`, tx, ty+316);
       ctx.fillText(`移速: ${def.speed}`, tx, ty+338);
       ctx.fillText(`价格: ${def.cost}`, tx, ty+360);
