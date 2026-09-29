@@ -1873,7 +1873,7 @@ canvas.addEventListener('click', e => {
           const bw=96, bh=40, bx=30+col*(bw+16), by2=by+row*(bh+8);
           if (cx >= bx && cx <= bx+bw && cy >= by2 && cy <= by2+bh) {
             if (duelPick === 0) { duelA = cat.types[i]; duelPick = 1; }
-            else { duelB = cat.types[i]; duelPick = 2; codexOpen = false; duelLv = 6; }
+            else { duelB = cat.types[i]; duelPick = 2; duelLv = 6; }
             render(); return;
           }
           ci++;
