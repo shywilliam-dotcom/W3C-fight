@@ -930,7 +930,7 @@ function applyDmg(att, tgt, dmg, def) {
       const skelCount = game.units.filter(o => o.side===att.side && o.type==='skeleton' && o.master===att).length;
       if (skelCount < 3) {
         game.units.push({
-          x: att.x - 15*att.dir, y: att.y + (Math.random()-0.5)*20, lane: att.lane, side: att.side,
+          x: att.x - 15*att.dir, y: att.y, lane: att.lane, side: att.side,
           type:'skeleton', dir: att.dir, level: lv, name: '白骨', master: att,
           hp: 100*Math.pow(1.15,lv-1), maxHp: 100*Math.pow(1.15,lv-1),
           atk: 8*Math.pow(1.15,lv-1), speed: 30, range: 15, atkSpeed: 1.0,
@@ -1141,9 +1141,9 @@ function updateUnits(game, dt) {
         const golemMul = Math.pow(1.15, (u.level||1)-1);
         const golemHp = Math.round(360 * golemMul);
         game.units.push({
-          x:u.x + 20*u.dir, y:u.y + (Math.random()-0.5)*20, lane:u.lane, side:u.side, type:'golem', name:'奥术傀儡',
+          x:u.x + 20*u.dir, y:u.y, lane:u.lane, side:u.side, type:'golem', name:'奥术傀儡',
           dir:u.dir, level:u.level||1, atkType:'normal', armorType:'heavy', master:u,
-          hp:golemHp, maxHp:golemHp, atk:Math.round(24*golemMul), atkSpeed:0.5, range:15, speed:u.speed, atkTimer:0,
+          hp:golemHp, maxHp:golemHp, atk:Math.round(24*golemMul), atkSpeed:0.5, range:25, speed:u.speed, atkTimer:0,
           dmgReduce:0.5, st:{}, baseArmor:5, flatArmor:5
         });
         u.golemCD = 15;
