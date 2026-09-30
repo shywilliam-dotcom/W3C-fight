@@ -91,47 +91,58 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v9.04';
+const VERSION = 'v10.00';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
-const LANE_NAMES = ['上路','中路','下路'];
-const MY_BASE_X = 50;
-const EN_BASE_X = 1150;
+// ============ 大战场坐标系统（3倍放大+视口滚动） ============
+const WORLD_W = 3600, WORLD_H = 2160; // 战场实际尺寸（1200×3, 720×3）
+const SCALE = 3; // 放大倍数
+let viewX = 0, viewY = 720; // 视口左上角在战场中的位置（初始显示我方基地，y=1080在视口中心）
+const VIEW_W = 1200, VIEW_H = 720; // 视口尺寸（canvas大小）
+// 视口边界限制
+function clampView() {
+  viewX = Math.max(0, Math.min(viewX, WORLD_W - VIEW_W));
+  viewY = Math.max(0, Math.min(viewY, WORLD_H - VIEW_H));
+}
+// 战场坐标→屏幕坐标
+function toScreenX(x) { return x - viewX; }
+function toScreenY(y) { return y - viewY; }
+// 屏幕坐标→战场坐标
+function toWorldX(x) { return x + viewX; }
+function toWorldY(y) { return y + viewY; }
 
-// 计算道路上任意x处的中心y坐标（处理弯道）
+const LANE_Y = [390, 1080, 1770]; // 三路y坐标（×3）
+const LANE_NAMES = ['上路','中路','下路'];
+const MY_BASE_X = 150; // ×3
+const EN_BASE_X = 3450; // ×3
+
+// 计算道路上任意x处的中心y坐标（处理弯道，所有坐标×3）
 function getRoadY(lane, x) {
   const laneY = LANE_Y[lane];
-  if (x >= 380 && x <= 820) return laneY; // 直道
-  if (x < 380) {
-    // 我方弯道：P0(50,360) P1(200,laneY) P2(380,laneY)
-    // x(t) = 50 + 300t + 30t²，解t
-    const t = (-300 + Math.sqrt(84000 + 120*x)) / 60;
-    // y(t) = 360 + t*(2*laneY-720) + t²*(360-laneY)
-    return 360 + t*(2*laneY-720) + t*t*(360-laneY);
+  if (x >= 1140 && x <= 2460) return laneY; // 直道（380×3=1140, 820×3=2460）
+  if (x < 1140) {
+    // 我方弯道：P0(150,1080) P1(600,laneY) P2(1140,laneY)
+    const t = (-900 + Math.sqrt(756000 + 360*x)) / 180;
+    return 1080 + t*(2*laneY-2160) + t*t*(1080-laneY);
   } else {
-    // 敌方弯道：P0(820,laneY) P1(1000,laneY) P2(1150,360)
-    // x(t) = 820 + 360t - 30t²，解t
-    const t = (360 - Math.sqrt(228000 - 120*x)) / 60;
-    // y(t) = laneY + t²*(360-laneY)
-    return laneY + t*t*(360-laneY);
+    // 敌方弯道：P0(2460,laneY) P1(3000,laneY) P2(3450,1080)
+    const t = (1080 - Math.sqrt(2052000 - 360*x)) / 180;
+    return laneY + t*t*(1080-laneY);
   }
 }
 
-// 兵营槽位（田字格，密集在基地前方）
+// 兵营槽位（所有坐标×3）
 const BARRACK_SLOTS = [
-  // 左侧己方12兵营：每路4个，2列2行，屏幕坐标不缩放
-  {x:5, y:100, lane:0}, {x:5, y:180, lane:0},
-  {x:65, y:100, lane:0}, {x:65, y:180, lane:0},
-  {x:5, y:320, lane:1}, {x:5, y:400, lane:1},
-  {x:65, y:320, lane:1}, {x:65, y:400, lane:1},
-  {x:5, y:540, lane:2}, {x:5, y:620, lane:2},
-  {x:65, y:540, lane:2}, {x:65, y:620, lane:2}
+  {x:15, y:300, lane:0}, {x:15, y:540, lane:0},
+  {x:195, y:300, lane:0}, {x:195, y:540, lane:0},
+  {x:15, y:960, lane:1}, {x:15, y:1200, lane:1},
+  {x:195, y:960, lane:1}, {x:195, y:1200, lane:1},
+  {x:15, y:1620, lane:2}, {x:15, y:1860, lane:2},
+  {x:195, y:1620, lane:2}, {x:195, y:1860, lane:2}
 ];
-// 我方塔（每路3座，后退留出战斗空间）
-const MY_TOWER_X = [230, 273, 315];
-// 中间交战区 420~780 完全让开
-// 敌方塔
-const EN_TOWER_X = [885, 927, 970];
+// 我方塔x坐标（×3）
+const MY_TOWER_X = [690, 819, 945];
+// 敌方塔x坐标（×3）
+const EN_TOWER_X = [2655, 2781, 2910];
 // ============ 名字库 ============
 const NAME_POOLS = {
   melee: ['赵铁柱','王大力','李铁山','张铁柱','刘大勇','陈石头','杨守义','黄开山','赵铁柱','孙铁柱','周大勇','吴铁牛','郑石头','马守山','朱开山','林铁柱','何大勇','高铁山','罗石头','郑守义','梁铁柱','宋大勇','唐铁牛','许石头','韩开山','冯铁柱','邓大勇','曹铁山','彭石头','萧守义','田铁柱','董大勇','袁铁牛','潘石头','蒋开山','蔡铁柱','余大勇','于铁山','杜石头','叶守义'],
@@ -163,15 +174,14 @@ function getUnitName(type) {
   return name;
 }
 
-// 敌方兵营（镜像）
+// 敌方兵营（镜像，所有坐标×3）
 const EN_BARRACK_POS = [
-  // 右侧敌方12兵营：每路4个，2列2行
-  {x:1135, y:100, lane:0}, {x:1135, y:180, lane:0},
-  {x:1195, y:100, lane:0}, {x:1195, y:180, lane:0},
-  {x:1135, y:320, lane:1}, {x:1135, y:400, lane:1},
-  {x:1195, y:320, lane:1}, {x:1195, y:400, lane:1},
-  {x:1135, y:540, lane:2}, {x:1135, y:620, lane:2},
-  {x:1195, y:540, lane:2}, {x:1195, y:620, lane:2}
+  {x:3405, y:300, lane:0}, {x:3405, y:540, lane:0},
+  {x:3585, y:300, lane:0}, {x:3585, y:540, lane:0},
+  {x:3405, y:960, lane:1}, {x:3405, y:1200, lane:1},
+  {x:3585, y:960, lane:1}, {x:3585, y:1200, lane:1},
+  {x:3405, y:1620, lane:2}, {x:3405, y:1860, lane:2},
+  {x:3585, y:1620, lane:2}, {x:3585, y:1860, lane:2}
 ];
 
 // ============ 兵种（魔兽攻防相克） =====// atkType: normal(普通) / pierce(穿刺) / magic(魔法) / siege(攻城)
@@ -378,35 +388,35 @@ function initGame() {
     prepTime:3, bountyAnnounced:false, aiGold:{my:500, enemy:500}, aiBuildCD:{my:0, enemy:0} };
   usedNames.clear();
 
-  // 我方基地（1个，横跨三路）
-  game.towers.push({ x:MY_BASE_X, y:360, side:'my', isBase:true, hp:3000, maxHp:3000,
-    atk:150, armor:30, flatArmor:30, baseArmor:30, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
+  // 我方基地（1个，横跨三路，y=1080=360×3）
+  game.towers.push({ x:MY_BASE_X, y:1080, side:'my', isBase:true, hp:3000, maxHp:3000,
+    atk:150, armor:30, flatArmor:30, baseArmor:30, atkType:'chaos', atkTimer:0, range:450, alive:true, armorType:'fort' });
   // 敌方基地
-  game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
-    atk:150, armor:30, flatArmor:30, baseArmor:30, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
+  game.towers.push({ x:EN_BASE_X, y:1080, side:'enemy', isBase:true, hp:3000, maxHp:3000,
+    atk:150, armor:30, flatArmor:30, baseArmor:30, atkType:'chaos', atkTimer:0, range:450, alive:true, armorType:'fort' });
 
-  // 每边10个塔，绝对坐标[x, y]，用户给什么坐标就用什么
-  const tRange = 200;
-  // 我方塔：[x, y] 绝对坐标
+  // 每边10个塔，绝对坐标[x, y]（×3），用户给什么坐标就用什么
+  const tRange = 600; // 200×3
+  // 我方塔：[x, y] 绝对坐标（×3）
   const myTowers = [
-    [190, 295],  // 1号
-    [190, 425],  // 2号
-    [180, 131],  // 3号 x-10
-    [180, 589],  // 4号 x-10
-    [320, 207],  // 5号
-    [320, 513],  // 6号
-    [425, 65],   // 7号 x-15
-    [425, 295],  // 8号 x-15
-    [425, 425],  // 9号 x-15
-    [425, 655],  // 10号 x-15
+    [570, 885],   // 1号 190×3, 295×3
+    [570, 1275],  // 2号
+    [540, 393],   // 3号
+    [540, 1767],  // 4号
+    [960, 621],   // 5号
+    [960, 1539],  // 6号
+    [1275, 195],  // 7号
+    [1275, 885],  // 8号
+    [1275, 1275], // 9号
+    [1275, 1965], // 10号
   ];
   myTowers.forEach(([tx, ty]) => {
     game.towers.push({ x:tx, y:ty, lane:0, side:'my', isBase:false,
       hp:3000, maxHp:3000, atk:50, armor:0, flatArmor:0, baseArmor:0, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
-  // 敌方镜像：x=1200-tx，y相同
+  // 敌方镜像：x=3600-tx，y相同
   myTowers.forEach(([tx, ty]) => {
-    game.towers.push({ x:1200-tx, y:ty, lane:0, side:'enemy', isBase:false,
+    game.towers.push({ x:3600-tx, y:ty, lane:0, side:'enemy', isBase:false,
       hp:3000, maxHp:3000, atk:50, armor:0, flatArmor:0, baseArmor:0, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
 
@@ -485,7 +495,7 @@ function spawnUnit(b) {
   else if (def.armorType === 'light') speedMul = 1.3; // 轻甲+30%
   else if (def.armorType === 'unarmored') speedMul = 0.9; // 无甲-10%
   if (isMage) speedMul = 0.9; // 法师类都-10%
-  const yOff = (Math.random()-0.5)*60; // y偏移±30，减少弯道处视觉跨路
+  const yOff = (Math.random()-0.5)*180; // y偏移±90（×3），减少弯道处视觉跨路
   const u = {
     x:b.side==='my'?MY_BASE_X+40:EN_BASE_X-40, y:LANE_Y[b.lane]+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
     name:getUnitName(b.unitType),
@@ -495,7 +505,7 @@ function spawnUnit(b) {
     flatArmor: def.armor || 0, baseArmor: def.armor || 0,
     hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
     atk:Math.round(def.atk*mul*timeMul), atkSpeed:def.atkSpeed,
-    range:def.range*rangeMul, speed:def.speed*speedMul, atkTimer:0,
+    range:def.range*rangeMul*SCALE, speed:def.speed*speedMul*SCALE, atkTimer:0,
     crit:['cannon','rocket','tesla','siege'].includes(b.unitType)?0:(b.unitType==='fighter'?0.10:0.05)*mul, dodge:['cannon','rocket','tesla','siege'].includes(b.unitType)?0:(b.unitType==='fighter'?0.15:0.05)*mul, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
     doubleStrike:0, doubleAttack:0, reflectPierce:0, reflectMagic:0, reflectMagicCD:0, multiTarget:0, splashRange:0,
@@ -1652,11 +1662,8 @@ function render() {
   // 淡色背景
   ctx.fillStyle = '#3a3a5a';
   ctx.fillRect(0,0,1200,720);
-  ctx.save();
-  ctx.translate(180, 80);
-  ctx.scale(0.7, 0.7);
 
-  // ===== Buff图标 =====
+  // ===== Buff图标（UI层，不随视口移动）=====
   const buffDefs = [
     {key:'fullRoster', icon:'⚔', name:'全军出击', desc:'四兵种齐全：全体攻击+15%'},
     {key:'meleeMaster', icon:'🛡', name:'近战精通', desc:'刀盾三系齐全：全体反弹10%直接伤害'},
@@ -1664,7 +1671,6 @@ function render() {
     {key:'mageMaster', icon:'🔮', name:'法师精通', desc:'法师三系齐全：全体血量+15%'},
     {key:'siegeMaster', icon:'💣', name:'攻城精通', desc:'工程车三系齐全：出兵间隔-2秒'},
   ];
-  // 我方buff（左上角）
   let bx = 10;
   buffDefs.forEach(b => {
     if (game.myBuffs && game.myBuffs[b.key]) {
@@ -1675,7 +1681,6 @@ function render() {
       bx += 28;
     }
   });
-  // 敌方buff（右上角）
   bx = 1190;
   buffDefs.forEach(b => {
     if (game.enemyBuffs && game.enemyBuffs[b.key]) {
@@ -1686,7 +1691,6 @@ function render() {
       bx -= 28;
     }
   });
-  // 通用buff（中间上边）
   ctx.textAlign='center';
   let gx = 600;
   if (game.time < 30) {
@@ -1700,7 +1704,6 @@ function render() {
     ctx.fillStyle = '#000'; ctx.font = '11px sans-serif';
     ctx.fillText('💰 击杀金币已开放', gx, 18);
   }
-  // 出兵加速
   const spawnBonus = Math.min(175, Math.floor(game.time/60)*15);
   if (spawnBonus > 0) {
     ctx.fillStyle = 'rgba(156,39,176,0.9)';
@@ -1710,53 +1713,57 @@ function render() {
   }
   ctx.textAlign='start';
 
-  // 路：三条独立直路（加宽50%：80→120）
-  ctx.lineWidth = 120;
+  // ===== 战场层（视口偏移，所有战场元素统一translate）=====
+  ctx.save();
+  ctx.translate(-viewX, -viewY);
+
+  // 路：三条独立直路（加宽50%：80→120，坐标×3）
+  ctx.lineWidth = 360; // 120×3
   ctx.lineCap = 'round';
   LANE_Y.forEach((y,i) => {
     ctx.strokeStyle = '#1e1e4a';
     ctx.beginPath();
-    ctx.moveTo(50, 360);
-    ctx.quadraticCurveTo(200, y, 380, y);
-    ctx.lineTo(820, y);
-    ctx.quadraticCurveTo(1000, y, 1150, 360);
+    ctx.moveTo(150, 1080);
+    ctx.quadraticCurveTo(600, y, 1140, y);
+    ctx.lineTo(2460, y);
+    ctx.quadraticCurveTo(3000, y, 3450, 1080);
     ctx.stroke();
   });
   ctx.lineWidth = 2; ctx.strokeStyle = '#0f3460';
   LANE_Y.forEach((y,i) => {
     ctx.beginPath();
-    ctx.moveTo(50, 360);
-    ctx.quadraticCurveTo(200, y, 380, y);
-    ctx.lineTo(820, y);
-    ctx.quadraticCurveTo(1000, y, 1150, 360);
+    ctx.moveTo(150, 1080);
+    ctx.quadraticCurveTo(600, y, 1140, y);
+    ctx.lineTo(2460, y);
+    ctx.quadraticCurveTo(3000, y, 3450, 1080);
     ctx.stroke();
   });
   ctx.lineCap = 'butt';
-  ctx.fillStyle='#555'; ctx.font='11px sans-serif';
-  ctx.fillText('上路', 380, LANE_Y[0]-65);
-  ctx.fillText('中路', 600, LANE_Y[1]-65);
-  ctx.fillText('下路', 380, LANE_Y[2]-65);
+  ctx.fillStyle='#555'; ctx.font='14px sans-serif';
+  ctx.fillText('上路', 1140, LANE_Y[0]-65);
+  ctx.fillText('中路', 1800, LANE_Y[1]-65);
+  ctx.fillText('下路', 1140, LANE_Y[2]-65);
 
   // 中间交战区标记（虚线）
-  ctx.strokeStyle='#2a2a5a'; ctx.setLineDash([8,8]); ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(600,100); ctx.lineTo(600,620); ctx.stroke();
+  ctx.strokeStyle='#2a2a5a'; ctx.setLineDash([24,24]); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(1800,300); ctx.lineTo(1800,1860); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle='#333'; ctx.font='12px sans-serif'; ctx.textAlign='center';
-  ctx.fillText('⚔ 交战区 ⚔', 600, 95); ctx.textAlign='start';
+  ctx.fillStyle='#333'; ctx.font='14px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('⚔ 交战区 ⚔', 1800, 285); ctx.textAlign='start';
 
   // 基地
   game.towers.filter(t=>t.isBase).forEach(t => {
     ctx.fillStyle = t.side==='my'?'#1565C0':'#C62828';
     ctx.beginPath();
-    ctx.moveTo(t.x, t.y-50); ctx.lineTo(t.x+30, t.y); ctx.lineTo(t.x, t.y+50); ctx.lineTo(t.x-30, t.y);
+    ctx.moveTo(t.x, t.y-150); ctx.lineTo(t.x+90, t.y); ctx.lineTo(t.x, t.y+150); ctx.lineTo(t.x-90, t.y);
     ctx.closePath(); ctx.fill();
-    ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.stroke();
-    ctx.fillStyle='#FFD700'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
-    ctx.fillText('基地', t.x, t.y+65); ctx.textAlign='start';
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=3; ctx.stroke();
+    ctx.fillStyle='#FFD700'; ctx.font='bold 16px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('基地', t.x, t.y+180); ctx.textAlign='start';
     // 血条
-    ctx.fillStyle='#333'; ctx.fillRect(t.x-40, t.y+70, 80, 6);
+    ctx.fillStyle='#333'; ctx.fillRect(t.x-120, t.y+190, 240, 12);
     ctx.fillStyle = t.alive?'#4CAF50':'#F44336';
-    ctx.fillRect(t.x-40, t.y+70, 80*(t.hp/t.maxHp), 6);
+    ctx.fillRect(t.x-120, t.y+190, 240*(t.hp/t.maxHp), 12);
   });
 
   // 塔（准备阶段隐藏敌方塔）
@@ -1765,64 +1772,61 @@ function render() {
     if (game.prepTime > 0 && t.side === 'enemy') return;
     if (!t.alive) {
       ctx.fillStyle='#444'; ctx.fillRect(t.x-12, t.y-25, 24, 20);
-      ctx.fillStyle='#666'; ctx.font='9px sans-serif'; ctx.fillText('废墟', t.x-10, t.y-12);
+      ctx.fillStyle='#666'; ctx.font='14px sans-serif'; ctx.fillText('废墟', t.x-30, t.y-36);
       return;
     }
     ctx.fillStyle = t.side==='my'?'#1565C0':'#C62828';
-    ctx.fillRect(t.x-12, t.y-35, 24, 35);
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(t.x-12, t.y-35, 24, 35);
+    ctx.fillRect(t.x-36, t.y-105, 72, 105);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.strokeRect(t.x-36, t.y-105, 72, 105);
     ctx.fillStyle = t.side==='my'?'#42A5F5':'#EF5350';
-    ctx.beginPath(); ctx.moveTo(t.x-12,t.y-35); ctx.lineTo(t.x,t.y-48); ctx.lineTo(t.x+12,t.y-35); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(t.x-36,t.y-105); ctx.lineTo(t.x,t.y-144); ctx.lineTo(t.x+36,t.y-105); ctx.fill(); ctx.stroke();
     // 血条
     const pct = t.hp/t.maxHp;
-    ctx.fillStyle='#333'; ctx.fillRect(t.x-15, t.y+3, 30, 4);
+    ctx.fillStyle='#333'; ctx.fillRect(t.x-45, t.y+9, 90, 10);
     ctx.fillStyle = pct>0.5?'#4CAF50':pct>0.25?'#FF9800':'#F44336';
-    ctx.fillRect(t.x-15, t.y+3, 30*pct, 4);
+    ctx.fillRect(t.x-45, t.y+9, 90*pct, 10);
   });
 
-  ctx.restore();
-
-  // 空兵营槽位（不缩放）
+  // 空兵营槽位（视口内，×3）
   BARRACK_SLOTS.forEach(slot => {
     const y = slot.y || (LANE_Y[slot.lane] + (slot.dy||0));
-    const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<5&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-y)<5);
+    const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<15&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-y)<15);
     if (!ex) {
-      ctx.beginPath(); ctx.arc(slot.x, y, 30, 0, Math.PI*2);
-      if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2; }      else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=1.5; }
+      ctx.beginPath(); ctx.arc(slot.x, y, 90, 0, Math.PI*2);
+      if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=3; }
+      else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=2; }
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = game.selectedType?'#4CAF50':'#4A6FA5';
-      ctx.font='14px sans-serif'; ctx.textAlign='center'; ctx.fillText('+', slot.x, y+4); ctx.textAlign='start';
+      ctx.font='32px sans-serif'; ctx.textAlign='center'; ctx.fillText('+', slot.x, y+10); ctx.textAlign='start';
     }
   });
 
-  // 兵营
+  // 兵营（×3）
   game.barracks.forEach(b => {
     const y = b.y || (LANE_Y[b.lane] + (b.dy||0));
     if (!b.alive) {
       ctx.fillStyle='#333';
-      ctx.fillRect(b.x-40, y-50, 80, 80);
-      ctx.strokeStyle='#555'; ctx.strokeRect(b.x-40, y-50, 80, 80);
+      ctx.fillRect(b.x-120, y-150, 240, 240);
+      ctx.strokeStyle='#555'; ctx.strokeRect(b.x-120, y-150, 240, 240);
       return;
     }
     ctx.fillStyle = b.side==='my'?'#2196F3':'#F44336';
-    ctx.fillRect(b.x-40, y-50, 80, 80);
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(b.x-40, y-50, 80, 80);
+    ctx.fillRect(b.x-120, y-150, 240, 240);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.strokeRect(b.x-120, y-150, 240, 240);
     const iconMap = {melee:'👊', barbarian:'👊', paladin:'👊', fighter:'👊',
       archer:'🏹', musketeer:'🏹', ranger:'🏹', crossbow:'🏹',
       mage:'🧙‍♂️', ice:'🧙‍♂️', arcane:'🧙‍♂️', fire:'🧙‍♂️', darkfire:'🧙‍♂️',
       cannon:'💣', rocket:'💣', tesla:'💣', siege:'💣'};
-    ctx.font = '28px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(iconMap[b.unitType]||'❓', b.x, y+10);
+    ctx.font = '64px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(iconMap[b.unitType]||'❓', b.x, y-30);
     if (b.level>1) {
-      ctx.fillStyle='#FFD700'; ctx.font='bold 10px sans-serif';
-      ctx.fillText('Lv'+b.level, b.x, y+14);
+      ctx.fillStyle='#FFD700'; ctx.font='bold 18px sans-serif';
+      ctx.fillText('Lv'+b.level, b.x, y+20);
     }
     ctx.textAlign='start';
   });
 
-  ctx.save(); ctx.translate(180, 80); ctx.scale(0.7, 0.7);
-
-  // 单位
+  // 单位（视口内，去掉旧的translate/scale）
   game.units.forEach(u => {
     const def = UNIT_TYPES[u.type] || { color:'#9E9E9E', size:12, shape:'square' };
     const s = def.size;
@@ -1858,7 +1862,7 @@ function render() {
       animY = Math.sin(game.time*3 + u.x*0.05) * 1.5; // 呼吸
     }
 
-    // ===== 优先贴立绘 =====
+    // ===== 优先贴立绘（3倍放大）=====
     {
       const pKey = typeToPortrait[u.type];
       const pImg = pKey ? portraitImgs[pKey] : null;
@@ -1866,22 +1870,22 @@ function render() {
         // 阵营色：我方蓝，敌方红
         const sideColor = u.side==='my' ? 'rgba(79,195,247,0.35)' : 'rgba(239,83,80,0.35)';
         const sideBorder = u.side==='my' ? '#4FC3F7' : '#EF5350';
-        // 脚下阵营光环
+        // 脚下阵营光环（×3）
         ctx.save();
-        ctx.beginPath(); ctx.ellipse(u.x, u.y+8, 14, 5, 0, 0, Math.PI*2);
+        ctx.beginPath(); ctx.ellipse(u.x, u.y+24, 42, 15, 0, 0, Math.PI*2);
         ctx.fillStyle = sideColor; ctx.fill();
-        ctx.strokeStyle = sideBorder; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.strokeStyle = sideBorder; ctx.lineWidth = 3; ctx.stroke();
         ctx.restore();
 
         ctx.save();
-        ctx.translate(u.x + (doFlip?-animX:animX), u.y + animY);
-        if (doFlip) ctx.scale(-1, 1); // 按flipTypes统一翻转
+        ctx.translate(u.x + (doFlip?-animX*3:animX*3), u.y + animY*3);
+        if (doFlip) ctx.scale(-1, 1);
         ctx.rotate(animRot);
-        ctx.scale(animScale, animScale);
+        ctx.scale(animScale*3, animScale*3);
         const sc = 1.4;
         const iw = 22 * sc, ih = 28 * sc * 0.8;
         ctx.drawImage(pImg, -iw/2, -ih + 4, iw, ih);
-        // 血条 - 按阵营色：我方绿，敌方红
+        // 血条（×3）
         if (u.hp < u.maxHp) {
           const bw = 22;
           ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -1890,24 +1894,24 @@ function render() {
           ctx.fillRect(-bw/2, -ih + 1, bw * (u.hp/u.maxHp), 4);
         }
         ctx.restore();
-        // 名字 - 按阵营色
+        // 名字（×3）
         ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
-        ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y - 26);
+        ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y - 78);
         ctx.textAlign = 'start';
         return;
       }
     }
 
-    // ===== Canvas分部件绘制（带走路/攻击/施法动画） =====
+    // ===== Canvas分部件绘制（带走路/攻击/施法动画，3倍放大）=====
     {
       const walkPhase = game.time*10 + u.x*0.15;
       const sc = 1.8;
       ctx.save();
-      ctx.translate(u.x + (doFlip?-animX:animX), u.y + animY);
-      if (doFlip) ctx.scale(-1, 1); // 按flipTypes统一翻转
+      ctx.translate(u.x + (doFlip?-animX*3:animX*3), u.y + animY*3);
+      if (doFlip) ctx.scale(-1, 1);
       ctx.rotate(animRot);
-      ctx.scale(animScale*sc, animScale*sc);
+      ctx.scale(animScale*sc*3, animScale*sc*3);
 
       const t = u.type;
       const p = (u._animT||0)/0.25;
@@ -2094,85 +2098,79 @@ function render() {
     const pct=u.hp/u.maxHp;
     ctx.fillStyle='#333'; ctx.fillRect(u.x-10,u.y-s-8,20,4);
     ctx.fillStyle = u.side==='my' ? '#4CAF50' : '#F44336';
-    ctx.fillRect(u.x-10,u.y-s-8,20*pct,4);
-    // 名字 - 按阵营色
+    ctx.fillRect(u.x-30,u.y-s*3-24,60*pct,12);
+    // 名字 - 按阵营色（×3）
     ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
-    ctx.font='bold 8px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y-s-11); ctx.textAlign='start';
-    // 选中框
+    ctx.font='bold 18px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y-s*3-30); ctx.textAlign='start';
+    // 选中框（×3）
     if (game.selectedUnit===u) {
-      ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(u.x,u.y,s+3,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle='#FFD700'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(u.x,u.y,s*3+9,0,Math.PI*2); ctx.stroke();
     }
   });
 
-  // 弹道 - 按类型渲染
+  // 弹道 - 按类型渲染（×3）
   game.projectiles.forEach(p => {
     const cx=p.x+(p.tx-p.x)*p.p, cy=p.y+(p.ty-p.y)*p.p;
     if (p.style==='arrow') {
-      // 箭：长条光亮
       const ang = Math.atan2(p.ty-p.y, p.tx-p.x);
       ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
-      ctx.strokeStyle = p.color; ctx.lineWidth = 2;
-      ctx.shadowColor = p.color; ctx.shadowBlur = 8;
-      ctx.beginPath(); ctx.moveTo(-8,0); ctx.lineTo(6,0); ctx.stroke();
+      ctx.strokeStyle = p.color; ctx.lineWidth = 4;
+      ctx.shadowColor = p.color; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.moveTo(-24,0); ctx.lineTo(18,0); ctx.stroke();
       ctx.restore();
     } else if (p.style==='bullet') {
-      // 火枪：暗红光球
-      ctx.shadowColor = '#ff4444'; ctx.shadowBlur = 12;
+      ctx.shadowColor = '#ff4444'; ctx.shadowBlur = 20;
       ctx.fillStyle = '#ff6644';
-      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI*2); ctx.fill();
       ctx.shadowBlur = 0;
     } else if (p.style==='shell') {
-      // 攻城炮弹：抛物线
-      const arch = Math.sin(p.p * Math.PI) * 30;
-      ctx.shadowColor = p.color; ctx.shadowBlur = 6;
+      const arch = Math.sin(p.p * Math.PI) * 90;
+      ctx.shadowColor = p.color; ctx.shadowBlur = 12;
       ctx.fillStyle = '#5a4a3a';
-      ctx.beginPath(); ctx.arc(cx, cy - arch, 5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy - arch, 12, 0, Math.PI*2); ctx.fill();
       ctx.shadowBlur = 0;
     } else if (p.style==='rocket') {
-      // 火箭炮大招：高抛物线火箭，带尾焰
-      const arch = Math.sin(p.p * Math.PI) * 80;
+      const arch = Math.sin(p.p * Math.PI) * 240;
       const rx = cx, ry = cy - arch;
-      // 尾焰
-      const tailX = p.x+(p.tx-p.x)*(p.p-0.08), tailY = p.y+(p.ty-p.y)*(p.p-0.08) - Math.sin((p.p-0.08)*Math.PI)*80;
+      const tailX = p.x+(p.tx-p.x)*(p.p-0.08), tailY = p.y+(p.ty-p.y)*(p.p-0.08) - Math.sin((p.p-0.08)*Math.PI)*240;
       const grad = ctx.createLinearGradient(tailX, tailY, rx, ry);
       grad.addColorStop(0, 'rgba(255,100,0,0)');
       grad.addColorStop(0.5, 'rgba(255,150,0,0.6)');
       grad.addColorStop(1, 'rgba(255,200,50,0.9)');
-      ctx.strokeStyle = grad; ctx.lineWidth = 4; ctx.lineCap='round';
+      ctx.strokeStyle = grad; ctx.lineWidth = 10; ctx.lineCap='round';
       ctx.beginPath(); ctx.moveTo(tailX, tailY); ctx.lineTo(rx, ry); ctx.stroke();
-      // 火箭头
-      ctx.shadowColor = '#FF6600'; ctx.shadowBlur = 15;
+      ctx.shadowColor = '#FF6600'; ctx.shadowBlur = 30;
       ctx.fillStyle = '#FF4500';
-      ctx.beginPath(); ctx.arc(rx, ry, 6, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(rx, ry, 14, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#FFD700';
-      ctx.beginPath(); ctx.arc(rx, ry, 3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(rx, ry, 7, 0, Math.PI*2); ctx.fill();
       ctx.shadowBlur = 0;
     } else if (p.style==='bolt') {
-      // 特斯拉闪电：锯齿状电光
-      ctx.strokeStyle = '#9B6BFF'; ctx.lineWidth = 2.5;
-      ctx.shadowColor = '#B388FF'; ctx.shadowBlur = 10;
+      ctx.strokeStyle = '#9B6BFF'; ctx.lineWidth = 5;
+      ctx.shadowColor = '#B388FF'; ctx.shadowBlur = 20;
       ctx.beginPath();
       const segs = 5;
       for (let i=0;i<=segs;i++) {
         const t = i/segs;
         const lx = p.x+(p.tx-p.x)*t;
-        const ly = p.y+(p.ty-p.y)*t + (i>0&&i<segs ? (Math.random()-0.5)*8 : 0);
+        const ly = p.y+(p.ty-p.y)*t + (i>0&&i<segs ? (Math.random()-0.5)*24 : 0);
         if (i===0) ctx.moveTo(lx,ly); else ctx.lineTo(lx,ly);
       }
       ctx.stroke();
       ctx.shadowBlur = 0;
     } else {
-      // 法师：光球
-      ctx.shadowColor = p.color; ctx.shadowBlur = 12;
+      ctx.shadowColor = p.color; ctx.shadowBlur = 20;
       ctx.fillStyle = p.color;
-      ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI*2); ctx.fill();
       ctx.shadowBlur = 0;
     }
   });
 
-  // 建造菜单（子级菜单放大，方便选择）
+  ctx.restore(); // 关闭视口translate
+
+  // 建造菜单（UI层，不随视口移动）
   if (game.buildMenu) {
     const m = game.buildMenu;
     const types = ['melee','archer','mage','cannon'];
@@ -2274,8 +2272,6 @@ function render() {
       }
     }
   }
-
-  ctx.restore();
 
   // 左下角版本号（分两行）
   ctx.fillStyle='#FFF'; ctx.font='bold 14px sans-serif';
@@ -2471,9 +2467,9 @@ function render() {
     ctx.fillText('开始对战', 600, 340);
     ctx.textAlign='start';
   }
-  // 右下角按钮 2x2
+  // 左下角按钮 2x2（从右下角移到左下角）
   const btnW = 70, btnH = 30;
-  const btnStartX = 1020, btnStartY = 620;
+  const btnStartX = 10, btnStartY = 620;
   const btns = [
     {x:0, y:0, label:'1x', color:'#607D8B'},
     {x:1, y:0, label:'设置', color:'#FF9800'},
@@ -2491,6 +2487,45 @@ function render() {
     ctx.fillText(b.label, bx + btnW/2, by + 20);
     ctx.textAlign = 'start';
   });
+
+  // 右下角小地图（220x132）
+  const mmW = 220, mmH = 132, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmScaleX = mmW / WORLD_W, mmScaleY = mmH / WORLD_H;
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fillRect(mmX, mmY, mmW, mmH);
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+  ctx.strokeRect(mmX, mmY, mmW, mmH);
+  // 道路缩略
+  ctx.strokeStyle = '#1e1e4a'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  LANE_Y.forEach(y => {
+    ctx.beginPath();
+    ctx.moveTo(mmX + 150*mmScaleX, mmY + 1080*mmScaleY);
+    ctx.quadraticCurveTo(mmX + 600*mmScaleX, mmY + y*mmScaleY, mmX + 1140*mmScaleX, mmY + y*mmScaleY);
+    ctx.lineTo(mmX + 2460*mmScaleX, mmY + y*mmScaleY);
+    ctx.quadraticCurveTo(mmX + 3000*mmScaleX, mmY + y*mmScaleY, mmX + 3450*mmScaleX, mmY + 1080*mmScaleY);
+    ctx.stroke();
+  });
+  ctx.lineCap = 'butt';
+  // 塔色块
+  game.towers.forEach(t => {
+    if (!t.alive) return;
+    const tx = mmX + t.x*mmScaleX, ty = mmY + t.y*mmScaleY;
+    ctx.fillStyle = t.side==='my' ? '#4FC3F7' : '#EF5350';
+    ctx.fillRect(tx-2, ty-2, t.isBase?6:4, t.isBase?6:4);
+  });
+  // 单位色块（战斗中闪烁）
+  game.units.forEach(u => {
+    if (u.hp <= 0) return;
+    const ux = mmX + u.x*mmScaleX, uy = mmY + u.y*mmScaleY;
+    const flash = u.animState === 'attack' ? (Math.sin(game.time*20)>0 ? '#fff' : (u.side==='my'?'#4FC3F7':'#EF5350')) : (u.side==='my'?'#4FC3F7':'#EF5350');
+    ctx.fillStyle = flash;
+    ctx.fillRect(ux-1, uy-1, 3, 3);
+  });
+  // 视口框
+  ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(mmX + viewX*mmScaleX, mmY + viewY*mmScaleY, 1200*mmScaleX, 720*mmScaleY);
+  ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText('小地图', mmX+mmW-4, mmY+12); ctx.textAlign = 'start';
 
   // 模拟菜单
   if (game.simOpen) {
@@ -2553,6 +2588,7 @@ canvas.addEventListener('wheel', e => {
 
 canvas.addEventListener('click', e => {
   if (game.gameOver) return;
+  if (dragMoved) { dragMoved = false; return; } // 拖拽后不触发点击
   const rect = canvas.getBoundingClientRect();
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
   let cx, cy;
@@ -2565,13 +2601,23 @@ canvas.addEventListener('click', e => {
     cy = dy / rect.height * 720;
   }
 
+  // 小地图点击跳转
+  const mmW = 220, mmH = 132, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
+    const wx = (cx - mmX) / mmW * WORLD_W;
+    const wy = (cy - mmY) / mmH * WORLD_H;
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
+    render(); return;
+  }
+
   // 开始对战按钮
   if (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) {
     game.started = true; render(); return;
   }
-  // canvas右下角按钮检测
+  // canvas左下角按钮检测（从右下角移到左下角）
   const btnW = 70, btnH = 30;
-  const btnStartX = 1020, btnStartY = 620;
+  const btnStartX = 10, btnStartY = 620;
   const btns = [
     {x:0, y:0, act:'speed'},
     {x:1, y:0, act:'settings'},
@@ -2608,9 +2654,9 @@ canvas.addEventListener('click', e => {
     if (cx >= 870 && cx <= 1150 && cy >= 575 && cy <= 605) { game.simOpen=false; startSimulation(1); return; }
   }
 
-  // 兵营用屏幕坐标，战场内容需要反算缩放
-  const fcX = (cx - 180) / 0.7;
-  const fcY = (cy - 80) / 0.7;
+  // 战场坐标：屏幕坐标 + 视口偏移
+  const fcX = cx + viewX;
+  const fcY = cy + viewY;
 
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
@@ -2787,8 +2833,8 @@ canvas.addEventListener('click', e => {
   // 找兵营槽位（优先检测，避免被兵挡住）
   for (const slot of BARRACK_SLOTS) {
     const sy = slot.y || (LANE_Y[slot.lane] + (slot.dy||0));
-    if (Math.abs(cx-slot.x)<40 && Math.abs(cy-sy)<40) {
-      const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<5&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-sy)<5);
+    if (Math.abs(fcX-slot.x)<120 && Math.abs(fcY-sy)<120) {
+      const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<15&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-sy)<15);
       if (ex) {
         game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
       } else {
@@ -2798,24 +2844,24 @@ canvas.addEventListener('click', e => {
     }
   }
 
-  // 找最近单位
+  // 找最近单位（点击范围×3）
   let nearUnit = null, nd = Infinity;
   game.units.forEach(u => {
     if (u.hp<=0) return;
     const d = Math.hypot(fcX-u.x, fcY-u.y);
-    if (d < nd && d < 20) { nd = d; nearUnit = u; }
+    if (d < nd && d < 60) { nd = d; nearUnit = u; }
   });
   if (nearUnit) {
     game.selectedUnit = nearUnit;
     game.upgradeMenu = null;
     return;
   }
-  // 找最近防御塔/基地
+  // 找最近防御塔/基地（点击范围×3）
   let nearTower = null, td = Infinity;
   game.towers.forEach(t => {
     if (!t.alive) return;
     const d = Math.hypot(fcX-t.x, fcY-t.y);
-    if (d < td && d < 25) { td = d; nearTower = t; }
+    if (d < td && d < 75) { td = d; nearTower = t; }
   });
   if (nearTower) {
     game.selectedTower = nearTower;
@@ -2826,6 +2872,46 @@ canvas.addEventListener('click', e => {
   game.selectedUnit = null;
   game.selectedTower = null;
 });
+
+// 视口拖拽
+let isDragging = false, dragStartX = 0, dragStartY = 0, dragViewX = 0, dragViewY = 0, dragMoved = false;
+canvas.addEventListener('mousedown', e => {
+  if (codexOpen || game.gameOver) return;
+  const rect = canvas.getBoundingClientRect();
+  const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
+  let cx, cy;
+  if (window.innerWidth < window.innerHeight) {
+    cx = dy / rect.height * 1200; cy = (rect.width - dx) / rect.width * 720;
+  } else {
+    cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
+  }
+  // 只在战场区域拖拽（排除UI按钮和小地图）
+  const mmW = 220, mmH = 132, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const inUI = (cx >= 10 && cx <= 155 && cy >= 620 && cy <= 685) || // 左下角按钮
+               (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) || // 小地图
+               (cx >= 200 && cy >= 600); // 底部信息栏
+  if (!inUI && cy < 600) {
+    isDragging = true; dragStartX = cx; dragStartY = cy;
+    dragViewX = viewX; dragViewY = viewY; dragMoved = false;
+  }
+});
+canvas.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const rect = canvas.getBoundingClientRect();
+  const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
+  let cx, cy;
+  if (window.innerWidth < window.innerHeight) {
+    cx = dy / rect.height * 1200; cy = (rect.width - dx) / rect.width * 720;
+  } else {
+    cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
+  }
+  const ddx = cx - dragStartX, ddy = cy - dragStartY;
+  if (Math.abs(ddx) > 3 || Math.abs(ddy) > 3) dragMoved = true;
+  viewX = Math.max(0, Math.min(WORLD_W - 1200, dragViewX - ddx));
+  viewY = Math.max(0, Math.min(WORLD_H - 720, dragViewY - ddy));
+});
+canvas.addEventListener('mouseup', () => { isDragging = false; });
+canvas.addEventListener('mouseleave', () => { isDragging = false; });
 
 // 按钮
 document.getElementById('speed-btn').addEventListener('click', () => {
