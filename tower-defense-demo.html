@@ -908,6 +908,12 @@ function applyDmg(att, tgt, dmg, def) {
       fd -= absorbed;
     }
     tgt.hp -= fd;
+    // 普通攻击日志（仅单位对单位，1v1显示用）
+    if (tgt.type && att.type && fd > 0) {
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+      pushCombatLog(`${attName} 攻击 ${tgtName}，造成${Math.round(fd)}伤害`);
+    }
     // 羁绊：刀盾3种齐全 → 全体反弹10%直接伤害
     if (tgt.side==='my' && game.myBuffs.meleeMaster && att.hp>0 && fd>0) {
       att.hp -= fd * 0.1;
