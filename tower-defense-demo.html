@@ -2697,9 +2697,9 @@ function startDuel(typeA, typeB, lv) {
   lv = lv || 6;
   const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
   // 创建跟主游戏一样的unit（y=360中路，lane=1）
-  const unitA = createDuelUnit(typeA, 'my', lv, 250);
+  const unitA = createDuelUnit(typeA, 'my', lv, 100);
   unitA.y = 360; unitA.lane = 1; unitA.yOff = 0;
-  const unitB = createDuelUnit(typeB, 'enemy', lv, 550);
+  const unitB = createDuelUnit(typeB, 'enemy', lv, 1100);
   unitB.y = 360; unitB.lane = 1; unitB.yOff = 0;
   // 虚拟game环境（完整结构，复用主游戏updateUnits）
   duelGame = {
