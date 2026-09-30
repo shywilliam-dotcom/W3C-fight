@@ -2507,14 +2507,14 @@ canvas.addEventListener('click', e => {
       duelMode = !duelMode; duelPick = 0; duelA = null; duelB = null; duelResult = null;
       render(); return;
     }
-    if (duelAnim && duelAnim.done && cx >= 290 && cx <= 450 && cy >= 335 && cy <= 375) {
+    if (duelAnim && duelAnim.done && cx >= 260 && cx <= 420 && cy >= 335 && cy <= 375) {
       startDuel(duelA, duelB, duelLv); render(); return;
     }
-    if (duelAnim && duelAnim.done && cx >= 470 && cx <= 630 && cy >= 335 && cy <= 375) {
+    if (duelAnim && duelAnim.done && cx >= 440 && cx <= 600 && cy >= 335 && cy <= 375) {
       duelAnim = null; duelPick = 0; duelA = null; duelB = null; render(); return;
     }
     // 点击日志区域：回到底部并恢复自动滚动
-    if (duelAnim && cx >= 900 && cx <= 1200 && cy >= 0 && cy <= 720) {
+    if (duelAnim && cx >= 840 && cx <= 1200 && cy >= 0 && cy <= 720) {
       duelLogAutoScroll = true;
       duelLogScroll = 0;
       render(); return;
@@ -2795,7 +2795,7 @@ function startDuel(typeA, typeB, lv) {
   // 创建跟主游戏一样的unit（y=360中路，lane=1）
   const unitA = createDuelUnit(typeA, 'my', lv, 100);
   unitA.y = 360; unitA.lane = 1; unitA.yOff = 0;
-  const unitB = createDuelUnit(typeB, 'enemy', lv, 800);
+  const unitB = createDuelUnit(typeB, 'enemy', lv, 740);
   unitB.y = 360; unitB.lane = 1; unitB.yOff = 0;
   // 虚拟game环境（完整结构，复用主游戏updateUnits）
   duelGame = {
@@ -2950,7 +2950,7 @@ function drawCodex() {
     ctx.fillText('✕', 1170, 31);
     ctx.textAlign = 'start';
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '1v1对战', 450, 35);
+    ctx.fillText(duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '1v1对战', 420, 35);
     ctx.textAlign='start';
     if (duelPick===2 && !duelAnim) {
       // 等级选择界面
@@ -2977,8 +2977,8 @@ function drawCodex() {
     if (duelAnim && duelPick===2) {
       const d = duelAnim;
       // 战场背景（左边3/4全屏）
-      ctx.fillStyle='#3a3a5a'; ctx.fillRect(0, 0, 900, 720);
-      ctx.strokeStyle='#888'; ctx.strokeRect(0, 0, 900, 720);
+      ctx.fillStyle='#3a3a5a'; ctx.fillRect(0, 0, 840, 720);
+      ctx.strokeStyle='#888'; ctx.strokeRect(0, 0, 840, 720);
       // A单位（左）- 真实x坐标
       const ax = d.a.x + d.aAttackAnim*15;
       const aSKey = typeToSprite[d.typeA];
@@ -3104,21 +3104,21 @@ function drawCodex() {
       }
       // 结果
       if (d.done) {
-        ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(250, 250, 400, 150);
+        ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(220, 250, 400, 150);
         ctx.fillStyle='#FFD700'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
-        ctx.fillText(`胜者: ${d.winner}`, 450, 290);
+        ctx.fillText(`胜者: ${d.winner}`, 420, 290);
         ctx.fillStyle='#fff'; ctx.font='14px sans-serif';
-        ctx.fillText(`用时: ${d.time.toFixed(1)}秒`, 450, 315);
-        ctx.fillStyle='#4CAF50'; ctx.fillRect(290, 335, 160, 40);
+        ctx.fillText(`用时: ${d.time.toFixed(1)}秒`, 420, 315);
+        ctx.fillStyle='#4CAF50'; ctx.fillRect(260, 335, 160, 40);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
-        ctx.fillText('再模拟一场', 370, 360);
-        ctx.fillStyle='#FF9800'; ctx.fillRect(470, 335, 160, 40);
+        ctx.fillText('再模拟一场', 340, 360);
+        ctx.fillStyle='#FF9800'; ctx.fillRect(440, 335, 160, 40);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
-        ctx.fillText('重选兵种', 550, 360);
+        ctx.fillText('重选兵种', 520, 360);
       }
       ctx.textAlign='start';
       // 日志面板（右边1/4全屏）
-      const logX = 900, logY = 0, logW = 300, logH = 720;
+      const logX = 840, logY = 0, logW = 360, logH = 720;
       ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(logX, logY, logW, logH);
       ctx.strokeStyle='#888'; ctx.strokeRect(logX, logY, logW, logH);
       ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
@@ -3127,7 +3127,7 @@ function drawCodex() {
       d.logs.forEach(log => {
         const logObj = typeof log === 'string' ? {time:'', msg:log, side:'neutral'} : log;
         let s = logObj.time ? `[${logObj.time}s] ${logObj.msg}` : logObj.msg;
-        while (s.length > 22) { allLines.push({text:s.slice(0,22), side:logObj.side}); s = s.slice(22); }
+        while (s.length > 26) { allLines.push({text:s.slice(0,26), side:logObj.side}); s = s.slice(26); }
         allLines.push({text:s, side:logObj.side});
       });
       const lineH = 16;
