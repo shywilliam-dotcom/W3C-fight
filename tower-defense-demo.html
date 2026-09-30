@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v9.02';
+const VERSION = 'v9.03';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -2694,6 +2694,7 @@ function startDuel(typeA, typeB, lv) {
   duelAnim = {
     typeA, typeB, level: lv,
     a: unitA, b: unitB,
+    aGolem: null, bGolem: null,
     game: duelGame,
     time: 0, done: false, winner: null,
     logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})，双方从两端入场！`],
@@ -2847,6 +2848,53 @@ function updateDuel(dt) {
   if (b.hp > 0 && b.st.stun <= 0) {
     if (dist > bRange) { b.x -= bSpd * dt; }
   }
+
+  // ===== 奥战法召唤傀儡（1v1）=====
+  const summonGolem = (owner, side) => {
+    if (owner.type !== 'arcane' || owner.hp <= 0) return null;
+    if (owner.golemCD === undefined) owner.golemCD = 0;
+    if (owner.golemCD > 0) { owner.golemCD -= dt; return null; }
+    const golemMul = Math.pow(1.15, (owner.level||1)-1);
+    const golemHp = Math.round(360 * golemMul);
+    const dir = side === 'a' ? 1 : -1;
+    return {
+      x: owner.x + 30*dir, y: 320, lane: 1, side: side==='a'?'my':'enemy', type:'golem',
+      dir: dir, level: owner.level||1, atkType:'normal', armorType:'heavy', master:owner,
+      hp:golemHp, maxHp:golemHp, atk:Math.round(24*golemMul), atkSpeed:0.5, range:25, speed:owner.speed, atkTimer:0,
+      dmgReduce:0.5, st:{}, baseArmor:5, flatArmor:5
+    };
+  };
+  // A方召唤
+  if (!d.aGolem || d.aGolem.hp <= 0) {
+    const g = summonGolem(a, 'a');
+    if (g) { d.aGolem = g; a.golemCD = 15; d.logs.push(`[${d.time.toFixed(1)}s] ⭐${UNIT_TYPES[d.typeA].name} 召唤奥术傀儡！HP${g.maxHp} 攻${g.atk}`); }
+  } else if (a.hp <= 0) { d.aGolem.hp = 0; }
+  // B方召唤
+  if (!d.bGolem || d.bGolem.hp <= 0) {
+    const g = summonGolem(b, 'b');
+    if (g) { d.bGolem = g; b.golemCD = 15; d.logs.push(`[${d.time.toFixed(1)}s] ⭐${UNIT_TYPES[d.typeB].name} 召唤奥术傀儡！HP${g.maxHp} 攻${g.atk}`); }
+  } else if (b.hp <= 0) { d.bGolem.hp = 0; }
+
+  // 傀儡移动和攻击
+  const updateGolem = (golem, enemy, enemyGolem, side) => {
+    if (!golem || golem.hp <= 0) return;
+    golem.atkTimer -= dt;
+    // 目标：优先对方主体，其次对方傀儡
+    let target = enemy.hp > 0 ? enemy : (enemyGolem && enemyGolem.hp > 0 ? enemyGolem : null);
+    if (!target) return;
+    const gdist = Math.abs(target.x - golem.x);
+    if (gdist > golem.range) {
+      golem.x += golem.dir * golem.speed * dt;
+    } else if (golem.atkTimer <= 0) {
+      const dmg = Math.max(1, golem.atk - (target.flatArmor||0)*0.5);
+      target.hp -= dmg;
+      golem.atkTimer = 1 / golem.atkSpeed;
+      const tName = target === enemy ? UNIT_TYPES[side==='a'?d.typeB:d.typeA].name : '奥术傀儡';
+      d.logs.push(`[${d.time.toFixed(1)}s] 奥术傀儡(${side==='a'?UNIT_TYPES[d.typeA].name:UNIT_TYPES[d.typeB].name}的) 攻击 ${tName}，造成${Math.round(dmg)}伤害`);
+    }
+  };
+  updateGolem(d.aGolem, b, d.bGolem, 'a');
+  updateGolem(d.bGolem, a, d.aGolem, 'b');
 
   // 攻速计算（复用主游戏逻辑）
   const calcAtkSpd = (u) => {
@@ -3061,6 +3109,20 @@ function drawCodex() {
       ctx.fillStyle='#4CAF50'; ctx.fillRect(ax-50, 230, 100*Math.max(0,d.a.hp/d.a.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.a.hp))}/${d.a.maxHp}`, ax, 240);
+      // A方傀儡
+      if (d.aGolem && d.aGolem.hp > 0) {
+        const gx = d.aGolem.x;
+        const gImg = spriteImgs['golem'];
+        if (gImg && gImg.complete && gImg.naturalWidth > 0) {
+          ctx.save(); ctx.translate(gx, 320); ctx.scale(-2, 2); ctx.drawImage(gImg, -12, -20, 24, 32); ctx.restore();
+        } else {
+          ctx.fillStyle='#8B4513'; ctx.beginPath(); ctx.arc(gx, 300, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 308, 20, 20);
+        }
+        ctx.fillStyle='#4CAF50'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+        ctx.fillText('傀儡', gx, 270);
+        ctx.fillStyle='#333'; ctx.fillRect(gx-25, 275, 50, 6);
+        ctx.fillStyle='#4CAF50'; ctx.fillRect(gx-25, 275, 50*Math.max(0,d.aGolem.hp/d.aGolem.maxHp), 6);
+      }
       // B单位（右）- 真实x坐标
       const bx = d.b.x - d.bAttackAnim*15;
       const bSKey = typeToSprite[d.typeB];
@@ -3085,6 +3147,20 @@ function drawCodex() {
       ctx.fillStyle='#F44336'; ctx.fillRect(bx-50, 380, 100*Math.max(0,d.b.hp/d.b.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.b.hp))}/${d.b.maxHp}`, bx, 390);
+      // B方傀儡
+      if (d.bGolem && d.bGolem.hp > 0) {
+        const gx = d.bGolem.x;
+        const gImg = spriteImgs['golem'];
+        if (gImg && gImg.complete && gImg.naturalWidth > 0) {
+          ctx.save(); ctx.translate(gx, 320); ctx.scale(2, 2); ctx.drawImage(gImg, -12, -20, 24, 32); ctx.restore();
+        } else {
+          ctx.fillStyle='#8B4513'; ctx.beginPath(); ctx.arc(gx, 300, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 308, 20, 20);
+        }
+        ctx.fillStyle='#F44336'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+        ctx.fillText('傀儡', gx, 420);
+        ctx.fillStyle='#333'; ctx.fillRect(gx-25, 410, 50, 6);
+        ctx.fillStyle='#F44336'; ctx.fillRect(gx-25, 410, 50*Math.max(0,d.bGolem.hp/d.bGolem.maxHp), 6);
+      }
       // 攻击特效：用真实坐标
       if (d.aAttackAnim > 0.3) {
         const prog = 1 - d.aAttackAnim;
