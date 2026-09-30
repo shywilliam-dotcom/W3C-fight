@@ -2171,36 +2171,36 @@ function render() {
     }
   });
 
-  // 建造菜单
+  // 建造菜单（子级菜单放大，方便选择）
   if (game.buildMenu) {
     const m = game.buildMenu;
     const types = ['melee','archer','mage','cannon'];
     const names = ['近战(60)','弓手(80)','法师(90)','攻城车(220)'];
     const costs = [60,80,90,220];
-    const mw=200, btnH=42, mh=types.length*btnH+30;
+    const mw=300, btnH=60, mh=types.length*btnH+40;
     const mx = Math.min(m.x, 1200-mw-10);
     const my = Math.max(10, Math.min(m.y-mh/2, 720-mh-10));
     ctx.fillStyle='rgba(0,0,0,0.95)';
     ctx.fillRect(mx, my, mw, mh);
     ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2;
     ctx.strokeRect(mx, my, mw, mh);
-    ctx.fillStyle='#4CAF50'; ctx.font='bold 15px sans-serif';
-    ctx.fillText('建造兵营', mx+12, my+22);
+    ctx.fillStyle='#4CAF50'; ctx.font='bold 20px sans-serif';
+    ctx.fillText('建造兵营', mx+15, my+28);
     m.hits = [];
     types.forEach((t,i) => {
-      const py = my+30+i*btnH;
+      const py = my+38+i*btnH;
       const cost = costs[i];
       const can = game.gold>=cost;
       ctx.fillStyle = can?'#4CAF50':'#555';
-      ctx.fillRect(mx+8, py, mw-16, btnH-6);
+      ctx.fillRect(mx+10, py, mw-20, btnH-8);
       ctx.fillStyle = can?'#fff':'#999';
-      ctx.font='bold 14px sans-serif';
-      ctx.fillText(names[i], mx+15, py+24);
-      m.hits.push({ x:mx+5, y:py-3, w:mw-10, h:btnH, key:t, cost:cost });
+      ctx.font='bold 18px sans-serif';
+      ctx.fillText(names[i], mx+20, py+34);
+      m.hits.push({ x:mx+5, y:py-4, w:mw-10, h:btnH, key:t, cost:cost });
     });
   }
 
-  // 升级菜单（Canvas上绘制）
+  // 升级菜单（子级菜单放大，方便选择）
   if (game.upgradeMenu) {
     const m = game.upgradeMenu;
     const b = m.barrack;
@@ -2214,61 +2214,61 @@ function render() {
     const canUpgrade = curLv <= 6; // 7级以上没有升级选项
     const canTransform = curLv >= 4 && paths; // 4级以上才能转换
     const showPaths = canTransform;
-    const totalH = (showPaths ? paths.length : 0) * 36 + (canUpgrade ? 70 : 40);
-    const mw=280, mh=totalH*2;
+    const totalH = (showPaths ? paths.length : 0) * 52 + (canUpgrade ? 80 : 50);
+    const mw=380, mh=totalH;
     const mx = Math.min(m.x, 1200-mw-10);
-    const my = Math.max(10, m.y-mh/2);
+    const my = Math.max(10, Math.min(m.y-mh/2, 720-mh-10));
     ctx.fillStyle='rgba(0,0,0,0.92)';
     ctx.fillRect(mx, my, mw, mh);
     ctx.strokeStyle='#e94560'; ctx.lineWidth=2;
     ctx.strokeRect(mx, my, mw, mh);
     // 标题：兵种名 + 等级
-    ctx.fillStyle='#e94560'; ctx.font='bold 14px sans-serif';
-    ctx.fillText(`${UNIT_TYPES[b.unitType].name} Lv.${curLv}`, mx+10, my+20);
+    ctx.fillStyle='#e94560'; ctx.font='bold 20px sans-serif';
+    ctx.fillText(`${UNIT_TYPES[b.unitType].name} Lv.${curLv}`, mx+15, my+28);
     // 等级升级行（Lv.1-6显示）
-    let y = my+30;
+    let y = my+40;
     if (canUpgrade && curLv < maxLv) {
       ctx.fillStyle = canUpLv ? '#FFD700' : '#555';
-      ctx.fillRect(mx+5, y, mw-10, 30);
+      ctx.fillRect(mx+8, y, mw-16, 44);
       ctx.fillStyle = canUpLv ? '#000' : '#888';
-      ctx.font='bold 12px sans-serif';
-      ctx.fillText(`⬆ 升Lv.${curLv+1} (${lvCost}金) +10%血攻`, mx+12, y+12);
-      ctx.font='10px sans-serif'; ctx.fillText(`每级+10%属性/技能`, mx+12, y+25);
-      m.lvHit = { x:mx+5, y, w:mw-10, h:30, cost:lvCost };
+      ctx.font='bold 16px sans-serif';
+      ctx.fillText(`⬆ 升Lv.${curLv+1} (${lvCost}金) +10%血攻`, mx+18, y+20);
+      ctx.font='12px sans-serif'; ctx.fillText(`每级+10%属性/技能`, mx+18, y+38);
+      m.lvHit = { x:mx+5, y, w:mw-10, h:44, cost:lvCost };
     } else if (curLv >= 7) {
-      ctx.fillStyle='#FF6B6B'; ctx.font='12px sans-serif';
-      ctx.fillText('⚠ Lv.7以上必须转换兵种', mx+12, y+12);
+      ctx.fillStyle='#FF6B6B'; ctx.font='14px sans-serif';
+      ctx.fillText('⚠ Lv.7以上必须转换兵种', mx+18, y+25);
       m.lvHit = null;
     } else {
-      ctx.fillStyle='#FFD700'; ctx.font='12px sans-serif';
-      ctx.fillText('★ 已满级 Lv.10 ★', mx+12, y+18);
+      ctx.fillStyle='#FFD700'; ctx.font='16px sans-serif';
+      ctx.fillText('★ 已满级 Lv.10 ★', mx+18, y+28);
       m.lvHit = null;
     }
-    y += 40;
+    y += 52;
     // 进阶路线（Lv.4+显示）
     if (showPaths) {
       paths.forEach((p,i) => {
-        const py = y+i*36;
+        const py = y+i*52;
         // 转职费用 = 建造费用 × 200%
         const cost = Math.round(baseCost * 2);
         const can = game.gold>=cost;
         ctx.fillStyle = can?'#4CAF50':'#666';
-        ctx.fillRect(mx+5, py, mw-10, 30);
+        ctx.fillRect(mx+8, py, mw-16, 44);
         ctx.fillStyle = can?'#fff':'#999';
-        ctx.font='13px sans-serif';
-        ctx.fillText(`${i+1}. ${p.name} (${cost}金)`, mx+12, py+12);
-        ctx.font='10px sans-serif'; ctx.fillStyle = can?'#ccc':'#555';
-        ctx.fillText(UNIT_TYPES[p.key].desc||'', mx+12, py+25);
+        ctx.font='bold 16px sans-serif';
+        ctx.fillText(`${i+1}. ${p.name} (${cost}金)`, mx+18, py+20);
+        ctx.font='12px sans-serif'; ctx.fillStyle = can?'#ccc':'#555';
+        ctx.fillText(UNIT_TYPES[p.key].desc||'', mx+18, py+38);
       });
       m.menuHits = paths.map((p,i) => ({
-        x:mx+5, y:y+i*36, w:mw-10, h:30,
+        x:mx+5, y:y+i*52, w:mw-10, h:44,
         key:p.key, cost:Math.round(baseCost * 2)
       }));
     } else {
       m.menuHits = [];
       if (curLv < 4) {
-        ctx.fillStyle='#888'; ctx.font='11px sans-serif';
-        ctx.fillText('Lv.4解锁进阶兵种', mx+12, y+10);
+        ctx.fillStyle='#888'; ctx.font='14px sans-serif';
+        ctx.fillText('Lv.4解锁进阶兵种', mx+18, y+15);
       }
     }
   }
@@ -2612,12 +2612,12 @@ canvas.addEventListener('click', e => {
 
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
-    // 右上角关闭按钮
-    if (cx >= 1150 && cx <= 1190 && cy >= 10 && cy <= 40) {
+    // 右上角关闭按钮（放大后坐标）
+    if (cx >= 1100 && cx <= 1180 && cy >= 10 && cy <= 55) {
       codexOpen = false; duelMode = false; duelPick = 0; render(); return;
     }
-    // 1v1按钮
-    if (cx >= 1000 && cx <= 1120 && cy >= 15 && cy <= 45) {
+    // 1v1按钮（放大后坐标）
+    if (cx >= 950 && cx <= 1090 && cy >= 10 && cy <= 55) {
       duelMode = !duelMode; duelPick = 0; duelA = null; duelB = null; duelResult = null;
       render(); return;
     }
@@ -3134,10 +3134,10 @@ function getCodexButtonRect(idx) {
   const lx = 30;
   const isDuel = duelMode;
   let by = isDuel ? 30 : 70;
-  const titleH = isDuel ? 20 : 26;
-  const bw = isDuel ? 88 : 96, bh = isDuel ? 42 : 51;
-  const hGap = isDuel ? 10 : 16, vGap = isDuel ? 8 : 12;
-  const catGap = isDuel ? 8 : 12;
+  const titleH = isDuel ? 24 : 26;
+  const bw = isDuel ? 110 : 110, bh = isDuel ? 56 : 60;
+  const hGap = isDuel ? 14 : 16, vGap = isDuel ? 10 : 12;
+  const catGap = isDuel ? 12 : 12;
   let n = 0;
   for (const cat of CODEX) {
     by += titleH;
@@ -3159,11 +3159,11 @@ function drawCodex() {
   ctx.fillStyle = 'rgba(0,0,0,0.9)';
   ctx.fillRect(0, 0, 1200, 720);
   if (duelMode) {
-    // 右上角关闭按钮（日志框内）
+    // 右上角关闭按钮（放大方便点击）
     ctx.fillStyle = '#e94560';
-    ctx.fillRect(1150, 10, 40, 30);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('✕', 1170, 31);
+    ctx.fillRect(1120, 10, 70, 45);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('✕', 1155, 40);
     ctx.textAlign = 'start';
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign='center';
     const duelTitle = duelPick===10 ? `多vs多 - 选择我方阵容 (${duelTeamA.length}/${MAX_DUEL_TEAM})` :
@@ -3461,25 +3461,21 @@ function drawCodex() {
     }
     // 画兵种列表（对战中不画）—— 用统一函数getCodexButtonRect，确保与点击坐标严格一致
     if (duelPick === 2) return;
-    const lx = 30;
-    let by2 = 30;
-    const titleH2 = 20;
-    const bw2 = 88, bh2 = 42;
-    const hGap2 = 10, vGap2 = 8, catGap2 = 8;
     let btnIdx2 = 0;
     for (const cat of CODEX) {
-      ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 17px sans-serif';
-      ctx.fillText(cat.cat, lx, by2);
-      by2 += titleH2;
+      const firstRect = getCodexButtonRect(btnIdx2);
+      if (firstRect) {
+        ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 20px sans-serif';
+        ctx.fillText(cat.cat, firstRect.x, firstRect.y - 8);
+      }
       for (let i=0; i<cat.names.length; i++) {
         const rect = getCodexButtonRect(btnIdx2);
         ctx.fillStyle = '#3a3a5a';
         ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-        ctx.fillStyle = '#ddd'; ctx.font='13px sans-serif';
-        ctx.fillText(cat.names[i], rect.x+6, rect.y + rect.h*0.6);
+        ctx.fillStyle = '#ddd'; ctx.font='bold 16px sans-serif';
+        ctx.fillText(cat.names[i], rect.x+8, rect.y + rect.h*0.62);
         btnIdx2++;
       }
-      by2 += 2*(bh2+vGap2) + catGap2;
     }
     return;
   }
@@ -3487,31 +3483,27 @@ function drawCodex() {
   ctx.fillStyle = '#FFD700'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('📖 兵种图鉴', 600, 35);
   ctx.textAlign = 'start';
-  // 右上角关闭按钮
+  // 右上角关闭按钮（放大）
   ctx.fillStyle = '#e94560';
-  ctx.fillRect(1130, 15, 40, 30);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('✕', 1150, 36);
+  ctx.fillRect(1100, 10, 80, 45);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('✕', 1140, 40);
   ctx.textAlign = 'start';
-  // 1v1对战按钮
+  // 1v1对战按钮（放大）
   ctx.fillStyle = '#e67e22';
-  ctx.fillRect(1000, 15, 120, 30);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
-  ctx.fillText(duelMode ? '返回图鉴' : '⚔️ 1v1对战', 1010, 36);
+  ctx.fillRect(950, 10, 140, 45);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif';
+  ctx.fillText(duelMode ? '返回图鉴' : '⚔️ 1v1对战', 960, 38);
 
   // 左半区：4类纵向排列，每类2x2网格按钮（用统一函数计算位置，确保与点击严格一致）
-  const lx = 30;
-  let by = duelMode ? 30 : 70;
-  const titleH = duelMode ? 20 : 26;
-  const bw = duelMode ? 88 : 96, bh = duelMode ? 42 : 51;
-  const hGap = duelMode ? 10 : 16, vGap = duelMode ? 8 : 12;
-  const catGap = duelMode ? 8 : 12;
   let btnIdx = 0;
   for (const cat of CODEX) {
     // 分类标题
-    ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 17px sans-serif';
-    ctx.fillText(cat.cat, lx, by);
-    by += titleH;
+    const firstRect = getCodexButtonRect(btnIdx);
+    if (firstRect) {
+      ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(cat.cat, firstRect.x, firstRect.y - 8);
+    }
     for (let i=0; i<cat.names.length; i++) {
       const rect = getCodexButtonRect(btnIdx);
       if (codexSel === btnIdx) {
@@ -3523,11 +3515,10 @@ function drawCodex() {
         ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
         ctx.fillStyle = '#ddd';
       }
-      ctx.font = '13px sans-serif';
-      ctx.fillText(cat.names[i], rect.x+6, rect.y + rect.h*0.6);
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText(cat.names[i], rect.x+8, rect.y + rect.h*0.62);
       btnIdx++;
     }
-    by += 2 * (bh + vGap) + catGap;
   }
 
   // 右半区：详情（1v1模式不显示）
