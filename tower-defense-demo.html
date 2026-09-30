@@ -2143,12 +2143,15 @@ function render() {
     const b = m.barrack;
     const paths = UPGRADE_PATHS[b.unitType];
     const curLv = b.level || 1;
-    const lvCost = curLv * 100;
+    const baseCost = UNIT_TYPES[b.unitType].cost; // 建造费用为基数
+    const lvCost = Math.round(baseCost * 0.3 * curLv); // 升级费用每级递增30%
     const maxLv = 10;
     const canUpLv = curLv < maxLv && game.gold >= lvCost;
-    // 3级及以上才显示进阶选项，3级以下只显示升级
-    const showPaths = curLv >= 3 && paths;
-    const totalH = (showPaths ? paths.length : 0) * 36 + 70;
+    // 等级限制：Lv.1-3只能升级，Lv.4-6可升可转，Lv.7+必须转换
+    const canUpgrade = curLv <= 6; // 7级以上没有升级选项
+    const canTransform = curLv >= 4 && paths; // 4级以上才能转换
+    const showPaths = canTransform;
+    const totalH = (showPaths ? paths.length : 0) * 36 + (canUpgrade ? 70 : 40);
     const mw=280, mh=totalH*2;
     const mx = Math.min(m.x, 1200-mw-10);
     const my = Math.max(10, m.y-mh/2);
@@ -2159,9 +2162,9 @@ function render() {
     // 标题：兵种名 + 等级
     ctx.fillStyle='#e94560'; ctx.font='bold 14px sans-serif';
     ctx.fillText(`${UNIT_TYPES[b.unitType].name} Lv.${curLv}`, mx+10, my+20);
-    // 等级升级行
+    // 等级升级行（Lv.1-6显示）
     let y = my+30;
-    if (curLv < maxLv) {
+    if (canUpgrade && curLv < maxLv) {
       ctx.fillStyle = canUpLv ? '#FFD700' : '#555';
       ctx.fillRect(mx+5, y, mw-10, 30);
       ctx.fillStyle = canUpLv ? '#000' : '#888';
@@ -2169,18 +2172,22 @@ function render() {
       ctx.fillText(`⬆ 升Lv.${curLv+1} (${lvCost}金) +10%血攻`, mx+12, y+12);
       ctx.font='10px sans-serif'; ctx.fillText(`每级+10%属性/技能`, mx+12, y+25);
       m.lvHit = { x:mx+5, y, w:mw-10, h:30, cost:lvCost };
+    } else if (curLv >= 7) {
+      ctx.fillStyle='#FF6B6B'; ctx.font='12px sans-serif';
+      ctx.fillText('⚠ Lv.7以上必须转换兵种', mx+12, y+12);
+      m.lvHit = null;
     } else {
       ctx.fillStyle='#FFD700'; ctx.font='12px sans-serif';
       ctx.fillText('★ 已满级 Lv.10 ★', mx+12, y+18);
       m.lvHit = null;
     }
     y += 40;
-    // 进阶路线（3级及以上显示）
+    // 进阶路线（Lv.4+显示）
     if (showPaths) {
       paths.forEach((p,i) => {
         const py = y+i*36;
-        // 转换费用 = 高级兵种造价 + 1次升级费用
-        const cost = UNIT_TYPES[p.key].cost + lvCost;
+        // 转职费用 = 建造费用 × 200%
+        const cost = Math.round(baseCost * 2);
         const can = game.gold>=cost;
         ctx.fillStyle = can?'#4CAF50':'#666';
         ctx.fillRect(mx+5, py, mw-10, 30);
@@ -2192,13 +2199,13 @@ function render() {
       });
       m.menuHits = paths.map((p,i) => ({
         x:mx+5, y:y+i*36, w:mw-10, h:30,
-        key:p.key, cost:UNIT_TYPES[p.key].cost + lvCost
+        key:p.key, cost:Math.round(baseCost * 2)
       }));
     } else {
       m.menuHits = [];
-      if (curLv < 3) {
+      if (curLv < 4) {
         ctx.fillStyle='#888'; ctx.font='11px sans-serif';
-        ctx.fillText('Lv.3解锁进阶兵种', mx+12, y+10);
+        ctx.fillText('Lv.4解锁进阶兵种', mx+12, y+10);
       }
     }
   }
