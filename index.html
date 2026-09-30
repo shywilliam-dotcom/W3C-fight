@@ -196,7 +196,7 @@ const UNIT_TYPES = {
     skill1:{k:'poison',v:0.20}, skill2:{k:'backJump',v:200}, desc:'20%毒箭+敌人近身时后跳200并定身目标' },
   mage:     { name:'法师', armor:0, shape:'diamond', size:9, hp:280, atk:16, atkSpeed:0.7, range:135, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:null,
     skill1:{k:'healAlly',v:0.03}, skill2:null, desc:'纯平A+攻击时100%给附近血量最低友方回3%血' },
-  cannon:   { name:'攻城车', armor:2, shape:'square', size:11, hp:600, atk:88, atkSpeed:0.35, range:170, speed:50, cost:260, color:'#F44336', atkType:'siege', armorType:'fort', ult:null,
+  cannon:   { name:'攻城车', armor:0, shape:'square', size:11, hp:600, atk:88, atkSpeed:0.35, range:170, speed:50, cost:260, color:'#F44336', atkType:'siege', armorType:'unarmored', ult:null,
     skill1:{k:'splashRange',v:40}, skill2:{k:'knockback',v:0.10}, desc:'溅射+10%概率击退主要目标' },
 
   // 近战升级（大招=旋风斩）
@@ -224,11 +224,11 @@ const UNIT_TYPES = {
     skill1:{k:'summonSkeleton',v:5}, skill2:{k:'burnStack',v:1}, desc:'每5秒召唤骷髅+dot叠加（后期强）' },
 
   // 攻城车升级（大招=弹幕）
-  rocket:   { name:'火箭炮', armor:1, shape:'square', size:11, hp:350, atk:100, atkSpeed:0.3, range:220, speed:50, cost:260, color:'#DC143C', atkType:'siege', armorType:'fort', ult:'rocketBarrage',
+  rocket:   { name:'火箭炮', armor:0, shape:'square', size:11, hp:350, atk:100, atkSpeed:0.3, range:220, speed:50, cost:260, color:'#DC143C', atkType:'siege', armorType:'unarmored', ult:'rocketBarrage',
     skill1:{k:'splashRange',v:150}, skill2:{k:'splash',v:0.25}, desc:'大范围溅射150+25%概率溅射 | 大招:每3倍攻击间隔发射1枚火箭全屏随机打击1个目标造成120%伤害(不占攻击CD)（中期强）' },
-  tesla:    { name:'特斯拉', armor:1, shape:'square', size:11, hp:360, atk:100, atkSpeed:0.3, range:190, speed:50, cost:260, color:'#00FFFF', atkType:'magic', armorType:'fort', ult:'stunBlast',
+  tesla:    { name:'特斯拉', armor:0, shape:'square', size:11, hp:360, atk:100, atkSpeed:0.3, range:190, speed:50, cost:260, color:'#00FFFF', atkType:'magic', armorType:'unarmored', ult:'stunBlast',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标每单位15%概率晕1秒+电圈50范围20/s | 大招:下3次攻击必晕2秒并丢失目标CD40s（后期强）' },
-  siege:    { name:'攻城炮', shape:'square', size:13, hp:400, atk:100, atkSpeed:0.35, range:170, speed:50, cost:260, color:'#8B0000', atkType:'siege', armorType:'fort', ult:'airSlug',
+  siege:    { name:'攻城炮', armor:3, shape:'square', size:13, hp:400, atk:100, atkSpeed:0.35, range:170, speed:50, cost:260, color:'#8B0000', atkType:'siege', armorType:'heavy', ult:'airSlug',
     skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射 | 大招:下2次攻击200%伤害+击飞+丢失目标CD40s（早期强）' }
 };
 
