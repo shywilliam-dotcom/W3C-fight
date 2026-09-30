@@ -1141,10 +1141,10 @@ function updateUnits(game, dt) {
         const golemMul = Math.pow(1.15, (u.level||1)-1);
         const golemHp = Math.round(360 * golemMul);
         game.units.push({
-          x:u.x + 20*u.dir, y:u.y + (Math.random()-0.5)*20, lane:u.lane, side:u.side, type:'golem',
+          x:u.x + 20*u.dir, y:u.y + (Math.random()-0.5)*20, lane:u.lane, side:u.side, type:'golem', name:'奥术傀儡',
           dir:u.dir, level:u.level||1, atkType:'normal', armorType:'heavy', master:u,
           hp:golemHp, maxHp:golemHp, atk:Math.round(12*golemMul), atkSpeed:1.0, range:15, speed:u.speed, atkTimer:0,
-          dmgReduce:0.5, st:{}
+          dmgReduce:0.5, st:{}, baseArmor:5, flatArmor:5
         });
         u.golemCD = 15;
       }
