@@ -91,7 +91,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v9.03';
+const VERSION = 'v9.04';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const LANE_Y = [130, 360, 590]; // 战场放大15%：三路间距从220→230
 const LANE_NAMES = ['上路','中路','下路'];
@@ -950,82 +950,7 @@ function spawnProj(a,t,c) {
 }
 
 // ============ 更新 =====
-function update(dt) {
-  if (duelAnim && !duelAnim.done) updateDuel(dt);
-  if (game.gameOver) return;
-
-  // AI决策：只有开始后才运行
-  if (game.started) {
-    if (game._watchMode) { aiDecide('my'); aiDecide('enemy'); } // 模拟观战：双方AI
-    else { aiDecide('enemy'); } // 正常模式：只有敌方AI，己方玩家控制
-  }
-
-  // 准备阶段：倒计时，不出兵不交战
-  if (game.prepTime > 0) {
-    game.prepTime -= dt;
-    if (game.prepTime <= 0) game.prepTime = 0;
-    return;
-  }
-
-  game.time += dt;
-
-  // 30秒通告赏金开启
-  if (!game.bountyAnnounced && game.time >= 30) {
-    game.bountyAnnounced = true;
-  }
-
-  game.goldAcc += income()*dt;
-  if (game.goldAcc>=1) { let g=Math.floor(game.goldAcc); game.gold+=g; game.goldAcc-=g; }
-
-  // 羁绊检测（每秒更新一次）
-  game.buffTimer = (game.buffTimer||0) - dt;
-  if (game.buffTimer <= 0) {
-    game.buffTimer = 1;
-    const checkBuff = (side) => {
-      const types = new Set();
-      game.units.forEach(u => { if (u.side===side && u.hp>0) types.add(u.type); });
-      game.barracks.forEach(b => { if (b.side===side && b.alive) types.add(b.unitType); });
-      return {
-        fullRoster: ['melee','archer','mage','cannon'].every(t => types.has(t)),
-        meleeMaster: ['barbarian','paladin','fighter'].every(t => types.has(t)),
-        archerMaster: ['musketeer','ranger','crossbow'].every(t => types.has(t)),
-        mageMaster: ['arcane','ice','fire'].every(t => types.has(t)),
-        siegeMaster: ['siege','rocket','tesla'].every(t => types.has(t)),
-      };
-    };
-    game.myBuffs = checkBuff('my');
-    game.enemyBuffs = checkBuff('enemy');
-  }
-
-  // AI升级：每5秒随机升级一个兵营（需要扣钱）
-  game.aiTimer = (game.aiTimer||5) - dt;
-  if (game.aiTimer <= 0) {
-    game.aiTimer = 5;
-    game.barracks.forEach(b => {
-      if (b.alive && Math.random()<0.3) {
-        const cost = (b.level||1)*100;
-        if (game.gold >= cost) {
-          game.gold -= cost;
-          b.level = Math.min(10, (b.level||1)+1);
-        }
-      }
-    });
-  }
-
-  // 出兵（攻城车类20秒，其他15秒）
-  game.barracks.forEach(b => {
-    if (!b.alive) return;
-    b.spawnTimer -= dt;
-    if (b.spawnTimer<=0) {
-      spawnUnit(b);
-      const isSiege = ['cannon','rocket','tesla','siege'].includes(b.unitType);
-      let interval = isSiege ? 20 : 15;
-      // 羁绊：工程车3种齐全 → 出兵间隔-2秒
-      if (b.side==='my' && game.myBuffs.siegeMaster) interval -= 2;
-      b.spawnTimer = interval;
-    }
-  });
-
+function updateUnits(game, dt) {
   // 单位更新
   game.units.forEach(u => {
     if (u.st.polymorphed>0) u.st.polymorphed-=dt;
@@ -1386,6 +1311,85 @@ function update(dt) {
     }
   });
   game.units = game.units.filter(u=>u.hp>0);
+}
+
+function update(dt) {
+  if (duelAnim && !duelAnim.done) updateDuel(dt);
+  if (game.gameOver) return;
+
+  // AI决策：只有开始后才运行
+  if (game.started) {
+    if (game._watchMode) { aiDecide('my'); aiDecide('enemy'); } // 模拟观战：双方AI
+    else { aiDecide('enemy'); } // 正常模式：只有敌方AI，己方玩家控制
+  }
+
+  // 准备阶段：倒计时，不出兵不交战
+  if (game.prepTime > 0) {
+    game.prepTime -= dt;
+    if (game.prepTime <= 0) game.prepTime = 0;
+    return;
+  }
+
+  game.time += dt;
+
+  // 30秒通告赏金开启
+  if (!game.bountyAnnounced && game.time >= 30) {
+    game.bountyAnnounced = true;
+  }
+
+  game.goldAcc += income()*dt;
+  if (game.goldAcc>=1) { let g=Math.floor(game.goldAcc); game.gold+=g; game.goldAcc-=g; }
+
+  // 羁绊检测（每秒更新一次）
+  game.buffTimer = (game.buffTimer||0) - dt;
+  if (game.buffTimer <= 0) {
+    game.buffTimer = 1;
+    const checkBuff = (side) => {
+      const types = new Set();
+      game.units.forEach(u => { if (u.side===side && u.hp>0) types.add(u.type); });
+      game.barracks.forEach(b => { if (b.side===side && b.alive) types.add(b.unitType); });
+      return {
+        fullRoster: ['melee','archer','mage','cannon'].every(t => types.has(t)),
+        meleeMaster: ['barbarian','paladin','fighter'].every(t => types.has(t)),
+        archerMaster: ['musketeer','ranger','crossbow'].every(t => types.has(t)),
+        mageMaster: ['arcane','ice','fire'].every(t => types.has(t)),
+        siegeMaster: ['siege','rocket','tesla'].every(t => types.has(t)),
+      };
+    };
+    game.myBuffs = checkBuff('my');
+    game.enemyBuffs = checkBuff('enemy');
+  }
+
+  // AI升级：每5秒随机升级一个兵营（需要扣钱）
+  game.aiTimer = (game.aiTimer||5) - dt;
+  if (game.aiTimer <= 0) {
+    game.aiTimer = 5;
+    game.barracks.forEach(b => {
+      if (b.alive && Math.random()<0.3) {
+        const cost = (b.level||1)*100;
+        if (game.gold >= cost) {
+          game.gold -= cost;
+          b.level = Math.min(10, (b.level||1)+1);
+        }
+      }
+    });
+  }
+
+  // 出兵（攻城车类20秒，其他15秒）
+  game.barracks.forEach(b => {
+    if (!b.alive) return;
+    b.spawnTimer -= dt;
+    if (b.spawnTimer<=0) {
+      spawnUnit(b);
+      const isSiege = ['cannon','rocket','tesla','siege'].includes(b.unitType);
+      let interval = isSiege ? 20 : 15;
+      // 羁绊：工程车3种齐全 → 出兵间隔-2秒
+      if (b.side==='my' && game.myBuffs.siegeMaster) interval -= 2;
+      b.spawnTimer = interval;
+    }
+  });
+
+  updateUnits(game, dt);
   // 兵营被摧毁
   game.barracks.forEach(b => { if (b.alive && b.hp<=0) b.alive=false; });
 
@@ -2681,20 +2685,22 @@ let duelGame = null;
 function startDuel(typeA, typeB, lv) {
   lv = lv || 6;
   const defA = UNIT_TYPES[typeA], defB = UNIT_TYPES[typeB];
-  // 创建跟主游戏一样的unit
+  // 创建跟主游戏一样的unit（y=360中路，lane=1）
   const unitA = createDuelUnit(typeA, 'my', lv, 250);
+  unitA.y = 360; unitA.lane = 1; unitA.yOff = 0;
   const unitB = createDuelUnit(typeB, 'enemy', lv, 550);
-  // 虚拟game环境
+  unitB.y = 360; unitB.lane = 1; unitB.yOff = 0;
+  // 虚拟game环境（完整结构，复用主游戏updateUnits）
   duelGame = {
     units: [unitA, unitB],
-    projectiles: [],
-    myBuffs: {},
-    time: 0
+    towers: [], barracks: [], projectiles: [],
+    myBuffs: {}, enemyBuffs: {},
+    gold: 9999, time: 0, _isDuel: true,
+    started: true, prepTime: 0, gameOver: false
   };
   duelAnim = {
     typeA, typeB, level: lv,
     a: unitA, b: unitB,
-    aGolem: null, bGolem: null,
     game: duelGame,
     time: 0, done: false, winner: null,
     logs: [`战斗开始！${defA.name}(Lv${lv}) vs ${defB.name}(Lv${lv})，双方从两端入场！`],
@@ -2718,237 +2724,20 @@ function updateDuel(dt) {
     globalCombatLog = [];
   }
 
-  // 状态衰减
-  a.atkTimer -= dt; b.atkTimer -= dt;
-  a.st.stun = Math.max(0, a.st.stun - dt);
-  b.st.stun = Math.max(0, b.st.stun - dt);
-  a.st.poison = Math.max(0, a.st.poison - dt);
-  b.st.poison = Math.max(0, b.st.poison - dt);
-  a.st.burn = Math.max(0, a.st.burn - dt);
-  b.st.burn = Math.max(0, b.st.burn - dt);
-  a.st.vulnerable = Math.max(0, a.st.vulnerable - dt);
-  b.st.vulnerable = Math.max(0, b.st.vulnerable - dt);
-  a.st.slow = Math.max(0, a.st.slow - dt);
-  b.st.slow = Math.max(0, b.st.slow - dt);
-  // 护甲撕裂恢复
-  if (a.st.armorReduceT && a.st.armorReduceT > 0) {
-    a.st.armorReduceT -= dt;
-    if (a.st.armorReduceT <= 0) a.flatArmor = a.baseArmor || 0;
-  }
-  if (b.st.armorReduceT && b.st.armorReduceT > 0) {
-    b.st.armorReduceT -= dt;
-    if (b.st.armorReduceT <= 0) b.flatArmor = b.baseArmor || 0;
-  }
-  a.st.iceBlock = Math.max(0, a.st.iceBlock - dt);
-  b.st.iceBlock = Math.max(0, b.st.iceBlock - dt);
-  a.holyShieldT = Math.max(0, a.holyShieldT - dt);
-  b.holyShieldT = Math.max(0, b.holyShieldT - dt);
-  a.holyUltCD = Math.max(0, a.holyUltCD - dt);
-  b.holyUltCD = Math.max(0, b.holyUltCD - dt);
-  a.whirlwindCD = Math.max(0, a.whirlwindCD - dt);
-  b.whirlwindCD = Math.max(0, b.whirlwindCD - dt);
-  a.arrowRainWaveTimer = Math.max(0, a.arrowRainWaveTimer - dt);
-  b.arrowRainWaveTimer = Math.max(0, b.arrowRainWaveTimer - dt);
+  // 攻击动画衰减
   d.aAttackAnim = Math.max(0, d.aAttackAnim - dt*3);
   d.bAttackAnim = Math.max(0, d.bAttackAnim - dt*3);
 
-  // 圣骑士被动大招：血量低于15%时触发
-  if (a.ultimate==='holyUlt' && a.hp>0 && a.hp/a.maxHp<0.15 && a.holyUltCD<=0) {
-    a.hp = a.maxHp; a.holyUltCD = 60; a.holyShieldT = 2;
-    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${UNIT_TYPES[d.typeA].name} 被动大招【圣光庇护】！回满血量+减伤60%持续2秒！`);
-  }
-  if (b.ultimate==='holyUlt' && b.hp>0 && b.hp/b.maxHp<0.15 && b.holyUltCD<=0) {
-    b.hp = b.maxHp; b.holyUltCD = 60; b.holyShieldT = 2;
-    d.logs.push(`[${d.time.toFixed(1)}s] ⭐${UNIT_TYPES[d.typeB].name} 被动大招【圣光庇护】！回满血量+减伤60%持续2秒！`);
-  }
-
-  // 毒dot每秒触发（无视护甲）
-  a.poisonTick = (a.poisonTick||0) - dt;
-  b.poisonTick = (b.poisonTick||0) - dt;
-  if (a.st.poison > 0 && a.poisonTick <= 0) {
-    a.poisonTick = 1;
-    const pd = (a.st.poisonDps||0) * (a.st.poisonStacks||1);
-    a.hp -= pd;
-    d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${a.st.poisonStacks||1}层)对${UNIT_TYPES[d.typeA].name}造成${Math.round(pd)}伤害`);
-  }
-  if (b.st.poison > 0 && b.poisonTick <= 0) {
-    b.poisonTick = 1;
-    const pd = (b.st.poisonDps||0) * (b.st.poisonStacks||1);
-    b.hp -= pd;
-    d.logs.push(`[${d.time.toFixed(1)}s] 毒dot(${b.st.poisonStacks||1}层)对${UNIT_TYPES[d.typeB].name}造成${Math.round(pd)}伤害`);
-  }
-
-  // 灼烧dot每秒触发
-  a.burnTick = (a.burnTick||0) - dt;
-  b.burnTick = (b.burnTick||0) - dt;
-  if (a.st.burn > 0 && a.burnTick <= 0) {
-    a.burnTick = 1;
-    const bd = a.st.burnDps || 0;
-    a.hp -= bd;
-    if (bd > 0) d.logs.push(`[${d.time.toFixed(1)}s] 灼烧dot对${UNIT_TYPES[d.typeA].name}造成${Math.round(bd)}伤害`);
-  }
-  if (b.st.burn > 0 && b.burnTick <= 0) {
-    b.burnTick = 1;
-    const bd = b.st.burnDps || 0;
-    b.hp -= bd;
-    if (bd > 0) d.logs.push(`[${d.time.toFixed(1)}s] 灼烧dot对${UNIT_TYPES[d.typeB].name}造成${Math.round(bd)}伤害`);
-  }
-
-  // 旋风斩持续伤害：每0.5秒120%
-  if (a.whirlwindActive > 0) {
-    a.whirlwindActive -= dt;
-    a.whirlwindTick = (a.whirlwindTick||0) - dt;
-    if (a.whirlwindTick <= 0) {
-      a.whirlwindTick = 0.5;
-      const wd = a.atk * 1.2;
-      b.hp -= wd;
-      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeA].name} 旋风斩造成${Math.round(wd)}伤害`);
-    }
-  }
-  if (b.whirlwindActive > 0) {
-    b.whirlwindActive -= dt;
-    b.whirlwindTick = (b.whirlwindTick||0) - dt;
-    if (b.whirlwindTick <= 0) {
-      b.whirlwindTick = 0.5;
-      const wd = b.atk * 1.2;
-      a.hp -= wd;
-      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeB].name} 旋风斩造成${Math.round(wd)}伤害`);
-    }
-  }
-
-  // 箭雨持续伤害：4波每0.5秒120%
-  if (a.arrowRainWaves > 0) {
-    if (a.arrowRainWaveTimer <= 0) {
-      a.arrowRainWaveTimer = 0.5;
-      a.arrowRainWaves--;
-      const wd = a.arrowRainDmg || a.atk * 1.2;
-      b.hp -= wd;
-      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeA].name} 箭雨第${4-a.arrowRainWaves}波，造成${Math.round(wd)}伤害`);
-    }
-  }
-  if (b.arrowRainWaves > 0) {
-    if (b.arrowRainWaveTimer <= 0) {
-      b.arrowRainWaveTimer = 0.5;
-      b.arrowRainWaves--;
-      const wd = b.arrowRainDmg || b.atk * 1.2;
-      a.hp -= wd;
-      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeB].name} 箭雨第${4-b.arrowRainWaves}波，造成${Math.round(wd)}伤害`);
-    }
-  }
-
-  // 移动入场：双方向对方移动，进入射程后停止
-  const dist = Math.abs(b.x - a.x);
-  const aRange = a.range || 15;
-  const bRange = b.range || 15;
-  const aSpd = a.st.slow > 0 ? a.speed*0.5 : a.speed;
-  const bSpd = b.st.slow > 0 ? b.speed*0.5 : b.speed;
-  if (a.hp > 0 && a.st.stun <= 0) {
-    if (dist > aRange) { a.x += aSpd * dt; }
-  }
-  if (b.hp > 0 && b.st.stun <= 0) {
-    if (dist > bRange) { b.x -= bSpd * dt; }
-  }
-
-  // ===== 奥战法召唤傀儡（1v1）=====
-  const summonGolem = (owner, side) => {
-    if (owner.type !== 'arcane' || owner.hp <= 0) return null;
-    if (owner.golemCD === undefined) owner.golemCD = 0;
-    if (owner.golemCD > 0) { owner.golemCD -= dt; return null; }
-    const golemMul = Math.pow(1.15, (owner.level||1)-1);
-    const golemHp = Math.round(360 * golemMul);
-    const dir = side === 'a' ? 1 : -1;
-    return {
-      x: owner.x + 30*dir, y: 320, lane: 1, side: side==='a'?'my':'enemy', type:'golem',
-      dir: dir, level: owner.level||1, atkType:'normal', armorType:'heavy', master:owner,
-      hp:golemHp, maxHp:golemHp, atk:Math.round(24*golemMul), atkSpeed:0.5, range:25, speed:owner.speed, atkTimer:0,
-      dmgReduce:0.5, st:{}, baseArmor:5, flatArmor:5
-    };
-  };
-  // A方召唤
-  if (!d.aGolem || d.aGolem.hp <= 0) {
-    const g = summonGolem(a, 'a');
-    if (g) { d.aGolem = g; a.golemCD = 15; d.logs.push(`[${d.time.toFixed(1)}s] ⭐${UNIT_TYPES[d.typeA].name} 召唤奥术傀儡！HP${g.maxHp} 攻${g.atk}`); }
-  } else if (a.hp <= 0) { d.aGolem.hp = 0; }
-  // B方召唤
-  if (!d.bGolem || d.bGolem.hp <= 0) {
-    const g = summonGolem(b, 'b');
-    if (g) { d.bGolem = g; b.golemCD = 15; d.logs.push(`[${d.time.toFixed(1)}s] ⭐${UNIT_TYPES[d.typeB].name} 召唤奥术傀儡！HP${g.maxHp} 攻${g.atk}`); }
-  } else if (b.hp <= 0) { d.bGolem.hp = 0; }
-
-  // 傀儡移动和攻击
-  const updateGolem = (golem, enemy, enemyGolem, side) => {
-    if (!golem || golem.hp <= 0) return;
-    golem.atkTimer -= dt;
-    // 目标：优先对方主体，其次对方傀儡
-    let target = enemy.hp > 0 ? enemy : (enemyGolem && enemyGolem.hp > 0 ? enemyGolem : null);
-    if (!target) return;
-    const gdist = Math.abs(target.x - golem.x);
-    if (gdist > golem.range) {
-      golem.x += golem.dir * golem.speed * dt;
-    } else if (golem.atkTimer <= 0) {
-      const dmg = Math.max(1, golem.atk - (target.flatArmor||0)*0.5);
-      target.hp -= dmg;
-      golem.atkTimer = 1 / golem.atkSpeed;
-      const tName = target === enemy ? UNIT_TYPES[side==='a'?d.typeB:d.typeA].name : '奥术傀儡';
-      d.logs.push(`[${d.time.toFixed(1)}s] 奥术傀儡(${side==='a'?UNIT_TYPES[d.typeA].name:UNIT_TYPES[d.typeB].name}的) 攻击 ${tName}，造成${Math.round(dmg)}伤害`);
-    }
-  };
-  updateGolem(d.aGolem, b, d.bGolem, 'a');
-  updateGolem(d.bGolem, a, d.aGolem, 'b');
-
-  // 攻速计算（复用主游戏逻辑）
-  const calcAtkSpd = (u) => {
-    let spd = u.atkSpeed;
-    if (u.berserk) { const hpPct = u.hp/u.maxHp; spd = u.atkSpeed * (1 + (1-hpPct)*0.6); }
-    if (u.rampageCD && u.rampageCD>0) { spd *= 1.7; u.rampageCD -= dt; }
-    if (u.st.vulnerable>0) spd *= 0.8;
-    if (u.st.slow>0) spd *= 0.8;
-    if (u.focusFire>0 && u.focusStacks>0) spd *= (1 + Math.min(3.0, u.focusStacks * u.focusFire));
-    return spd;
-  };
-
-  // A攻击（复用主游戏doAttack）
-  if (a.atkTimer <= 0 && a.hp > 0 && a.st.stun <= 0 && dist <= aRange && a.whirlwindActive<=0 && a.arrowRainWaves<=0) {
-    const beforeHp = b.hp;
-    const beforeLogs = d.logs.length;
-    // 临时把game指向duelGame，让doAttack能工作
-    const oldGame = game;
-    game = d.game;
-    doAttack(a, b, UNIT_TYPES[d.typeA]);
-    game = oldGame;
-    d.aAttackAnim = 1;
-    const aSpd = calcAtkSpd(a);
-    a.atkTimer = 1 / aSpd;
-    // 记录伤害日志
-    if (b.hp < beforeHp) {
-      const dmg = beforeHp - b.hp;
-      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeA].name} 攻击 ${UNIT_TYPES[d.typeB].name}，造成${Math.round(dmg)}伤害`);
-    }
-  }
-
-  // B攻击（复用主游戏doAttack）
-  if (b.atkTimer <= 0 && b.hp > 0 && b.st.stun <= 0 && dist <= bRange && b.whirlwindActive<=0 && b.arrowRainWaves<=0) {
-    const beforeHp = a.hp;
-    const oldGame = game;
-    game = d.game;
-    doAttack(b, a, UNIT_TYPES[d.typeB]);
-    game = oldGame;
-    d.bAttackAnim = 1;
-    const bSpd = calcAtkSpd(b);
-    b.atkTimer = 1 / bSpd;
-    if (a.hp < beforeHp) {
-      const dmg = beforeHp - a.hp;
-      d.logs.push(`[${d.time.toFixed(1)}s] ${UNIT_TYPES[d.typeB].name} 攻击 ${UNIT_TYPES[d.typeA].name}，造成${Math.round(dmg)}伤害`);
-    }
-  }
+  // ===== 核心：复用主游戏的单位更新逻辑（移动/攻击/技能/召唤物/dot全部一致）=====
+  updateUnits(d.game, dt);
 
   // 胜负判定
   if (a.hp <= 0 || b.hp <= 0 || d.time > 120) {
     d.done = true;
     d.winner = a.hp <= 0 && b.hp <= 0 ? '平局' : a.hp > b.hp ? UNIT_TYPES[d.typeA].name : UNIT_TYPES[d.typeB].name;
     d.logs.push(`战斗结束！胜者：${d.winner}，用时${d.time.toFixed(1)}秒`);
-    duelLogAutoScroll = false; // 战斗结束后停止自动滚动，允许用户回看首行
-    duelLogScroll = 0; // 重置到顶部，显示首行
+    duelLogAutoScroll = false;
+    duelLogScroll = 0;
   }
 }
 
@@ -3109,20 +2898,24 @@ function drawCodex() {
       ctx.fillStyle='#4CAF50'; ctx.fillRect(ax-50, 230, 100*Math.max(0,d.a.hp/d.a.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.a.hp))}/${d.a.maxHp}`, ax, 240);
-      // A方傀儡
-      if (d.aGolem && d.aGolem.hp > 0) {
-        const gx = d.aGolem.x;
-        const gImg = spriteImgs['golem'];
+      // A方召唤物（傀儡/骷髅）- 从duelGame.units读取
+      d.game.units.forEach(u => {
+        if (u.side !== 'my' || u.hp <= 0) return;
+        if (u.type !== 'golem' && u.type !== 'skeleton') return;
+        const gx = u.x;
+        const gKey = typeToSprite[u.type] || u.type;
+        const gImg = spriteImgs[gKey];
         if (gImg && gImg.complete && gImg.naturalWidth > 0) {
           ctx.save(); ctx.translate(gx, 320); ctx.scale(-2, 2); ctx.drawImage(gImg, -12, -20, 24, 32); ctx.restore();
         } else {
-          ctx.fillStyle='#8B4513'; ctx.beginPath(); ctx.arc(gx, 300, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 308, 20, 20);
+          ctx.fillStyle = u.type==='golem'?'#8B4513':'#EEE'; ctx.beginPath(); ctx.arc(gx, 300, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 308, 20, 20);
         }
+        const gName = u.type==='golem'?'傀儡':'骷髅';
         ctx.fillStyle='#4CAF50'; ctx.font='10px sans-serif'; ctx.textAlign='center';
-        ctx.fillText('傀儡', gx, 270);
+        ctx.fillText(gName, gx, 270);
         ctx.fillStyle='#333'; ctx.fillRect(gx-25, 275, 50, 6);
-        ctx.fillStyle='#4CAF50'; ctx.fillRect(gx-25, 275, 50*Math.max(0,d.aGolem.hp/d.aGolem.maxHp), 6);
-      }
+        ctx.fillStyle='#4CAF50'; ctx.fillRect(gx-25, 275, 50*Math.max(0,u.hp/u.maxHp), 6);
+      });
       // B单位（右）- 真实x坐标
       const bx = d.b.x - d.bAttackAnim*15;
       const bSKey = typeToSprite[d.typeB];
@@ -3147,20 +2940,24 @@ function drawCodex() {
       ctx.fillStyle='#F44336'; ctx.fillRect(bx-50, 380, 100*Math.max(0,d.b.hp/d.b.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
       ctx.fillText(`${Math.max(0,Math.round(d.b.hp))}/${d.b.maxHp}`, bx, 390);
-      // B方傀儡
-      if (d.bGolem && d.bGolem.hp > 0) {
-        const gx = d.bGolem.x;
-        const gImg = spriteImgs['golem'];
+      // B方召唤物（傀儡/骷髅）- 从duelGame.units读取
+      d.game.units.forEach(u => {
+        if (u.side !== 'enemy' || u.hp <= 0) return;
+        if (u.type !== 'golem' && u.type !== 'skeleton') return;
+        const gx = u.x;
+        const gKey = typeToSprite[u.type] || u.type;
+        const gImg = spriteImgs[gKey];
         if (gImg && gImg.complete && gImg.naturalWidth > 0) {
           ctx.save(); ctx.translate(gx, 320); ctx.scale(2, 2); ctx.drawImage(gImg, -12, -20, 24, 32); ctx.restore();
         } else {
-          ctx.fillStyle='#8B4513'; ctx.beginPath(); ctx.arc(gx, 300, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 308, 20, 20);
+          ctx.fillStyle = u.type==='golem'?'#8B4513':'#EEE'; ctx.beginPath(); ctx.arc(gx, 300, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 308, 20, 20);
         }
+        const gName = u.type==='golem'?'傀儡':'骷髅';
         ctx.fillStyle='#F44336'; ctx.font='10px sans-serif'; ctx.textAlign='center';
-        ctx.fillText('傀儡', gx, 420);
+        ctx.fillText(gName, gx, 420);
         ctx.fillStyle='#333'; ctx.fillRect(gx-25, 410, 50, 6);
-        ctx.fillStyle='#F44336'; ctx.fillRect(gx-25, 410, 50*Math.max(0,d.bGolem.hp/d.bGolem.maxHp), 6);
-      }
+        ctx.fillStyle='#F44336'; ctx.fillRect(gx-25, 410, 50*Math.max(0,u.hp/u.maxHp), 6);
+      });
       // 攻击特效：用真实坐标
       if (d.aAttackAnim > 0.3) {
         const prog = 1 - d.aAttackAnim;
