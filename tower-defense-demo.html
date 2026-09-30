@@ -1256,7 +1256,7 @@ function updateUnits(game, dt) {
         u.atkTimer = Math.min(u.atkTimer, 0.3);
       }
       // 换目标后需要等；持续大招期间不能普攻
-      if (u.targetSwitchTimer<=0 && u.atkTimer<=0 && u.whirlwindActive<=0 && (u.arrowRainWaves||0)<=0) {
+      if (u.targetSwitchTimer<=0 && u.atkTimer<=0 && (u.whirlwindActive||0)<=0 && (u.arrowRainWaves||0)<=0) {
         // 火法dot叠加：连续攻击同一目标时，burn层数+1
         if (u.burnStack && bestT.st) {
           bestT.st.burnStacks = (bestT.st.burnStacks||0) + 1;
