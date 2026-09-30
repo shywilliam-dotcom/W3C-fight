@@ -2279,9 +2279,9 @@ function render() {
 
   // 统一信息栏（底部贴边）
   ctx.fillStyle='rgba(0,0,0,0.85)';
-  ctx.fillRect(200, 600, 680, 120);
+  ctx.fillRect(200, 600, 540, 120);
   ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  ctx.strokeRect(200, 600, 680, 120);
+  ctx.strokeRect(200, 600, 540, 120);
 
   // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
@@ -2293,7 +2293,7 @@ function render() {
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
-    const pw = 680, ph = 130;
+    const pw = 540, ph = 130;
     const px = 200, py = 590;
     ctx.fillStyle='rgba(0,0,0,0.9)';
     ctx.fillRect(px, py, pw, ph);
@@ -2315,7 +2315,7 @@ function render() {
 
     // 右侧信息区 - 紧凑多列布局
     const tx = px + aw + 14;
-    const col1 = tx, col2 = tx+180, col3 = tx+360, col4 = tx+520;
+    const col1 = tx, col2 = tx+140, col3 = tx+280, col4 = tx+400;
     const lineH = 15;
 
     // 标题行
@@ -2488,7 +2488,7 @@ function render() {
   });
 
   // 右下角小地图（220x132）
-  const mmW = 286, mmH = 172, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
   const mmScaleX = mmW / WORLD_W, mmScaleY = mmH / WORLD_H;
   ctx.fillStyle = 'rgba(0,0,0,0.8)';
   ctx.fillRect(mmX, mmY, mmW, mmH);
@@ -2587,7 +2587,7 @@ canvas.addEventListener('wheel', e => {
 
 canvas.addEventListener('click', e => {
   if (game.gameOver) return;
-  if (dragMoved) { dragMoved = false; return; } // 拖拽后不触发点击
+  if (dragMoved || mmDragging) { dragMoved = false; mmDragging = false; return; } // 拖拽后不触发点击
   const rect = canvas.getBoundingClientRect();
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
   let cx, cy;
@@ -2601,7 +2601,7 @@ canvas.addEventListener('click', e => {
   }
 
   // 小地图点击跳转
-  const mmW = 286, mmH = 172, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
@@ -2884,10 +2884,17 @@ canvas.addEventListener('mousedown', e => {
   } else {
     cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
   }
-  // 只在战场区域拖拽（排除UI按钮和小地图）
-  const mmW = 286, mmH = 172, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  // 小地图点击/拖拽
+  const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
+    mmDragging = true;
+    const wx = (cx - mmX) / mmW * WORLD_W;
+    const wy = (cy - mmY) / mmH * WORLD_H;
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
+    return;
+  }
   const inUI = (cx >= 10 && cx <= 155 && cy >= 620 && cy <= 685) || // 左下角按钮
-               (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) || // 小地图
                (cx >= 200 && cy >= 600); // 底部信息栏
   if (!inUI && cy < 600) {
     isDragging = true; dragStartX = cx; dragStartY = cy;
@@ -2895,6 +2902,22 @@ canvas.addEventListener('mousedown', e => {
   }
 });
 canvas.addEventListener('mousemove', e => {
+  if (mmDragging) {
+    const rect = canvas.getBoundingClientRect();
+    const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
+    let cx, cy;
+    if (window.innerWidth < window.innerHeight) {
+      cx = dy / rect.height * 1200; cy = (rect.width - dx) / rect.width * 720;
+    } else {
+      cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
+    }
+    const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+    const wx = (cx - mmX) / mmW * WORLD_W;
+    const wy = (cy - mmY) / mmH * WORLD_H;
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
+    return;
+  }
   if (!isDragging) return;
   const rect = canvas.getBoundingClientRect();
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
@@ -2909,8 +2932,8 @@ canvas.addEventListener('mousemove', e => {
   viewX = Math.max(0, Math.min(WORLD_W - 1200, dragViewX - ddx));
   viewY = Math.max(0, Math.min(WORLD_H - 720, dragViewY - ddy));
 });
-canvas.addEventListener('mouseup', () => { isDragging = false; });
-canvas.addEventListener('mouseleave', () => { isDragging = false; });
+canvas.addEventListener('mouseup', () => { isDragging = false; mmDragging = false; });
+canvas.addEventListener('mouseleave', () => { isDragging = false; mmDragging = false; });
 
 // Touch事件支持（手机拖拽）
 function getTouchPos(e) {
@@ -2923,13 +2946,22 @@ function getTouchPos(e) {
     return { cx: dx / rect.width * 1200, cy: dy / rect.height * 720 };
   }
 }
+let mmDragging = false; // 小地图滑动中
 canvas.addEventListener('touchstart', e => {
   if (codexOpen || game.gameOver) return;
   e.preventDefault();
   const {cx, cy} = getTouchPos(e);
-  const mmW = 286, mmH = 172, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  // 小地图触摸：启动滑动跟随
+  if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
+    mmDragging = true;
+    const wx = (cx - mmX) / mmW * WORLD_W;
+    const wy = (cy - mmY) / mmH * WORLD_H;
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
+    return;
+  }
   const inUI = (cx >= 10 && cx <= 155 && cy >= 620 && cy <= 685) ||
-               (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) ||
                (cx >= 200 && cy >= 600);
   if (!inUI && cy < 600) {
     isDragging = true; dragStartX = cx; dragStartY = cy;
@@ -2937,9 +2969,18 @@ canvas.addEventListener('touchstart', e => {
   }
 }, {passive: false});
 canvas.addEventListener('touchmove', e => {
-  if (!isDragging) return;
   e.preventDefault();
   const {cx, cy} = getTouchPos(e);
+  // 小地图滑动跟随
+  if (mmDragging) {
+    const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+    const wx = (cx - mmX) / mmW * WORLD_W;
+    const wy = (cy - mmY) / mmH * WORLD_H;
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
+    return;
+  }
+  if (!isDragging) return;
   const ddx = cx - dragStartX, ddy = cy - dragStartY;
   if (Math.abs(ddx) > 3 || Math.abs(ddy) > 3) dragMoved = true;
   viewX = Math.max(0, Math.min(WORLD_W - 1200, dragViewX - ddx));
@@ -2948,6 +2989,7 @@ canvas.addEventListener('touchmove', e => {
 canvas.addEventListener('touchend', e => {
   e.preventDefault();
   isDragging = false;
+  mmDragging = false;
 }, {passive: false});
 
 // 按钮
