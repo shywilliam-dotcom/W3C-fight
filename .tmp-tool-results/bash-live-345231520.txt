@@ -1,5 +1,0 @@
-SyntaxError: Illegal continue statement: no surrounding iteration statement
-    at Object.<anonymous> (/home/user/Doubao/chats/38444220314495490/verify.js:31:13)
-    at Module._compile (node:internal/modules/cjs/loader:1781:14)
-    at Object..js (node:internal/modules/cjs/loader:1913:10)
-    at Module.load (node:internal/modules/cjs/loader:1505:32)

@@ -1082,7 +1082,7 @@ function updateUnits(game, dt) {
       if (u.skeletonTimer<=0) {
         u.skeletonTimer = u.summonSkeleton;
         const skelCount = game.units.filter(o => o.side===u.side && o.type==='skeleton' && o.master===u).length;
-        if (skelCount >= 3) continue;
+        if (skelCount >= 3) return;
         const skelMul = Math.pow(1.15, (u.level||1)-1);
         const skelHp = Math.round(100 * skelMul);
         game.units.push({
@@ -1225,7 +1225,7 @@ function updateUnits(game, dt) {
       if (u.golemCD>0) u.golemCD-=dt;
       else {
         const golemExists = game.units.some(o => o.side===u.side && o.type==='golem' && o.master===u);
-        if (golemExists) { u.golemCD = 1; continue; }
+        if (golemExists) { u.golemCD = 1; return; }
         const golemMul = Math.pow(1.15, (u.level||1)-1);
         const golemHp = Math.round(360 * golemMul);
         game.units.push({
