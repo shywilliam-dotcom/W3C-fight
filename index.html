@@ -2523,10 +2523,10 @@ canvas.addEventListener('click', e => {
       duelMode = !duelMode; duelPick = 0; duelA = null; duelB = null; duelResult = null;
       render(); return;
     }
-    if (duelAnim && duelAnim.done && cx >= 260 && cx <= 420 && cy >= 335 && cy <= 375) {
+    if (duelAnim && duelAnim.done && cx >= 200 && cx <= 380 && cy >= 645 && cy <= 685) {
       startDuel(duelA, duelB, duelLv); render(); return;
     }
-    if (duelAnim && duelAnim.done && cx >= 440 && cx <= 600 && cy >= 335 && cy <= 375) {
+    if (duelAnim && duelAnim.done && cx >= 460 && cx <= 640 && cy >= 645 && cy <= 685) {
       duelAnim = null; duelPick = 0; duelA = null; duelB = null; render(); return;
     }
     // 点击日志区域：回到底部并恢复自动滚动
@@ -3118,19 +3118,18 @@ function drawCodex() {
           ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py-arch, 8, 0, Math.PI*2); ctx.fill();
         }
       }
-      // 结果
+      // 结果（底部显示，不遮挡战斗画面）
       if (d.done) {
-        ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(220, 250, 400, 150);
-        ctx.fillStyle='#FFD700'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
-        ctx.fillText(`胜者: ${d.winner}`, 420, 290);
-        ctx.fillStyle='#fff'; ctx.font='14px sans-serif';
-        ctx.fillText(`用时: ${d.time.toFixed(1)}秒`, 420, 315);
-        ctx.fillStyle='#4CAF50'; ctx.fillRect(260, 335, 160, 40);
+        ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(120, 600, 600, 100);
+        ctx.strokeStyle='#FFD700'; ctx.strokeRect(120, 600, 600, 100);
+        ctx.fillStyle='#FFD700'; ctx.font='bold 20px sans-serif'; ctx.textAlign='center';
+        ctx.fillText(`胜者: ${d.winner}  |  用时: ${d.time.toFixed(1)}秒`, 420, 630);
+        ctx.fillStyle='#4CAF50'; ctx.fillRect(200, 645, 180, 40);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
-        ctx.fillText('再模拟一场', 340, 360);
-        ctx.fillStyle='#FF9800'; ctx.fillRect(440, 335, 160, 40);
+        ctx.fillText('再模拟一场', 290, 670);
+        ctx.fillStyle='#FF9800'; ctx.fillRect(460, 645, 180, 40);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
-        ctx.fillText('重选兵种', 520, 360);
+        ctx.fillText('重选兵种', 550, 670);
       }
       ctx.textAlign='start';
       // 日志面板（右边1/4全屏）
