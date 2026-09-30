@@ -650,7 +650,12 @@ function doAttack(att, tgt, def) {
       tgt.st.vulnerable=3;
     }
     // 圣骑士：10%概率击晕1秒
-    if (att.strikeStun>0 && Math.random()<att.strikeStun) tgt.st.stun=1;
+    if (att.strikeStun>0 && Math.random()<att.strikeStun) {
+      tgt.st.stun=1;
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+      pushCombatLog(`💫${attName} 击晕 ${tgtName}1秒！`);
+    }
     // 攻城车：10%概率击退主要目标
     if (att.knockback>0 && Math.random()<att.knockback) tgt.x += att.dir * 25;
   }
