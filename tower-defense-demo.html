@@ -570,14 +570,24 @@ function doAttack(att, tgt, def) {
   if (att.side==='my' && game.myBuffs.fullRoster) dmg *= 1.15;
   // 死亡光环：悲壮 → 攻击+30%
   if (att.atkBuff && att.atkBuffT>0) dmg *= (1 + att.atkBuff);
-  if (att.crit && Math.random()<att.crit) dmg*=2;
+  if (att.crit && Math.random()<att.crit) {
+    dmg*=2;
+    att._isCrit = true;
+  } else { att._isCrit = false; }
   if (att.holyStrike && Math.random()<att.holyStrike) dmg*=1.5;
   if (att.instantKill && Math.random()<att.instantKill && tgt.type!==undefined) {
-    tgt.hp = 0; spawnProj(att,tgt,'#FFD700'); return;
+    tgt.hp = 0; spawnProj(att,tgt,'#FFD700');
+    const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+    const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+    pushCombatLog(`💀${attName} 即死秒杀了 ${tgtName}！`);
+    return;
   }
   // 斩杀：目标血量<5%时直接击杀
   if (att.execute && tgt.type!==undefined && tgt.hp < tgt.maxHp*att.execute) {
     tgt.hp = 0; spawnProj(att,tgt,'#FF4500');
+    const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+    const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+    pushCombatLog(`⚔️${attName} 斩杀了 ${tgtName}！回血+攻+攻速`);
     // 狂战：回10%血，攻+10%，攻速+70%持续3秒
     if (att.hp>0) {
       att.hp = Math.min(att.maxHp, att.hp + att.maxHp*0.1);
@@ -605,6 +615,8 @@ function doAttack(att, tgt, def) {
     } else {
       // 触发了连击，保底清零
       att.doubleStrikeBonus = 0;
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      pushCombatLog(`🔗${attName} 触发连锁连击！${strikes}连击`);
     }
   }
   // 破甲弩手专注射击：同一目标每次攻击（含连击）叠加攻速，换目标清零
@@ -644,13 +656,21 @@ function doAttack(att, tgt, def) {
     if (att.burnDps>0) { tgt.st.burn=3; tgt.st.burnDps=att.burnDps; }
     // 攻城车通用dot：灼烧5/s持续3秒
     if (att.atkType==='siege') { tgt.st.burn=3; tgt.st.burnDps=Math.max(tgt.st.burnDps||0, 5); }
-    if (att.poison>0 && Math.random()<att.poison) { tgt.st.poison=3; tgt.st.poisonDps=att.poisonDps; tgt.st.poisonStacks=Math.min(4,(tgt.st.poisonStacks||0)+1); }
+    if (att.poison>0 && Math.random()<att.poison) {
+      tgt.st.poison=3; tgt.st.poisonDps=att.poisonDps; tgt.st.poisonStacks=Math.min(4,(tgt.st.poisonStacks||0)+1);
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+      pushCombatLog(`☠️${attName} 对 ${tgtName} 施加剧毒！(${tgt.st.poisonStacks}层)`);
+    }
     // 特斯拉昏迷
     if (att.stun>0 && Math.random()<att.stun) tgt.st.stun=1.5;
     // 冰法易伤debuff：对已有易伤目标再次施加时额外50%伤害
     if (att.vulnerable>0 && Math.random()<att.vulnerable) {
       if (tgt.st.vulnerable>0) {
         applyDmg(att, tgt, att.atk*0.5, def); // 额外50%攻击伤害
+        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+        const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+        pushCombatLog(`💔${attName} 对已有易伤的 ${tgtName} 造成额外50%伤害！`);
       }
       tgt.st.vulnerable=3;
     }
@@ -662,19 +682,34 @@ function doAttack(att, tgt, def) {
       pushCombatLog(`💫${attName} 击晕 ${tgtName}1秒！`);
     }
     // 攻城车：10%概率击退主要目标
-    if (att.knockback>0 && Math.random()<att.knockback) tgt.x += att.dir * 25;
+    if (att.knockback>0 && Math.random()<att.knockback) {
+      tgt.x += att.dir * 25;
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+      pushCombatLog(`💨${attName} 击退了 ${tgtName}！`);
+    }
   }
   if (att.splash && Math.random()<att.splash) {
+    let splashHit = 0;
     game.units.forEach(o => {
       if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
-          Math.abs(o.x-tgt.x)<50) applyDmg(att,o,dmg*0.5,def);
+          Math.abs(o.x-tgt.x)<50) { applyDmg(att,o,dmg*0.5,def); splashHit++; }
     });
+    if (splashHit>0) {
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      pushCombatLog(`💥${attName} 溅射命中${splashHit}个目标！`);
+    }
   }
   if (att.splashRange>0 && tgt.type!==undefined) {
+    let splashHit = 0;
     game.units.forEach(o => {
       if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
-          Math.abs(o.x-tgt.x)<att.splashRange) applyDmg(att,o,dmg*0.6,def);
+          Math.abs(o.x-tgt.x)<att.splashRange) { applyDmg(att,o,dmg*0.6,def); splashHit++; }
     });
+    if (splashHit>0) {
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      pushCombatLog(`🌊${attName} 大范围溅射命中${splashHit}个目标！`);
+    }
   }
   if (att.aoe>0 && tgt.type!==undefined) {
     let hit=0;
@@ -688,6 +723,7 @@ function doAttack(att, tgt, def) {
   if (att.chainLightning>0 && tgt.type!==undefined) {
     let hit=[tgt];
     let cur=tgt;
+    let chainCount = 0;
     for(let i=1;i<att.chainLightning;i++){
       let next=null,nd=Infinity;
       game.units.forEach(o=>{
@@ -701,7 +737,11 @@ function doAttack(att, tgt, def) {
       game.projectiles.push({x:cur.x,y:cur.y,tx:next.x,ty:next.y,p:0,color:'#B388FF',style:'bolt',startX:cur.x,startY:cur.y});
       // 连锁闪电每目标15%概率眩晕
       if (att.stun>0 && Math.random()<att.stun) next.st.stun=1.5;
-      hit.push(next); cur=next;
+      hit.push(next); cur=next; chainCount++;
+    }
+    if (chainCount>0) {
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      pushCombatLog(`⚡${attName} 连锁闪电跳跃${chainCount}次！`);
     }
   }
   // 法师回血：攻击时100%给附近血量最低友方回3%血
@@ -713,7 +753,12 @@ function doAttack(att, tgt, def) {
         if (pct < lowestPct) { lowestPct = pct; lowest = o; }
       }
     });
-    if (lowest) lowest.hp = Math.min(lowest.maxHp, lowest.hp + lowest.maxHp * att.healAlly);
+    if (lowest) {
+      lowest.hp = Math.min(lowest.maxHp, lowest.hp + lowest.maxHp * att.healAlly);
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      const tgtName = UNIT_TYPES[lowest.type] ? UNIT_TYPES[lowest.type].name : (lowest.name||'单位');
+      pushCombatLog(`💚${attName} 治疗了 ${tgtName}，恢复${Math.round(lowest.maxHp*att.healAlly)}血`);
+    }
   }
   // 6级大招（攻击时释放，占用1次攻击）
   let ultUsed = false;
@@ -888,15 +933,25 @@ function applyDmg(att, tgt, dmg, def) {
   } else {
     if (tgt.st.iceBlock>0) return;
     // 野蛮人格挡弓手类攻击（穿刺攻击）
-    if (tgt.parryArcher && att.atkType==='pierce' && Math.random()<tgt.parryArcher) return;
+    if (tgt.parryArcher && att.atkType==='pierce' && Math.random()<tgt.parryArcher) {
+      const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      pushCombatLog(`🛡️${tgtName} 招架了 ${attName} 的穿刺攻击！`);
+      return;
+    }
     // 眩晕时无法闪避
     if (tgt.dodge && tgt.st.stun<=0 && Math.random()<tgt.dodge) {
+      const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
       // 闪避反击：格斗家闪避后立刻反击，每秒最多一次
       if (tgt.dodgeCounter && att.hp>0 && (!tgt.counterCD || tgt.counterCD<=0)) {
         let counterDmg = tgt.atk * 1.0;
         att.hp -= counterDmg;
         tgt.counterCD = 1;
         spawnProj(tgt, att, '#FF6B9D');
+        pushCombatLog(`👊${tgtName} 闪避了 ${attName} 的攻击并反击！造成${Math.round(counterDmg)}伤害`);
+      } else {
+        pushCombatLog(`💨${tgtName} 闪避了 ${attName} 的攻击！`);
       }
       // 格斗家大招：躲闪时50%概率无敌1秒+周围120范围100%伤害
       if (tgt.ultimate==='dodgeUlt' && (!tgt.dodgeUltCD || tgt.dodgeUltCD<=0) && Math.random()<0.5) {
@@ -906,6 +961,7 @@ function applyDmg(att, tgt, dmg, def) {
               Math.abs(o.x-tgt.x)<120) applyDmg(tgt,o,tgt.atk,def);
         });
         tgt.dodgeUltCD = 15;
+        pushCombatLog(`⚡${tgtName} 触发一闪！无敌1秒+范围伤害`);
       }
       return;
     }
@@ -925,7 +981,11 @@ function applyDmg(att, tgt, dmg, def) {
     if (tgt.type && att.type && fd > 0) {
       const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
       const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
-      pushCombatLog(`${attName} 攻击 ${tgtName}，造成${Math.round(fd)}伤害`);
+      if (att._isCrit) {
+        pushCombatLog(`💥暴击！${attName} 攻击 ${tgtName}，造成${Math.round(fd)}伤害`);
+      } else {
+        pushCombatLog(`${attName} 攻击 ${tgtName}，造成${Math.round(fd)}伤害`);
+      }
     }
     // 羁绊：刀盾3种齐全 → 全体反弹10%直接伤害
     if (tgt.side==='my' && game.myBuffs.meleeMaster && att.hp>0 && fd>0) {
@@ -1010,7 +1070,11 @@ function updateUnits(game, dt) {
     // 圣骑士低血爆发回血：血量<50%时CD10秒回50%血
     if (u.holyHeal) {
       if (u.holyHealCD>0) u.holyHealCD-=dt;
-      else if (u.hp < u.maxHp*0.5) { u.hp = Math.min(u.maxHp, u.hp + u.maxHp*0.25); u.holyHealCD=15; }
+      else if (u.hp < u.maxHp*0.5) {
+        u.hp = Math.min(u.maxHp, u.hp + u.maxHp*0.25); u.holyHealCD=15;
+        const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+        pushCombatLog(`✨${uName} 触发圣光回血！恢复25%生命`);
+      }
     }
     // 暗火法：每5秒召唤小骷髅，血量随法师等级成长
     if (u.summonSkeleton>0) {
@@ -1018,7 +1082,7 @@ function updateUnits(game, dt) {
       if (u.skeletonTimer<=0) {
         u.skeletonTimer = u.summonSkeleton;
         const skelCount = game.units.filter(o => o.side===u.side && o.type==='skeleton' && o.master===u).length;
-        if (skelCount >= 3) return;
+        if (skelCount >= 3) continue;
         const skelMul = Math.pow(1.15, (u.level||1)-1);
         const skelHp = Math.round(100 * skelMul);
         game.units.push({
@@ -1027,6 +1091,8 @@ function updateUnits(game, dt) {
           hp:skelHp, maxHp:skelHp, atk:Math.round(4*skelMul), atkSpeed:1.0, range:15, speed:60, atkTimer:0,
           currentTarget:null, targetSwitchTimer:0, firstAttackDone:true, st:{}
         });
+        const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+        pushCombatLog(`💀${uName} 召唤了小骷髅！(${skelCount+1}/3)`);
       }
     }
     // 换目标计时
@@ -1038,6 +1104,8 @@ function updateUnits(game, dt) {
       u.hp = u.maxHp;
       u.holyUltCD = 60;
       u.holyShieldT = 2; // 减伤60%持续2秒
+      const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+      pushCombatLog(`🛡️${uName} 触发圣光庇护！回满血+减伤60%持续2秒`);
     }
     if (u.holyShieldT>0) u.holyShieldT-=dt;
     if (u.dodgeUltCD>0) u.dodgeUltCD-=dt;
@@ -1090,6 +1158,9 @@ function updateUnits(game, dt) {
         u.x -= u.dir * 200; // 后跳
         if (nearest.st) nearest.st.stun = 1.5; // 定身
         u.backJumpCD = 8;
+        const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+        const tName = UNIT_TYPES[nearest.type] ? UNIT_TYPES[nearest.type].name : (nearest.name||'单位');
+        pushCombatLog(`🦘${uName} 后跳躲避！定身 ${tName} 1.5秒`);
       }
     }
     // 法师回血：攻击时给附近血量最低友方回3%血（在攻击逻辑里触发，这里不做）
@@ -1105,6 +1176,8 @@ function updateUnits(game, dt) {
         // 直接冲到敌人面前
         u.x = nearest.x - 50 * u.dir;
         u.chargeCD = 5;
+        const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+        pushCombatLog(`💨${uName} 瞬影步冲锋！`);
       }
     }
     if (u.chargeCD>0) u.chargeCD-=dt;
@@ -1114,6 +1187,8 @@ function updateUnits(game, dt) {
       u.x = u.side==='my' ? 100 : 1100;
       u.hp = Math.max(u.hp, u.maxHp*0.20);
       u.arcaneBlinkCD = 60;
+      const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+      pushCombatLog(`✨${uName} 触发奥术闪现！无敌传送回基地+回20%血`);
     }
     // 火箭炮大招：每20秒发射1枚火箭，全屏随机打击1个目标，造成120%伤害，不占攻击CD
     if (u.type==='rocket' && u.hp>0) {
@@ -1160,6 +1235,8 @@ function updateUnits(game, dt) {
           dmgReduce:0.5, st:{}, baseArmor:5, flatArmor:5
         });
         u.golemCD = u.summonGolem;
+        const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+        pushCombatLog(`🗿${uName} 召唤了奥术傀儡！(生命${golemHp}/攻击${Math.round(24*golemMul)})`);
       }
     }
     // 奥法群体护盾：CD15秒，给周围5个单位加30%血护盾
@@ -1176,6 +1253,10 @@ function updateUnits(game, dt) {
           }
         });
         u.shieldCD = 15;
+        if (count>0) {
+          const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+          pushCombatLog(`🛡️${uName} 释放群体护盾！${count}个单位获得${shieldAmount}点护盾`);
+        }
       }
     }
     // 冰法友方护盾：CD3秒，给1个友方加15%减伤护盾
@@ -1192,6 +1273,9 @@ function updateUnits(game, dt) {
         if (target) {
           target.dmgReduce = Math.max(target.dmgReduce||0, u.shieldAlly);
           u.shieldAllyCD = 3;
+          const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+          const tName = UNIT_TYPES[target.type] ? UNIT_TYPES[target.type].name : (target.name||'单位');
+          pushCombatLog(`❄️${uName} 给 ${tName} 加上冰霜护盾！减伤${Math.round(u.shieldAlly*100)}%`);
         }
       }
     }
