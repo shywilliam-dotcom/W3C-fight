@@ -2640,13 +2640,13 @@ canvas.addEventListener('click', e => {
     if (duelMode) {
       // 多vs多选兵模式（duelPick=10选我方，11选敌方，12等级选择）
       if (duelPick === 10 || duelPick === 11) {
-        // 完成选兵按钮（底部右侧）
-        if (cx >= 950 && cx <= 1170 && cy >= 545 && cy <= 605) {
+        // 完成选兵按钮（最底部右侧）
+        if (cx >= 950 && cx <= 1170 && cy >= 650 && cy <= 700) {
           if (duelPick === 10 && duelTeamA.length > 0) { duelPick = 11; render(); return; }
           if (duelPick === 11 && duelTeamB.length > 0) { duelPick = 12; duelLv = 6; render(); return; }
         }
-        // 清空阵容按钮（底部）
-        if (cx >= 780 && cx <= 930 && cy >= 545 && cy <= 605) {
+        // 清空阵容按钮（最底部）
+        if (cx >= 780 && cx <= 930 && cy >= 650 && cy <= 700) {
           if (duelPick === 10) duelTeamA = [];
           else duelTeamB = [];
           render(); return;
@@ -3174,34 +3174,55 @@ function drawCodex() {
                       duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '1v1对战';
     ctx.fillText(duelTitle, 420, 35);
     ctx.textAlign='start';
-    // 多vs多选兵界面：显示已选阵容（底部，不遮挡兵种按钮）
+    // 多vs多选兵界面：显示已选阵容（最底部，不遮挡兵种按钮）
     if (duelPick === 10 || duelPick === 11) {
       const team = duelPick === 10 ? duelTeamA : duelTeamB;
       const teamColor = duelPick === 10 ? '#4FC3F7' : '#EF5350';
-      // 阵容显示框（底部）
-      ctx.fillStyle = '#1a1a2e'; ctx.fillRect(30, 540, 720, 70);
-      ctx.strokeStyle = teamColor; ctx.lineWidth = 2; ctx.strokeRect(30, 540, 720, 70);
-      ctx.fillStyle = teamColor; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText(duelPick === 10 ? '我方阵容：' : '敌方阵容：', 45, 565);
+      // 阵容显示框（最底部y=645，高度60，不遮挡攻城类按钮）
+      ctx.fillStyle = '#1a1a2e'; ctx.fillRect(30, 645, 720, 60);
+      ctx.strokeStyle = teamColor; ctx.lineWidth = 2; ctx.strokeRect(30, 645, 720, 60);
+      ctx.fillStyle = teamColor; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(duelPick === 10 ? '我方阵容：' : '敌方阵容：', 45, 668);
       team.forEach((t, i) => {
-        ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif';
-        ctx.fillText(`${i+1}.${UNIT_TYPES[t].name}`, 45 + (i%3)*230, 590 + Math.floor(i/3)*20);
+        ctx.fillStyle = '#fff'; ctx.font = '13px sans-serif';
+        ctx.fillText(`${i+1}.${UNIT_TYPES[t].name}`, 45 + (i%3)*230, 690 + Math.floor(i/3)*18);
       });
       if (team.length === 0) {
-        ctx.fillStyle = '#888'; ctx.font = '14px sans-serif';
-        ctx.fillText('点击上方兵种加入阵容，最多5个', 45, 590);
+        ctx.fillStyle = '#888'; ctx.font = '13px sans-serif';
+        ctx.fillText('点击上方兵种加入阵容，最多5个', 45, 690);
       }
       ctx.lineWidth = 1;
       // 清空按钮
-      ctx.fillStyle = '#666'; ctx.fillRect(780, 545, 150, 60);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('清空阵容', 855, 582);
+      ctx.fillStyle = '#666'; ctx.fillRect(780, 650, 150, 50);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('清空阵容', 855, 682);
       // 完成按钮
       ctx.fillStyle = team.length > 0 ? '#4CAF50' : '#444';
-      ctx.fillRect(950, 545, 220, 60);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 18px sans-serif';
-      ctx.fillText(duelPick === 10 ? '完成选择 →' : '开始对战 →', 1060, 582);
+      ctx.fillRect(950, 650, 220, 50);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 17px sans-serif';
+      ctx.fillText(duelPick === 10 ? '完成选择 →' : '开始对战 →', 1060, 682);
       ctx.textAlign = 'start';
+    }
+    // 1v1等级选择（选完第二个兵种后显示）
+    if (duelPick===2 && !duelAnim) {
+      ctx.fillStyle='#3a3a5a'; ctx.fillRect(300, 80, 600, 400);
+      ctx.strokeStyle='#888'; ctx.strokeRect(300, 80, 600, 400);
+      ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(`选择等级: ${duelLv}级`, 600, 140);
+      ctx.font='14px sans-serif';
+      ctx.fillText(`我方：${UNIT_TYPES[duelA].name}`, 600, 175);
+      ctx.fillText(`敌方：${UNIT_TYPES[duelB].name}`, 600, 200);
+      for (let i=1; i<=10; i++) {
+        const bx = 340 + (i-1)*56;
+        ctx.fillStyle = i===duelLv ? '#4CAF50' : '#666';
+        ctx.fillRect(bx, 240, 48, 40);
+        ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
+        ctx.fillText(i, bx+24, 265);
+      }
+      ctx.fillStyle='#FF9800'; ctx.fillRect(450, 330, 300, 50);
+      ctx.fillStyle='#fff'; ctx.font='bold 20px sans-serif';
+      ctx.fillText('开始对战', 600, 362);
+      ctx.textAlign='start';
     }
     // 多vs多等级选择
     if (duelPick===12 && !duelAnim) {
