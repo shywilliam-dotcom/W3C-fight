@@ -1,0 +1,4 @@
+JS syntax OK
+✓ render OK
+
+=== 全部通过 ===

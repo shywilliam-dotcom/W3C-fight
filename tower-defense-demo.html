@@ -3249,8 +3249,8 @@ function drawCodex() {
       const d = duelAnim;
       const isMulti = d.isMulti;
       // 战场背景（左边3/4全屏）
-      ctx.fillStyle='#3a3a5a'; ctx.fillRect(0, 0, 840, 720);
-      ctx.strokeStyle='#888'; ctx.strokeRect(0, 0, 840, 720);
+      ctx.fillStyle='#3a3a5a'; ctx.fillRect(0, 0, 820, 720);
+      ctx.strokeStyle='#888'; ctx.strokeRect(0, 0, 820, 720);
       // 多vs多：渲染所有单位
       if (isMulti) {
         const flipTypes = ['mage','ice','arcane','fire','musketeer','melee','barbarian','archer','cannon','siege','rocket','tesla'];
@@ -3438,7 +3438,7 @@ function drawCodex() {
         ctx.textAlign='start';
       }
       // 日志面板（右边1/4全屏，1v1和多vs多共用）
-      const logX = 840, logY = 0, logW = 360, logH = 720;
+      const logX = 820, logY = 0, logW = 380, logH = 720;
       ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(logX, logY, logW, logH);
       ctx.strokeStyle='#888'; ctx.strokeRect(logX, logY, logW, logH);
       ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
@@ -3447,10 +3447,10 @@ function drawCodex() {
       d.logs.forEach(log => {
         const logObj = typeof log === 'string' ? {time:'', msg:log, side:'neutral'} : log;
         let s = logObj.time ? `[${logObj.time}s] ${logObj.msg}` : logObj.msg;
-        while (s.length > 26) { allLines.push({text:s.slice(0,26), side:logObj.side}); s = s.slice(26); }
+        while (s.length > 32) { allLines.push({text:s.slice(0,32), side:logObj.side}); s = s.slice(32); }
         allLines.push({text:s, side:logObj.side});
       });
-      const lineH = 16;
+      const lineH = 15;
       const contentH = allLines.length * lineH;
       const visibleTop = logY + 30;
       const visibleH = logH - 50;
@@ -3469,7 +3469,7 @@ function drawCodex() {
         else if (line.side === 'enemy') ctx.fillStyle = '#EF5350';
         else if (line.text.includes('⭐') || line.text.includes('大招') || line.text.includes('释放')) ctx.fillStyle = '#FFD700';
         else ctx.fillStyle = '#CCC';
-        ctx.font='13px monospace';
+        ctx.font='12px monospace';
         ctx.fillText(line.text, logX+8, ly);
       });
       ctx.restore();
