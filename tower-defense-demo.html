@@ -2144,7 +2144,7 @@ function render() {
     const paths = UPGRADE_PATHS[b.unitType];
     const curLv = b.level || 1;
     const baseCost = UNIT_TYPES[b.unitType].cost; // 建造费用为基数
-    const lvCost = Math.round(baseCost * 0.3 * curLv); // 升级费用每级递增30%
+    const lvCost = Math.round(baseCost * (1 + 0.3 * (curLv - 1))); // 升级费用每级递增30%：1升2=130%，2升3=160%...
     const maxLv = 10;
     const canUpLv = curLv < maxLv && game.gold >= lvCost;
     // 等级限制：Lv.1-3只能升级，Lv.4-6可升可转，Lv.7+必须转换
