@@ -190,7 +190,7 @@ const ATK_MUL = {
 // 每个兵种：skill1 + skill2（随等级+10%/级），ult（6级大招）
 // ult: whirlwind(近战系) / piercing(弓手系) / blizzard(法师系) / barrage(攻城系)
 const UNIT_TYPES = {
-  melee:    { name:'刀盾手', armor:4, shape:'circle', size:10, hp:600, atk:10, atkSpeed:1.0, range:15, speed:60, cost:60, color:'#4CAF50', atkType:'melee', armorType:'heavy', ult:null,
+  melee:    { name:'刀盾手', armor:4, shape:'circle', size:10, hp:600, atk:10, atkSpeed:1.0, range:15, speed:60, cost:90, color:'#4CAF50', atkType:'melee', armorType:'heavy', ult:null,
     skill1:{k:'reflectPierce',v:0.20}, skill2:{k:'reflectMagic',v:10}, skill3:{k:'doubleAttack',v:0.15}, desc:'反射20%穿刺+反射魔法(CD10s)+15%攻击2次' },
   archer:   { name:'弓手', armor:2, shape:'triangle', size:9, hp:240, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:null,
     skill1:{k:'poison',v:0.20}, skill2:{k:'backJump',v:200}, desc:'20%毒箭+敌人近身时后跳200并定身目标' },
@@ -201,9 +201,9 @@ const UNIT_TYPES = {
 
   // 近战升级（大招=旋风斩）
   barbarian:{ name:'斧头野蛮人', armor:3, shape:'circle', size:13, hp:500, atk:18, atkSpeed:0.9, range:15, speed:60, cost:90, color:'#8B4513', atkType:'melee', armorType:'heavy', ult:'whirlwind',
-    skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, skill3:{k:'parryArcher',v:0.30}, desc:'群伤2目标+斩杀5%血+30%招架弓手+斩杀后回10%血攻+10% | 大招旋风斩:每秒120%攻击范围伤害持续3秒CD60s（早期强）' },
+    skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, skill3:{k:'parryArcher',v:0.30}, desc:'群伤2目标+斩杀5%血+30%招架弓手+斩杀后回10%血攻+10% | 大招旋风斩:每秒120%攻击范围伤害持续6秒CD60s（早期强）' },
   paladin:  { name:'圣骑士', armor:8, shape:'circle', size:11, hp:400, atk:12, atkSpeed:1.0, range:15, speed:60, cost:90, color:'#FFD700', atkType:'melee', armorType:'heavy', ult:'holyUlt',
-    skill1:{k:'holyHeal',v:1}, skill2:null, skill3:{k:'strikeStun',v:0.10}, desc:'低血回血25%CD15s+高护甲+10%攻击晕1秒 | 大招回血100%CD60s（中期强）' },
+    skill1:{k:'holyHeal',v:1}, skill2:null, skill3:{k:'strikeStun',v:0.10}, desc:'低血回血25%CD15s+高护甲+10%攻击晕1秒+大招CD中死亡给最低血友方回满血 | 大招回血100%CD60s（中期强）' },
   fighter:  { name:'格斗家', armor:1, shape:'circle', size:10, hp:400, atk:20, atkSpeed:1.3, range:15, speed:80, cost:90, color:'#FF6B9D', atkType:'melee', armorType:'medium', ult:'dodgeUlt',
     skill1:{k:'dodge',v:0.15}, skill2:{k:'charge',v:200}, desc:'15%闪避+瞬影步冲锋CD5s | 大招躲闪后无敌2秒+周围120范围100%伤害CD25s（后期强）' },
 
@@ -802,14 +802,14 @@ function doAttack(att, tgt, def) {
   // 6级大招（攻击时释放，占用1次攻击）
   let ultUsed = false;
   if (att.ultimate && tgt.type!==undefined) {
-    // 旋风斩（野蛮人）：CD60秒，持续3秒，每秒120%伤害范围80
+    // 旋风斩（野蛮人）：CD60秒，持续6秒，每秒120%伤害范围80
     if (att.ultimate==='whirlwind') {
       if (!att.whirlwindCD || att.whirlwindCD<=0) {
-        att.whirlwindActive = 3; // 持续3秒
+        att.whirlwindActive = 6; // 持续6秒
         att.whirlwindCD = 60;
         ultUsed = true;
         const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
-        pushCombatLog(`🌀${attName} 释放旋风斩！持续3秒范围伤害`);
+        pushCombatLog(`🌀${attName} 释放旋风斩！持续6秒范围伤害`);
       }
     }
     // 圣骑士大招：被动，血量低于15%时触发，回血100%+减伤60%持续2秒（60秒CD）
@@ -1474,6 +1474,19 @@ function updateUnits(game, dt) {
         // 坚强：80范围友方护盾，吸收工程车生命20%伤害，15秒
         const shieldVal = u.maxHp * 0.2;
         allies.forEach(o => { o.shield = (o.shield||0) + shieldVal; o.shieldT = 15; });
+      }
+    }
+    // 圣骑士死亡技能：如果大招在CD，被击杀时给附近血量最低友方回满血
+    if (u.hp<=0 && !u.paladinDeathHeal && u.type==='paladin' && u.holyUltCD && u.holyUltCD>0) {
+      u.paladinDeathHeal = true;
+      const allies = game.units.filter(o => o.side===u.side && o.hp>0 && o.lane===u.lane && Math.abs(o.x-u.x)<150);
+      if (allies.length>0) {
+        allies.sort((a,b) => (a.hp/a.maxHp) - (b.hp/b.maxHp));
+        const target = allies[0];
+        target.hp = target.maxHp;
+        const palName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+        const tgtName = UNIT_TYPES[target.type] ? UNIT_TYPES[target.type].name : (target.name||'单位');
+        pushCombatLog(`✨${palName} 牺牲！圣光降临，${tgtName} 回满血！`);
       }
     }
   });
