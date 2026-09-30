@@ -217,7 +217,7 @@ const UNIT_TYPES = {
 
   // 法师升级（大招=暴风雪）
   arcane:   { name:'奥法', armor:2, shape:'diamond', size:9, hp:200, atk:18, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#FF00FF', atkType:'magic', armorType:'medium', ult:'arcaneBlink',
-    skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.40}, desc:'10%变羊(目标不可攻击3秒四处游走)+群体护盾40%血（初期强）' },
+    skill1:{k:'polymorph',v:0.10}, skill2:{k:'shieldWall',v:0.40}, skill3:{k:'summonGolem',v:15}, desc:'10%变羊+群体护盾40%血+召唤傀儡(CD15s) | 大招濒死传送回基地回20%血CD60s（初期强）' },
   ice:      { name:'冰法', armor:0, shape:'diamond', size:10, hp:250, atk:10, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#00BFFF', atkType:'magic', armorType:'unarmored', ult:'blizzardNova',
     skill1:{k:'shieldAlly',v:0.15}, skill2:{k:'vulnerable',v:0.33}, desc:'友方冰霜护盾减伤15%+近战攻击者减速20%攻速降20%+33%概率易伤（中期强）' },
   fire:     { name:'暗火法', armor:0, shape:'diamond', size:9, hp:200, atk:15, atkSpeed:0.6, range:135, speed:65, cost:135, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:'fireBlast',
@@ -1136,13 +1136,13 @@ function updateUnits(game, dt) {
         }
       });
     }
-    // 奥法召唤傀儡：CD15秒，血量随法师等级成长
-    if (u.type==='arcane') {
+    // 召唤傀儡：CD由skill配置，血量随法师等级成长
+    if (u.summonGolem>0) {
       if (u.golemCD===undefined) u.golemCD=0;
       if (u.golemCD>0) u.golemCD-=dt;
       else {
         const golemExists = game.units.some(o => o.side===u.side && o.type==='golem' && o.master===u);
-        if (golemExists) return;
+        if (golemExists) { u.golemCD = 1; continue; }
         const golemMul = Math.pow(1.15, (u.level||1)-1);
         const golemHp = Math.round(360 * golemMul);
         game.units.push({
@@ -1151,7 +1151,7 @@ function updateUnits(game, dt) {
           hp:golemHp, maxHp:golemHp, atk:Math.round(24*golemMul), atkSpeed:0.5, range:25, speed:u.speed, atkTimer:0,
           dmgReduce:0.5, st:{}, baseArmor:5, flatArmor:5
         });
-        u.golemCD = 15;
+        u.golemCD = u.summonGolem;
       }
     }
     // 奥法群体护盾：CD15秒，给周围5个单位加30%血护盾
