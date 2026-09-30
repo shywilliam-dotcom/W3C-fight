@@ -1,6 +1,0 @@
-Serving HTTP on 0.0.0.0 port 8899 (http://0.0.0.0:8899/) ...
-127.0.0.1 - - [27/Sep/2026 17:37:25] "GET /tower-defense-demo.html HTTP/1.1" 200 -
-127.0.0.1 - - [27/Sep/2026 17:37:25] "GET /tower-defense-demo.html HTTP/1.1" 200 -
-200127.0.0.1 - - [27/Sep/2026 17:37:25] code 404, message File not found
-127.0.0.1 - - [27/Sep/2026 17:37:25] "GET /favicon.ico HTTP/1.1" 404 -
-127.0.0.1 - - [27/Sep/2026 17:38:46] "GET /tower-defense-demo.html HTTP/1.1" 200 -
