@@ -2477,12 +2477,13 @@ function render() {
   // 模拟菜单
   if (game.simOpen) {
     ctx.fillStyle='rgba(0,0,0,0.9)';
-    ctx.fillRect(870, 500, 280, 80);
+    ctx.fillRect(870, 500, 280, 110);
     ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2;
-    ctx.strokeRect(870, 500, 280, 80);
+    ctx.strokeRect(870, 500, 280, 110);
     ctx.fillStyle='#9C27B0'; ctx.font='bold 14px sans-serif';
     ctx.fillText('1v1对战模拟', 890, 530);
-    ctx.fillStyle='#2196F3'; ctx.fillText('对局模拟（AI互打）', 890, 560);
+    ctx.fillStyle='#FF9800'; ctx.fillText('多vs多模拟', 890, 560);
+    ctx.fillStyle='#2196F3'; ctx.fillText('对局模拟（AI互打）', 890, 590);
   }
   // 设置菜单
   if (game.settingsOpen) {
@@ -2584,8 +2585,9 @@ canvas.addEventListener('click', e => {
   }
   // 模拟菜单点击
   if (game.simOpen) {
-    if (cx >= 870 && cx <= 1150 && cy >= 515 && cy <= 545) { game.simOpen=false; showCodex(); duelMode=true; duelPick=0; duelA=null; duelB=null; duelAnim=null; render(); return; }
-    if (cx >= 870 && cx <= 1150 && cy >= 545 && cy <= 575) { game.simOpen=false; startSimulation(1); return; }
+    if (cx >= 870 && cx <= 1150 && cy >= 515 && cy <= 545) { game.simOpen=false; showCodex(); duelMode=true; duelPick=0; duelA=null; duelB=null; duelAnim=null; duelTeamA=[]; duelTeamB=[]; render(); return; }
+    if (cx >= 870 && cx <= 1150 && cy >= 545 && cy <= 575) { game.simOpen=false; showCodex(); duelMode=true; duelPick=10; duelTeamA=[]; duelTeamB=[]; duelAnim=null; render(); return; }
+    if (cx >= 870 && cx <= 1150 && cy >= 575 && cy <= 605) { game.simOpen=false; startSimulation(1); return; }
   }
 
   // 兵营用屏幕坐标，战场内容需要反算缩放
@@ -2604,10 +2606,12 @@ canvas.addEventListener('click', e => {
       render(); return;
     }
     if (duelAnim && duelAnim.done && cx >= 200 && cx <= 380 && cy >= 645 && cy <= 685) {
-      startDuel(duelA, duelB, duelLv); render(); return;
+      if (duelAnim.isMulti) startDuelMulti(duelTeamA, duelTeamB, duelLv);
+      else startDuel(duelA, duelB, duelLv);
+      render(); return;
     }
     if (duelAnim && duelAnim.done && cx >= 460 && cx <= 640 && cy >= 645 && cy <= 685) {
-      duelAnim = null; duelPick = 0; duelA = null; duelB = null; render(); return;
+      duelAnim = null; duelPick = 0; duelA = null; duelB = null; duelTeamA = []; duelTeamB = []; render(); return;
     }
     // 点击日志区域：回到底部并恢复自动滚动
     if (duelAnim && cx >= 840 && cx <= 1200 && cy >= 0 && cy <= 720) {
@@ -2615,17 +2619,52 @@ canvas.addEventListener('click', e => {
       duelLogScroll = 0;
       render(); return;
     }
-    if (duelMode && duelPick===2 && !duelAnim) {
-      // 等级选择
-      for (let i=1; i<=10; i++) {
-        const bx = 200 + (i-1)*80;
-        if (cx >= bx && cx <= bx+60 && cy >= 250 && cy <= 290) { duelLv = i; render(); return; }
-      }
-      // 开始按钮
-      if (cx >= 450 && cx <= 750 && cy >= 350 && cy <= 400) { startDuel(duelA, duelB, duelLv); render(); return; }
-      return;
-    }
     if (duelMode) {
+      // 多vs多选兵模式（duelPick=10选我方，11选敌方，12等级选择）
+      if (duelPick === 10 || duelPick === 11) {
+        // 完成选兵按钮
+        if (cx >= 950 && cx <= 1150 && cy >= 650 && cy <= 690) {
+          if (duelPick === 10 && duelTeamA.length > 0) { duelPick = 11; render(); return; }
+          if (duelPick === 11 && duelTeamB.length > 0) { duelPick = 12; duelLv = 6; render(); return; }
+        }
+        // 清空阵容
+        if (cx >= 800 && cx <= 940 && cy >= 650 && cy <= 690) {
+          if (duelPick === 10) duelTeamA = [];
+          else duelTeamB = [];
+          render(); return;
+        }
+        // 点兵种加入阵容
+        for (let i=0; i<16; i++) {
+          const rect = getCodexButtonRect(i);
+          if (cx >= rect.x && cx <= rect.x+rect.w && cy >= rect.y && cy <= rect.y+rect.h) {
+            const team = duelPick === 10 ? duelTeamA : duelTeamB;
+            if (team.length < MAX_DUEL_TEAM) {
+              team.push(rect.type);
+              render(); return;
+            }
+          }
+        }
+        return;
+      }
+      // 多vs多等级选择和开始
+      if (duelPick === 12 && !duelAnim) {
+        for (let i=1; i<=10; i++) {
+          const bx = 200 + (i-1)*80;
+          if (cx >= bx && cx <= bx+60 && cy >= 250 && cy <= 290) { duelLv = i; render(); return; }
+        }
+        if (cx >= 450 && cx <= 750 && cy >= 350 && cy <= 400) { startDuelMulti(duelTeamA, duelTeamB, duelLv); render(); return; }
+        return;
+      }
+      // 1v1等级选择
+      if (duelPick===2 && !duelAnim) {
+        for (let i=1; i<=10; i++) {
+          const bx = 200 + (i-1)*80;
+          if (cx >= bx && cx <= bx+60 && cy >= 250 && cy <= 290) { duelLv = i; render(); return; }
+        }
+        if (cx >= 450 && cx <= 750 && cy >= 350 && cy <= 400) { startDuel(duelA, duelB, duelLv); render(); return; }
+        return;
+      }
+      // 1v1选兵
       for (let i=0; i<16; i++) {
         const rect = getCodexButtonRect(i);
         if (cx >= rect.x && cx <= rect.x+rect.w && cy >= rect.y && cy <= rect.y+rect.h) {
@@ -2779,6 +2818,8 @@ document.getElementById('speed-btn').addEventListener('click', () => {
 // ===== 图鉴 =====
 let codexOpen = false, codexSel = 0;
 let duelMode = false, duelPick = 0, duelA = null, duelB = null, duelLv = 6;
+let duelTeamA = [], duelTeamB = []; // 多vs多阵容
+const MAX_DUEL_TEAM = 5; // 每方最多5个单位
 let duelAnim = null; // {a:{hp,maxHp,cd,anim}, b:{...}, time, done}
 let globalCombatLog = []; // 全局战斗日志，doAttack写入，1v1读取
 let currentLogSide = 'neutral'; // 当前日志所属阵营，doAttack/updateUnits自动设置
@@ -2917,6 +2958,50 @@ function startDuel(typeA, typeB, lv) {
   globalCombatLog = [];
 }
 
+// 多vs多模拟：双方各最多5个单位，y坐标错开
+function startDuelMulti(teamA, teamB, lv) {
+  lv = lv || 6;
+  const units = [];
+  const centerY = 360;
+  const spacing = 55; // 单位间距
+  // 我方单位从左侧入场，y坐标错开
+  teamA.forEach((type, i) => {
+    const y = centerY + (i - (teamA.length-1)/2) * spacing;
+    const u = createDuelUnit(type, 'my', lv, 100);
+    u.y = y; u.lane = 1; u.yOff = 0;
+    units.push(u);
+  });
+  // 敌方单位从右侧入场，y坐标错开
+  teamB.forEach((type, i) => {
+    const y = centerY + (i - (teamB.length-1)/2) * spacing;
+    const u = createDuelUnit(type, 'enemy', lv, 740);
+    u.y = y; u.lane = 1; u.yOff = 0;
+    units.push(u);
+  });
+  // 虚拟game环境
+  duelGame = {
+    units: units,
+    towers: [], barracks: [], projectiles: [],
+    myBuffs: {}, enemyBuffs: {},
+    gold: 9999, time: 0, _isDuel: true,
+    started: true, prepTime: 0, gameOver: false
+  };
+  const namesA = teamA.map(t => UNIT_TYPES[t].name).join('+');
+  const namesB = teamB.map(t => UNIT_TYPES[t].name).join('+');
+  duelAnim = {
+    typeA: teamA[0], typeB: teamB[0], level: lv,
+    a: units[0], b: units[teamA.length], // 兼容旧代码
+    teamA: teamA, teamB: teamB, isMulti: true,
+    game: duelGame,
+    time: 0, done: false, winner: null,
+    logs: [`战斗开始！[${namesA}](Lv${lv}) vs [${namesB}](Lv${lv})，双方从两端入场！`],
+    aAttackAnim: 0, bAttackAnim: 0
+  };
+  duelLogScroll = 0;
+  duelLogAutoScroll = true;
+  globalCombatLog = [];
+}
+
 function updateDuel(dt) {
   if (!duelAnim || duelAnim.done) return;
   const d = duelAnim;
@@ -2938,12 +3023,28 @@ function updateDuel(dt) {
   updateUnits(d.game, dt);
 
   // 胜负判定
-  if (a.hp <= 0 || b.hp <= 0 || d.time > 120) {
-    d.done = true;
-    d.winner = a.hp <= 0 && b.hp <= 0 ? '平局' : a.hp > b.hp ? UNIT_TYPES[d.typeA].name : UNIT_TYPES[d.typeB].name;
-    d.logs.push(`战斗结束！胜者：${d.winner}，用时${d.time.toFixed(1)}秒`);
-    duelLogAutoScroll = false;
-    duelLogScroll = 0;
+  if (d.isMulti) {
+    // 多vs多：一方全灭或超时
+    const myAlive = d.game.units.filter(u => u.side==='my' && u.hp>0).length;
+    const enemyAlive = d.game.units.filter(u => u.side==='enemy' && u.hp>0).length;
+    if (myAlive===0 || enemyAlive===0 || d.time > 180) {
+      d.done = true;
+      if (myAlive>0 && enemyAlive===0) d.winner = '我方';
+      else if (enemyAlive>0 && myAlive===0) d.winner = '敌方';
+      else d.winner = myAlive>enemyAlive ? '我方' : (enemyAlive>myAlive ? '敌方' : '平局');
+      d.logs.push(`战斗结束！胜者：${d.winner}，用时${d.time.toFixed(1)}秒`);
+      duelLogAutoScroll = false;
+      duelLogScroll = 0;
+    }
+  } else {
+    // 1v1
+    if (a.hp <= 0 || b.hp <= 0 || d.time > 120) {
+      d.done = true;
+      d.winner = a.hp <= 0 && b.hp <= 0 ? '平局' : a.hp > b.hp ? UNIT_TYPES[d.typeA].name : UNIT_TYPES[d.typeB].name;
+      d.logs.push(`战斗结束！胜者：${d.winner}，用时${d.time.toFixed(1)}秒`);
+      duelLogAutoScroll = false;
+      duelLogScroll = 0;
+    }
   }
 }
 
@@ -3049,17 +3150,48 @@ function drawCodex() {
     ctx.fillText('✕', 1170, 31);
     ctx.textAlign = 'start';
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '1v1对战', 420, 35);
+    const duelTitle = duelPick===10 ? `多vs多 - 选择我方阵容 (${duelTeamA.length}/${MAX_DUEL_TEAM})` :
+                      duelPick===11 ? `多vs多 - 选择敌方阵容 (${duelTeamB.length}/${MAX_DUEL_TEAM})` :
+                      duelPick===12 ? '多vs多对战' :
+                      duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '1v1对战';
+    ctx.fillText(duelTitle, 420, 35);
     ctx.textAlign='start';
-    if (duelPick===2 && !duelAnim) {
-      // 等级选择界面
+    // 多vs多选兵界面：显示已选阵容
+    if (duelPick === 10 || duelPick === 11) {
+      const team = duelPick === 10 ? duelTeamA : duelTeamB;
+      const teamColor = duelPick === 10 ? '#4FC3F7' : '#EF5350';
+      ctx.fillStyle = '#1a1a2e'; ctx.fillRect(60, 80, 680, 80);
+      ctx.strokeStyle = teamColor; ctx.strokeRect(60, 80, 680, 80);
+      ctx.fillStyle = teamColor; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(duelPick === 10 ? '我方阵容：' : '敌方阵容：', 75, 105);
+      team.forEach((t, i) => {
+        ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif';
+        ctx.fillText(`${i+1}.${UNIT_TYPES[t].name}`, 75 + i*120, 135);
+      });
+      if (team.length === 0) {
+        ctx.fillStyle = '#888'; ctx.font = '14px sans-serif';
+        ctx.fillText('点击下方兵种加入阵容', 75, 135);
+      }
+      // 清空按钮
+      ctx.fillStyle = '#666'; ctx.fillRect(800, 650, 140, 40);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('清空阵容', 870, 675);
+      // 完成按钮
+      ctx.fillStyle = team.length > 0 ? '#4CAF50' : '#444';
+      ctx.fillRect(950, 650, 200, 40);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif';
+      ctx.fillText(duelPick === 10 ? '完成选择 →' : '开始对战 →', 1050, 675);
+      ctx.textAlign = 'start';
+    }
+    // 多vs多等级选择
+    if (duelPick===12 && !duelAnim) {
       ctx.fillStyle='#3a3a5a'; ctx.fillRect(60, 80, 680, 450);
       ctx.strokeStyle='#888'; ctx.strokeRect(60, 80, 680, 450);
       ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
       ctx.fillText(`选择等级: ${duelLv}级`, 600, 150);
-      ctx.font='16px sans-serif';
-      ctx.fillText(`${duelA} vs ${duelB}`, 600, 190);
-      // 等级按钮
+      ctx.font='14px sans-serif';
+      ctx.fillText(`我方：${duelTeamA.map(t=>UNIT_TYPES[t].name).join('+')}`, 600, 185);
+      ctx.fillText(`敌方：${duelTeamB.map(t=>UNIT_TYPES[t].name).join('+')}`, 600, 210);
       for (let i=1; i<=10; i++) {
         const bx = 200 + (i-1)*80;
         ctx.fillStyle = i===duelLv ? '#4CAF50' : '#666';
@@ -3067,7 +3199,6 @@ function drawCodex() {
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
         ctx.fillText(i, bx+30, 275);
       }
-      // 开始按钮
       ctx.fillStyle='#FF9800'; ctx.fillRect(450, 350, 300, 50);
       ctx.fillStyle='#fff'; ctx.font='bold 20px sans-serif';
       ctx.fillText('开始对战', 600, 382);
