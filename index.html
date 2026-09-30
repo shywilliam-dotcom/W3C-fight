@@ -1268,6 +1268,9 @@ function updateUnits(game, dt) {
         if (allTargets.length>0) {
           const target = allTargets[Math.floor(Math.random()*allTargets.length)];
           const rocketDmg = u.atk * 1.2;
+          const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+          const tgtName = target.type ? (UNIT_TYPES[target.type] ? UNIT_TYPES[target.type].name : (target.name||'目标')) : (target.name||'目标');
+          pushCombatLog(`🚀${uName} 发射火箭突袭！命中 ${tgtName}，造成${Math.round(rocketDmg)}伤害`);
           applyDmg(u, target, rocketDmg, null);
           // 火箭特效：高抛物线
           game.projectiles.push({ x:u.x, y:u.y-10, tx:target.x, ty:target.y, p:0, color:'#FF4500', style:'rocket', startX:u.x, startY:u.y-10 });
