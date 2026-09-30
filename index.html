@@ -380,10 +380,10 @@ function initGame() {
 
   // 我方基地（1个，横跨三路）
   game.towers.push({ x:MY_BASE_X, y:360, side:'my', isBase:true, hp:3000, maxHp:3000,
-    atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
+    atk:150, armor:30, flatArmor:30, baseArmor:30, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
   // 敌方基地
   game.towers.push({ x:EN_BASE_X, y:360, side:'enemy', isBase:true, hp:3000, maxHp:3000,
-    atk:25, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
+    atk:150, armor:30, flatArmor:30, baseArmor:30, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
   // 每边10个塔，绝对坐标[x, y]，用户给什么坐标就用什么
   const tRange = 220;
@@ -402,12 +402,12 @@ function initGame() {
   ];
   myTowers.forEach(([tx, ty]) => {
     game.towers.push({ x:tx, y:ty, lane:0, side:'my', isBase:false,
-      hp:3000, maxHp:3000, atk:50, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+      hp:3000, maxHp:3000, atk:50, armor:0, flatArmor:0, baseArmor:0, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
   // 敌方镜像：x=1200-tx，y相同
   myTowers.forEach(([tx, ty]) => {
     game.towers.push({ x:1200-tx, y:ty, lane:0, side:'enemy', isBase:false,
-      hp:3000, maxHp:3000, atk:50, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+      hp:3000, maxHp:3000, atk:50, armor:0, flatArmor:0, baseArmor:0, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
 
   // AI兵营：空槽位，游戏过程中AI自动建和升级
