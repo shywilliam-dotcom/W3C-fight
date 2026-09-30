@@ -402,12 +402,12 @@ function initGame() {
   ];
   myTowers.forEach(([tx, ty]) => {
     game.towers.push({ x:tx, y:ty, lane:0, side:'my', isBase:false,
-      hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+      hp:3000, maxHp:3000, atk:50, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
   // 敌方镜像：x=1200-tx，y相同
   myTowers.forEach(([tx, ty]) => {
     game.towers.push({ x:1200-tx, y:ty, lane:0, side:'enemy', isBase:false,
-      hp:1500, maxHp:1500, atk:25, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+      hp:3000, maxHp:3000, atk:50, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
 
   // AI兵营：空槽位，游戏过程中AI自动建和升级
@@ -1023,8 +1023,8 @@ function applyDmg(att, tgt, dmg, def) {
     }
     // 冰法被动：攻击冰法的单位攻速降低20%，持续3秒
     if (tgt.type==='ice' && att.st) att.st.slow = 3;
-    // 单位击杀单位给10%造价金币（必须由单位击杀，塔击杀不算；前30秒无赏金）
-    if (tgt.hp <= 0 && UNIT_TYPES[tgt.type] && att.type !== undefined && game.time >= 30) {
+    // 单位击杀单位给10%造价金币（必须由单位击杀，塔击杀不算）
+    if (tgt.hp <= 0 && UNIT_TYPES[tgt.type] && att.type !== undefined) {
       game.gold += Math.round(UNIT_TYPES[tgt.type].cost * 0.10);
     }
     // 暗火法击杀后立刻召唤一个骷髅
