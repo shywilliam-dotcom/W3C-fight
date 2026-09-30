@@ -196,7 +196,7 @@ const UNIT_TYPES = {
     skill1:{k:'poison',v:0.20}, skill2:{k:'backJump',v:200}, desc:'20%毒箭+敌人近身时后跳200并定身目标' },
   mage:     { name:'法师', armor:0, shape:'diamond', size:9, hp:280, atk:16, atkSpeed:0.7, range:135, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:null,
     skill1:{k:'healAlly',v:0.03}, skill2:null, desc:'纯平A+攻击时100%给附近血量最低友方回3%血' },
-  cannon:   { name:'攻城车', armor:2, shape:'square', size:11, hp:600, atk:88, atkSpeed:0.35, range:170, speed:50, cost:220, color:'#F44336', atkType:'siege', armorType:'fort', ult:null,
+  cannon:   { name:'攻城车', armor:2, shape:'square', size:11, hp:600, atk:88, atkSpeed:0.35, range:170, speed:50, cost:494, color:'#F44336', atkType:'siege', armorType:'fort', ult:null,
     skill1:{k:'splashRange',v:40}, skill2:{k:'knockback',v:0.10}, desc:'溅射+10%概率击退主要目标' },
 
   // 近战升级（大招=旋风斩）
@@ -2146,7 +2146,9 @@ function render() {
     const lvCost = curLv * 100;
     const maxLv = 10;
     const canUpLv = curLv < maxLv && game.gold >= lvCost;
-    const totalH = (paths ? paths.length : 0) * 36 + 70;
+    // 3级及以上才显示进阶选项，3级以下只显示升级
+    const showPaths = curLv >= 3 && paths;
+    const totalH = (showPaths ? paths.length : 0) * 36 + 70;
     const mw=280, mh=totalH*2;
     const mx = Math.min(m.x, 1200-mw-10);
     const my = Math.max(10, m.y-mh/2);
@@ -2173,11 +2175,12 @@ function render() {
       m.lvHit = null;
     }
     y += 40;
-    // 进阶路线
-    if (paths) {
+    // 进阶路线（3级及以上显示）
+    if (showPaths) {
       paths.forEach((p,i) => {
         const py = y+i*36;
-        const cost = UNIT_TYPES[p.key].cost;
+        // 转换费用 = 高级兵种造价 + 1次升级费用
+        const cost = UNIT_TYPES[p.key].cost + lvCost;
         const can = game.gold>=cost;
         ctx.fillStyle = can?'#4CAF50':'#666';
         ctx.fillRect(mx+5, py, mw-10, 30);
@@ -2189,8 +2192,14 @@ function render() {
       });
       m.menuHits = paths.map((p,i) => ({
         x:mx+5, y:y+i*36, w:mw-10, h:30,
-        key:p.key, cost:UNIT_TYPES[p.key].cost
+        key:p.key, cost:UNIT_TYPES[p.key].cost + lvCost
       }));
+    } else {
+      m.menuHits = [];
+      if (curLv < 3) {
+        ctx.fillStyle='#888'; ctx.font='11px sans-serif';
+        ctx.fillText('Lv.3解锁进阶兵种', mx+12, y+10);
+      }
     }
   }
 
