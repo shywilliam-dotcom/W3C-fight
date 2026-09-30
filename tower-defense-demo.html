@@ -191,7 +191,7 @@ const ATK_MUL = {
 // ult: whirlwind(近战系) / piercing(弓手系) / blizzard(法师系) / barrage(攻城系)
 const UNIT_TYPES = {
   melee:    { name:'刀盾手', armor:4, shape:'circle', size:10, hp:600, atk:10, atkSpeed:1.0, range:15, speed:60, cost:60, color:'#4CAF50', atkType:'melee', armorType:'heavy', ult:null,
-    skill1:{k:'reflectPierce',v:0.20}, skill2:{k:'reflectMagic',v:10}, desc:'反射20%穿刺伤害+反射魔法攻击(CD10s)' },
+    skill1:{k:'reflectPierce',v:0.20}, skill2:{k:'reflectMagic',v:10}, skill3:{k:'doubleAttack',v:0.15}, desc:'反射20%穿刺+反射魔法(CD10s)+15%攻击2次' },
   archer:   { name:'弓手', armor:2, shape:'triangle', size:9, hp:240, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:null,
     skill1:{k:'poison',v:0.20}, skill2:{k:'backJump',v:200}, desc:'20%毒箭+敌人近身时后跳200并定身目标' },
   mage:     { name:'法师', armor:0, shape:'diamond', size:9, hp:280, atk:16, atkSpeed:0.7, range:135, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:null,
@@ -495,7 +495,7 @@ function spawnUnit(b) {
     range:def.range*rangeMul, speed:def.speed*speedMul, atkTimer:0,
     crit:['cannon','rocket','tesla','siege'].includes(b.unitType)?0:(b.unitType==='fighter'?0.10:0.05)*mul, dodge:['cannon','rocket','tesla','siege'].includes(b.unitType)?0:(b.unitType==='fighter'?0.15:0.05)*mul, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
-    doubleStrike:0, multiTarget:0, splashRange:0,
+    doubleStrike:0, doubleAttack:0, reflectPierce:0, reflectMagic:0, reflectMagicCD:0, multiTarget:0, splashRange:0,
     focusFire:0, focusStacks:0, focusTarget:null,
     doubleStrikeBonus:0, // 连击保底：未触发时+10%
     aoe:0, dmgReduce:0, buildingDamage:0,
@@ -526,6 +526,9 @@ function spawnUnit(b) {
     else if (s.k==='splash') u.splash = s.v*mul;
     else if (s.k==='splashRange') u.splashRange = s.v*rangeMul;
     else if (s.k==='doubleStrike') u.doubleStrike = s.v*mul;
+    else if (s.k==='doubleAttack') u.doubleAttack = s.v; // 固定概率攻击2次，不成长
+    else if (s.k==='reflectPierce') u.reflectPierce = s.v; // 反射穿刺伤害，不成长
+    else if (s.k==='reflectMagic') u.reflectMagic = s.v; // 反射魔法攻击CD，不成长
     else if (s.k==='focusFire') u.focusFire = s.v;
     else if (s.k==='armorPierce') u.armorPierce = !!s.v;
     else if (s.k==='aoe') u.aoe = s.v;
@@ -618,10 +621,20 @@ function doAttack(att, tgt, def) {
           Math.abs(o.x-att.x)<att.range+30) targets.push(o);
     });
   }
-  // 连锁连击：每次攻击都有概率再触发一次，无最大次数限制
-  // 保底机制：未触发连击时，下次连击概率+10%，触发后清零
+  // 刀盾手：固定概率攻击2次（不连锁，和破甲弩手的连锁连击不同）
   let strikeCount = 1;
-  if (att.doubleStrike>0) {
+  if (att.doubleAttack>0) {
+    targets.forEach(t => applyDmg(att,t,dmg,def));
+    if (Math.random() < att.doubleAttack) {
+      strikeCount = 2;
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      pushCombatLog(`⚔️${attName} 发动二连击！第2次攻击`);
+      targets.forEach(t => applyDmg(att,t,dmg,def));
+    }
+  }
+  // 破甲弩手：连锁连击，每次攻击都有概率再触发一次，无最大次数限制
+  // 保底机制：未触发连击时，下次连击概率+10%，触发后清零
+  else if (att.doubleStrike>0) {
     const dsChance = att.doubleStrike + (att.doubleStrikeBonus||0);
     // 先打第一次
     targets.forEach(t => applyDmg(att,t,dmg,def));
@@ -2303,7 +2316,10 @@ function render() {
     ctx.fillStyle='#4CAF50';
     // 被动技能列表 - 紧凑
     let skills = [];
-    if (u.doubleStrike) skills.push(`连击${Math.round(u.doubleStrike*100)}%`);
+    if (u.doubleStrike) skills.push(`连锁连击${Math.round(u.doubleStrike*100)}%`);
+    if (u.doubleAttack) skills.push(`二连击${Math.round(u.doubleAttack*100)}%`);
+    if (u.reflectPierce) skills.push(`反射穿刺${Math.round(u.reflectPierce*100)}%`);
+    if (u.reflectMagic) skills.push(`魔法反射CD${u.reflectMagic}s`);
     if (u.focusFire) skills.push(`专注+${Math.round(u.focusFire*100)}%/次`);
     if (u.focusStacks>0) skills.push(`专注${u.focusStacks}层`);
     if (u.armorReduce) skills.push(`破甲-${u.armorReduce}/次`);
@@ -2784,7 +2800,7 @@ function createDuelUnit(type, side, lv, x) {
     dodge:['cannon','rocket','tesla','siege'].includes(type)?0:(type==='fighter'?0.15:0.05)*mul,
     instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
-    doubleStrike:0, multiTarget:0, splashRange:0,
+    doubleStrike:0, doubleAttack:0, reflectPierce:0, reflectMagic:0, reflectMagicCD:0, multiTarget:0, splashRange:0,
     focusFire:0, focusStacks:0, focusTarget:null,
     doubleStrikeBonus:0,
     aoe:0, dmgReduce:0, buildingDamage:0,
@@ -2819,6 +2835,9 @@ function createDuelUnit(type, side, lv, x) {
     else if (s.k==='splash') u.splash = s.v*mul;
     else if (s.k==='splashRange') u.splashRange = s.v*rangeMul;
     else if (s.k==='doubleStrike') u.doubleStrike = s.v*mul;
+    else if (s.k==='doubleAttack') u.doubleAttack = s.v; // 固定概率攻击2次，不成长
+    else if (s.k==='reflectPierce') u.reflectPierce = s.v; // 反射穿刺伤害，不成长
+    else if (s.k==='reflectMagic') u.reflectMagic = s.v; // 反射魔法攻击CD，不成长
     else if (s.k==='focusFire') u.focusFire = s.v;
     else if (s.k==='armorPierce') u.armorPierce = !!s.v;
     else if (s.k==='aoe') u.aoe = s.v;
