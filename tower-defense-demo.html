@@ -604,21 +604,33 @@ function doAttack(att, tgt, def) {
           Math.abs(o.x-att.x)<att.range+30) targets.push(o);
     });
   }
-  // 连锁连击：每次攻击都有概率再触发一次，最多连打5次
+  // 连锁连击：每次攻击都有概率再触发一次，无最大次数限制
   // 保底机制：未触发连击时，下次连击概率+10%，触发后清零
-  let strikes = 1;
+  let strikeCount = 1;
   if (att.doubleStrike>0) {
     const dsChance = att.doubleStrike + (att.doubleStrikeBonus||0);
-    while (strikes<5 && Math.random()<dsChance) strikes++;
-    if (strikes===1) {
+    // 先打第一次
+    targets.forEach(t => applyDmg(att,t,dmg,def));
+    // 然后循环检查连击，每次连击单独打印
+    let comboNum = 0;
+    while (Math.random() < dsChance && comboNum < 30) { // 安全上限30次防止死循环
+      comboNum++;
+      strikeCount++;
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      const tgtName = tgt.type ? (UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'目标')) : '目标';
+      pushCombatLog(`🔗${attName} 触发连击第${comboNum}次！`);
+      targets.forEach(t => applyDmg(att,t,dmg,def));
+    }
+    if (comboNum === 0) {
       // 未触发连击，保底+10%
       att.doubleStrikeBonus = Math.min(0.5, (att.doubleStrikeBonus||0) + 0.10);
     } else {
       // 触发了连击，保底清零
       att.doubleStrikeBonus = 0;
-      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
-      pushCombatLog(`🔗${attName} 触发连锁连击！${strikes}连击`);
     }
+  } else {
+    // 没有连击技能，正常打一次
+    targets.forEach(t => applyDmg(att,t,dmg,def));
   }
   // 破甲弩手专注射击：同一目标每次攻击（含连击）叠加攻速，换目标清零
   if (att.focusFire>0 && tgt.type!==undefined) {
@@ -626,11 +638,11 @@ function doAttack(att, tgt, def) {
       att.focusTarget = tgt;
       att.focusStacks = 0;
     }
-    att.focusStacks += strikes; // 连击也加快叠加
+    att.focusStacks += strikeCount; // 连击也加快叠加
   }
   // 护甲撕裂：每次攻击降低目标0.5护甲，持续5秒，可叠加50层（下限-25）
   if (att.armorReduce>0 && tgt.type!==undefined && tgt.st) {
-    tgt.flatArmor = Math.max(-25, (tgt.flatArmor||0) - att.armorReduce * strikes);
+    tgt.flatArmor = Math.max(-25, (tgt.flatArmor||0) - att.armorReduce * strikeCount);
     tgt.st.armorReduceT = 5; // 5秒后恢复
     // 每跨越5层打印一次（处理连击跳层）
     const layers = Math.round(((tgt.baseArmor||0) - tgt.flatArmor) / 0.5);
@@ -645,7 +657,6 @@ function doAttack(att, tgt, def) {
       pushCombatLog(`【护甲撕裂】${attName} 将 ${tgtName} 护甲降到 ${tgt.flatArmor.toFixed(1)}（${layers}层），受到伤害${dmgPct}`);
     }
   }
-  targets.forEach(t => { for(let i=0;i<strikes;i++) applyDmg(att,t,dmg,def); });
 
   if (tgt.type!==undefined) {
     if (att.polymorpth && Math.random()<att.polymorpth) {
@@ -809,9 +820,16 @@ function doAttack(att, tgt, def) {
     // 弩手大招：连发5次，每次20%连击（15秒CD）
     if (att.ultimate==='rapidFire') {
       if (!att.rapidFireCD || att.rapidFireCD<=0) {
+        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+        const tgtName = tgt.type ? (UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'目标')) : '目标';
+        pushCombatLog(`⭐${attName} 释放大招【连发】！5次攻击开始`);
         for (let i=0;i<5;i++) {
+          pushCombatLog(`💥${attName} 连发第${i+1}击`);
           applyDmg(att,tgt,dmg,def);
-          if (Math.random()<0.20) applyDmg(att,tgt,dmg,def);
+          if (Math.random()<0.20) {
+            pushCombatLog(`🔗${attName} 连发触发连击！`);
+            applyDmg(att,tgt,dmg,def);
+          }
         }
         // 大招连发也叠加专注射击和护甲撕裂
         if (att.focusFire>0) {
@@ -824,8 +842,6 @@ function doAttack(att, tgt, def) {
         }
         att.rapidFireCD = 15;
         ultUsed = true;
-        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
-        pushCombatLog(`💥${attName} 释放连发！5次攻击+连击`);
       }
     }
     // 火法大招：对目标900%伤害（20秒CD）
