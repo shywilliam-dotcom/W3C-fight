@@ -203,7 +203,7 @@ const UNIT_TYPES = {
   barbarian:{ name:'斧头野蛮人', armor:3, shape:'circle', size:13, hp:500, atk:18, atkSpeed:0.9, range:15, speed:60, cost:90, color:'#8B4513', atkType:'melee', armorType:'heavy', ult:'whirlwind',
     skill1:{k:'aoe',v:2}, skill2:{k:'execute',v:0.05}, skill3:{k:'parryArcher',v:0.30}, desc:'群伤2目标+斩杀5%血+30%招架弓手+斩杀后回10%血攻+10% | 大招旋风斩:每秒120%攻击范围伤害持续6秒CD60s（早期强）' },
   paladin:  { name:'圣骑士', armor:8, shape:'circle', size:11, hp:400, atk:12, atkSpeed:1.0, range:15, speed:60, cost:90, color:'#FFD700', atkType:'melee', armorType:'heavy', ult:'holyUlt',
-    skill1:{k:'holyHeal',v:1}, skill2:null, skill3:{k:'strikeStun',v:0.10}, desc:'低血回血25%CD15s+高护甲+10%攻击晕1秒+大招CD中死亡给最低血友方回满血 | 大招回血100%CD60s（中期强）' },
+    skill1:{k:'holyHeal',v:1}, skill2:null, skill3:{k:'strikeStun',v:0.10}, desc:'低血回血25%CD15s+高护甲+10%攻击晕1秒+死亡给最低血友方回满血 | 大招回血100%CD60s（中期强）' },
   fighter:  { name:'格斗家', armor:1, shape:'circle', size:10, hp:400, atk:20, atkSpeed:1.3, range:15, speed:80, cost:90, color:'#FF6B9D', atkType:'melee', armorType:'medium', ult:'dodgeUlt',
     skill1:{k:'dodge',v:0.15}, skill2:{k:'charge',v:200}, desc:'15%闪避+瞬影步冲锋CD5s | 大招躲闪后无敌2秒+周围120范围100%伤害CD25s（后期强）' },
 
@@ -1476,8 +1476,8 @@ function updateUnits(game, dt) {
         allies.forEach(o => { o.shield = (o.shield||0) + shieldVal; o.shieldT = 15; });
       }
     }
-    // 圣骑士死亡技能：如果大招在CD，被击杀时给附近血量最低友方回满血
-    if (u.hp<=0 && !u.paladinDeathHeal && u.type==='paladin' && u.holyUltCD && u.holyUltCD>0) {
+    // 圣骑士死亡技能：被击杀时给附近血量最低友方回满血（大招被动低血时已自动回血，死时大招必在CD）
+    if (u.hp<=0 && !u.paladinDeathHeal && u.type==='paladin') {
       u.paladinDeathHeal = true;
       const allies = game.units.filter(o => o.side===u.side && o.hp>0 && o.lane===u.lane && Math.abs(o.x-u.x)<150);
       if (allies.length>0) {
