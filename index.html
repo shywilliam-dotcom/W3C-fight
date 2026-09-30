@@ -635,7 +635,12 @@ function doAttack(att, tgt, def) {
   targets.forEach(t => { for(let i=0;i<strikes;i++) applyDmg(att,t,dmg,def); });
 
   if (tgt.type!==undefined) {
-    if (att.polymorpth && Math.random()<att.polymorpth) tgt.st.polymorphed=2;
+    if (att.polymorpth && Math.random()<att.polymorpth) {
+      tgt.st.polymorphed=2;
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+      pushCombatLog(`🐑${attName} 把 ${tgtName} 变成羊了！2秒不能攻击`);
+    }
     if (att.burnDps>0) { tgt.st.burn=3; tgt.st.burnDps=att.burnDps; }
     // 攻城车通用dot：灼烧5/s持续3秒
     if (att.atkType==='siege') { tgt.st.burn=3; tgt.st.burnDps=Math.max(tgt.st.burnDps||0, 5); }
@@ -719,6 +724,8 @@ function doAttack(att, tgt, def) {
         att.whirlwindActive = 3; // 持续3秒
         att.whirlwindCD = 60;
         ultUsed = true;
+        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+        pushCombatLog(`🌀${attName} 释放旋风斩！持续3秒范围伤害`);
       }
     }
     // 圣骑士大招：被动，血量低于15%时触发，回血100%+减伤60%持续2秒（60秒CD）
@@ -735,6 +742,8 @@ function doAttack(att, tgt, def) {
         });
         att.dodgeUltCD = 15;
         ultUsed = true;
+        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+        pushCombatLog(`⚡${attName} 释放一闪！无敌1秒+范围伤害`);
       }
     }
     // 游侠大招：箭雨，目标周围150范围内4次伤害，每0.5秒一次（40秒CD）
@@ -747,6 +756,8 @@ function doAttack(att, tgt, def) {
         att.arrowRainDmg = dmg * 1.2;
         att.arrowRainCD = 40;
         ultUsed = true;
+        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+        pushCombatLog(`🏹${attName} 释放箭雨！4波×120%伤害`);
       }
     }
     // 弩手大招：连发5次，每次20%连击（15秒CD）
@@ -764,20 +775,11 @@ function doAttack(att, tgt, def) {
         if (att.armorReduce>0 && tgt.st) {
           tgt.flatArmor = Math.max(-25, (tgt.flatArmor||0) - att.armorReduce * 5);
           tgt.st.armorReduceT = 5;
-          const layers = Math.round(((tgt.baseArmor||0) - tgt.flatArmor) / 0.5);
-          const nextThreshold = (att._armorLogThreshold || 5);
-          if (layers >= nextThreshold && layers <= 50) {
-            att._armorLogThreshold = nextThreshold + 5;
-            const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'目标');
-            const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'攻击者');
-            const dmgPct = tgt.flatArmor < 0
-              ? '+' + Math.round((2-Math.pow(0.94,-tgt.flatArmor)-1)*100) + '%'
-              : Math.round((1-(tgt.flatArmor*0.06)/(1+tgt.flatArmor*0.06))*100) + '%减伤';
-            pushCombatLog(`【护甲撕裂】${attName} 将 ${tgtName} 护甲降到 ${tgt.flatArmor.toFixed(1)}（${layers}层），受到伤害${dmgPct}`);
-          }
         }
         att.rapidFireCD = 15;
         ultUsed = true;
+        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+        pushCombatLog(`💥${attName} 释放连发！5次攻击+连击`);
       }
     }
     // 火法大招：对目标900%伤害（20秒CD）
@@ -786,6 +788,8 @@ function doAttack(att, tgt, def) {
         applyDmg(att,tgt,dmg*9,def);
         att.fireBlastCD = 20;
         ultUsed = true;
+        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+        pushCombatLog(`🔥${attName} 释放暗炎爆发！900%伤害`);
       }
     }
     // 弹幕（攻城车基础）
@@ -808,6 +812,8 @@ function doAttack(att, tgt, def) {
         });
         att.pierceCD = 35;
         ultUsed = true;
+        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+        pushCombatLog(`🎯${attName} 释放穿透射击！直线5目标300%伤害`);
       }
     }
     // 冰法大招：暴风雪，180范围80伤害+冰冻3秒+减速5秒+易伤（60秒CD）
@@ -822,6 +828,8 @@ function doAttack(att, tgt, def) {
         });
         att.blizzardCD = 60;
         ultUsed = true;
+        const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+        pushCombatLog(`❄️${attName} 释放暴风雪！范围冰冻+减速+易伤`);
       }
     }
     // 攻城炮大招：下2次攻击200%伤害+击飞+丢失目标（40秒CD）
