@@ -1122,13 +1122,23 @@ function updateUnits(game, dt) {
     if (u.atkBuffT && u.atkBuffT>0) u.atkBuffT-=dt;
     if (u.atkSpdBuffT && u.atkSpdBuffT>0) u.atkSpdBuffT-=dt;
     if (u.shieldT && u.shieldT>0) { u.shieldT-=dt; if (u.shieldT<=0) u.shield=0; }
-    // 特斯拉电圈：身边50范围每秒10伤害
+    // 特斯拉电圈：身边50范围每秒20伤害（经过护甲计算，每秒打印一次日志）
     if (u.electricField>0) {
-      game.units.forEach(o => {
-        if (o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<50 && Math.abs(o.y-u.y)<50) {
-          o.hp -= u.electricField*dt;
+      u._efTimer = (u._efTimer||0) + dt;
+      if (u._efTimer >= 1.0) {
+        u._efTimer = 0;
+        let efHits = 0;
+        game.units.forEach(o => {
+          if (o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<50 && Math.abs(o.y-u.y)<50) {
+            applyDmg(u, o, u.electricField, null);
+            efHits++;
+          }
+        });
+        if (efHits>0) {
+          const uName = UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位');
+          pushCombatLog(`⚡${uName} 电磁力场生效！${efHits}个目标受到${u.electricField}伤害`);
         }
-      });
+      }
     }
     // 圣骑士低血爆发回血：血量<50%时CD10秒回50%血
     if (u.holyHeal) {
