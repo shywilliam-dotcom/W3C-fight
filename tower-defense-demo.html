@@ -2280,9 +2280,9 @@ function render() {
 
   // 统一信息栏（底部贴边）
   ctx.fillStyle='rgba(0,0,0,0.85)';
-  ctx.fillRect(200, 600, 800, 120);
+  ctx.fillRect(200, 600, 680, 120);
   ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  ctx.strokeRect(200, 600, 800, 120);
+  ctx.strokeRect(200, 600, 680, 120);
 
   // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
@@ -2294,7 +2294,7 @@ function render() {
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
-    const pw = 800, ph = 130;
+    const pw = 680, ph = 130;
     const px = 200, py = 590;
     ctx.fillStyle='rgba(0,0,0,0.9)';
     ctx.fillRect(px, py, pw, ph);
@@ -2489,7 +2489,7 @@ function render() {
   });
 
   // 右下角小地图（220x132）
-  const mmW = 220, mmH = 132, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 286, mmH = 172, mmX = 1200-mmW-10, mmY = 720-mmH-10;
   const mmScaleX = mmW / WORLD_W, mmScaleY = mmH / WORLD_H;
   ctx.fillStyle = 'rgba(0,0,0,0.8)';
   ctx.fillRect(mmX, mmY, mmW, mmH);
@@ -2526,27 +2526,6 @@ function render() {
   ctx.strokeRect(mmX + viewX*mmScaleX, mmY + viewY*mmScaleY, 1200*mmScaleX, 720*mmScaleY);
   ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
   ctx.fillText('小地图', mmX+mmW-4, mmY+12); ctx.textAlign = 'start';
-
-  // 视口移动方向按钮（手机友好，屏幕四边中间）
-  const navSize = 44, navAlpha = 0.3;
-  ctx.fillStyle = `rgba(100,150,200,${navAlpha})`;
-  // 上
-  ctx.fillRect(600-navSize/2, 5, navSize, navSize);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('▲', 600, 5+navSize/2+7);
-  // 下
-  ctx.fillStyle = `rgba(100,150,200,${navAlpha})`;
-  ctx.fillRect(600-navSize/2, 720-navSize-5, navSize, navSize);
-  ctx.fillStyle = '#fff'; ctx.fillText('▼', 600, 720-navSize-5+navSize/2+7);
-  // 左
-  ctx.fillStyle = `rgba(100,150,200,${navAlpha})`;
-  ctx.fillRect(5, 360-navSize/2, navSize, navSize);
-  ctx.fillStyle = '#fff'; ctx.fillText('◀', 5+navSize/2, 360+7);
-  // 右
-  ctx.fillStyle = `rgba(100,150,200,${navAlpha})`;
-  ctx.fillRect(1200-navSize-5, 360-navSize/2, navSize, navSize);
-  ctx.fillStyle = '#fff'; ctx.fillText('▶', 1200-navSize-5+navSize/2, 360+7);
-  ctx.textAlign = 'start';
 
   // 模拟菜单
   if (game.simOpen) {
@@ -2622,23 +2601,8 @@ canvas.addEventListener('click', e => {
     cy = dy / rect.height * 720;
   }
 
-  // 视口移动方向按钮
-  const navSize = 44, navStep = 250;
-  if (cx >= 600-navSize/2 && cx <= 600+navSize/2 && cy >= 5 && cy <= 5+navSize) {
-    viewY = Math.max(0, viewY - navStep); render(); return;
-  }
-  if (cx >= 600-navSize/2 && cx <= 600+navSize/2 && cy >= 720-navSize-5 && cy <= 720-5) {
-    viewY = Math.min(WORLD_H - 720, viewY + navStep); render(); return;
-  }
-  if (cx >= 5 && cx <= 5+navSize && cy >= 360-navSize/2 && cy <= 360+navSize/2) {
-    viewX = Math.max(0, viewX - navStep); render(); return;
-  }
-  if (cx >= 1200-navSize-5 && cx <= 1200-5 && cy >= 360-navSize/2 && cy <= 360+navSize/2) {
-    viewX = Math.min(WORLD_W - 1200, viewX + navStep); render(); return;
-  }
-
   // 小地图点击跳转
-  const mmW = 220, mmH = 132, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 286, mmH = 172, mmX = 1200-mmW-10, mmY = 720-mmH-10;
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
@@ -2922,7 +2886,7 @@ canvas.addEventListener('mousedown', e => {
     cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
   }
   // 只在战场区域拖拽（排除UI按钮和小地图）
-  const mmW = 220, mmH = 132, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 286, mmH = 172, mmX = 1200-mmW-10, mmY = 720-mmH-10;
   const inUI = (cx >= 10 && cx <= 155 && cy >= 620 && cy <= 685) || // 左下角按钮
                (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) || // 小地图
                (cx >= 200 && cy >= 600); // 底部信息栏
@@ -2964,7 +2928,7 @@ canvas.addEventListener('touchstart', e => {
   if (codexOpen || game.gameOver) return;
   e.preventDefault();
   const {cx, cy} = getTouchPos(e);
-  const mmW = 220, mmH = 132, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 286, mmH = 172, mmX = 1200-mmW-10, mmY = 720-mmH-10;
   const inUI = (cx >= 10 && cx <= 155 && cy >= 620 && cy <= 685) ||
                (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) ||
                (cx >= 200 && cy >= 600);
