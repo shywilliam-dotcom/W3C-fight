@@ -2208,9 +2208,10 @@ function render() {
     const lvCost = Math.round(baseCost * (1 + 0.3 * (curLv - 1))); // 升级费用每级递增30%：1升2=130%，2升3=160%...
     const maxLv = 10;
     const canUpLv = curLv < maxLv && game.gold >= lvCost;
-    // 等级限制：Lv.1-3只能升级，Lv.4-6可升可转，Lv.7+必须转换
-    const canUpgrade = curLv <= 6; // 7级以上没有升级选项
-    const canTransform = curLv >= 4 && paths; // 4级以上才能转换
+    // 等级限制：基础兵种Lv.1-3只能升级，Lv.4-6可升可转，Lv.7+必须转换；转换为高级兵种后可继续升级到10级
+    const isBaseType = ['melee','archer','mage','cannon'].includes(b.unitType);
+    const canUpgrade = isBaseType ? curLv <= 6 : curLv < maxLv;
+    const canTransform = curLv >= 4 && paths && isBaseType; // 只有基础兵种能转换，高级兵种不能再转
     const showPaths = canTransform;
     const totalH = (showPaths ? paths.length : 0) * 52 + (canUpgrade ? 80 : 50);
     const mw=380, mh=totalH;
@@ -2233,7 +2234,7 @@ function render() {
       ctx.fillText(`⬆ 升Lv.${curLv+1} (${lvCost}金) +10%血攻`, mx+18, y+20);
       ctx.font='12px sans-serif'; ctx.fillText(`每级+10%属性/技能`, mx+18, y+38);
       m.lvHit = { x:mx+5, y, w:mw-10, h:44, cost:lvCost };
-    } else if (curLv >= 7) {
+    } else if (curLv >= 7 && isBaseType) {
       ctx.fillStyle='#FF6B6B'; ctx.font='14px sans-serif';
       ctx.fillText('⚠ Lv.7以上必须转换兵种', mx+18, y+25);
       m.lvHit = null;
