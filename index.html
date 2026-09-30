@@ -2527,6 +2527,27 @@ function render() {
   ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
   ctx.fillText('小地图', mmX+mmW-4, mmY+12); ctx.textAlign = 'start';
 
+  // 视口移动方向按钮（手机友好，屏幕四边中间）
+  const navSize = 44, navAlpha = 0.3;
+  ctx.fillStyle = `rgba(100,150,200,${navAlpha})`;
+  // 上
+  ctx.fillRect(600-navSize/2, 5, navSize, navSize);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('▲', 600, 5+navSize/2+7);
+  // 下
+  ctx.fillStyle = `rgba(100,150,200,${navAlpha})`;
+  ctx.fillRect(600-navSize/2, 720-navSize-5, navSize, navSize);
+  ctx.fillStyle = '#fff'; ctx.fillText('▼', 600, 720-navSize-5+navSize/2+7);
+  // 左
+  ctx.fillStyle = `rgba(100,150,200,${navAlpha})`;
+  ctx.fillRect(5, 360-navSize/2, navSize, navSize);
+  ctx.fillStyle = '#fff'; ctx.fillText('◀', 5+navSize/2, 360+7);
+  // 右
+  ctx.fillStyle = `rgba(100,150,200,${navAlpha})`;
+  ctx.fillRect(1200-navSize-5, 360-navSize/2, navSize, navSize);
+  ctx.fillStyle = '#fff'; ctx.fillText('▶', 1200-navSize-5+navSize/2, 360+7);
+  ctx.textAlign = 'start';
+
   // 模拟菜单
   if (game.simOpen) {
     ctx.fillStyle='rgba(0,0,0,0.9)';
@@ -2599,6 +2620,21 @@ canvas.addEventListener('click', e => {
   } else {
     cx = dx / rect.width * 1200;
     cy = dy / rect.height * 720;
+  }
+
+  // 视口移动方向按钮
+  const navSize = 44, navStep = 250;
+  if (cx >= 600-navSize/2 && cx <= 600+navSize/2 && cy >= 5 && cy <= 5+navSize) {
+    viewY = Math.max(0, viewY - navStep); render(); return;
+  }
+  if (cx >= 600-navSize/2 && cx <= 600+navSize/2 && cy >= 720-navSize-5 && cy <= 720-5) {
+    viewY = Math.min(WORLD_H - 720, viewY + navStep); render(); return;
+  }
+  if (cx >= 5 && cx <= 5+navSize && cy >= 360-navSize/2 && cy <= 360+navSize/2) {
+    viewX = Math.max(0, viewX - navStep); render(); return;
+  }
+  if (cx >= 1200-navSize-5 && cx <= 1200-5 && cy >= 360-navSize/2 && cy <= 360+navSize/2) {
+    viewX = Math.min(WORLD_W - 1200, viewX + navStep); render(); return;
   }
 
   // 小地图点击跳转
