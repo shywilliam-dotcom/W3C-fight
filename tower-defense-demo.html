@@ -2949,6 +2949,44 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mouseup', () => { isDragging = false; });
 canvas.addEventListener('mouseleave', () => { isDragging = false; });
 
+// Touch事件支持（手机拖拽）
+function getTouchPos(e) {
+  const t = e.touches[0] || e.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  const dx = t.clientX - rect.left, dy = t.clientY - rect.top;
+  if (window.innerWidth < window.innerHeight) {
+    return { cx: dy / rect.height * 1200, cy: (rect.width - dx) / rect.width * 720 };
+  } else {
+    return { cx: dx / rect.width * 1200, cy: dy / rect.height * 720 };
+  }
+}
+canvas.addEventListener('touchstart', e => {
+  if (codexOpen || game.gameOver) return;
+  e.preventDefault();
+  const {cx, cy} = getTouchPos(e);
+  const mmW = 220, mmH = 132, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const inUI = (cx >= 10 && cx <= 155 && cy >= 620 && cy <= 685) ||
+               (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) ||
+               (cx >= 200 && cy >= 600);
+  if (!inUI && cy < 600) {
+    isDragging = true; dragStartX = cx; dragStartY = cy;
+    dragViewX = viewX; dragViewY = viewY; dragMoved = false;
+  }
+}, {passive: false});
+canvas.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  e.preventDefault();
+  const {cx, cy} = getTouchPos(e);
+  const ddx = cx - dragStartX, ddy = cy - dragStartY;
+  if (Math.abs(ddx) > 3 || Math.abs(ddy) > 3) dragMoved = true;
+  viewX = Math.max(0, Math.min(WORLD_W - 1200, dragViewX - ddx));
+  viewY = Math.max(0, Math.min(WORLD_H - 720, dragViewY - ddy));
+}, {passive: false});
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  isDragging = false;
+}, {passive: false});
+
 // 按钮
 document.getElementById('speed-btn').addEventListener('click', () => {
   game.speed = game.speed===1?2:game.speed===2?3:1;
