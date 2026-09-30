@@ -3222,11 +3222,60 @@ function drawCodex() {
       ctx.fillText('开始对战', 600, 382);
       ctx.textAlign='start';
     }
-    if (duelAnim && duelPick===2) {
+    if (duelAnim && (duelPick===2 || duelPick===12)) {
       const d = duelAnim;
+      const isMulti = d.isMulti;
       // 战场背景（左边3/4全屏）
       ctx.fillStyle='#3a3a5a'; ctx.fillRect(0, 0, 840, 720);
       ctx.strokeStyle='#888'; ctx.strokeRect(0, 0, 840, 720);
+      // 多vs多：渲染所有单位
+      if (isMulti) {
+        const flipTypes = ['mage','ice','arcane','fire','musketeer','melee','barbarian','archer','cannon','siege','rocket','tesla'];
+        d.game.units.forEach(u => {
+          if (u.hp<=0) return;
+          const ux = u.x;
+          const uy = u.y;
+          const sKey = typeToSprite[u.type];
+          const img = sKey ? spriteImgs[sKey] : null;
+          const isMy = u.side==='my';
+          if (img && img.complete && img.naturalWidth > 0 && img._ready!==false) {
+            ctx.save();
+            ctx.translate(ux, uy);
+            if (isMy) {
+              if (flipTypes.includes(u.type)) ctx.scale(-2.5, 2.5);
+              else ctx.scale(2.5, 2.5);
+            } else {
+              if (flipTypes.includes(u.type)) ctx.scale(2.5, 2.5);
+              else ctx.scale(-2.5, 2.5);
+            }
+            ctx.drawImage(img, -15, -25, 30, 40);
+            ctx.restore();
+          } else {
+            ctx.fillStyle = isMy ? '#4FC3F7' : '#EF5350';
+            ctx.beginPath(); ctx.arc(ux, uy-10, 8, 0, Math.PI*2); ctx.fill();
+            ctx.fillRect(ux-8, uy-2, 16, 25);
+          }
+          // 名字
+          ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+          ctx.fillText(UNIT_TYPES[u.type] ? UNIT_TYPES[u.type].name : (u.name||'单位'), ux, uy-40);
+          // 血条
+          ctx.fillStyle='#333'; ctx.fillRect(ux-40, uy-35, 80, 10);
+          ctx.fillStyle = isMy ? '#4CAF50' : '#F44336';
+          ctx.fillRect(ux-40, uy-35, 80*Math.max(0,u.hp/u.maxHp), 10);
+          ctx.fillStyle='#fff'; ctx.font='9px sans-serif';
+          ctx.fillText(`${Math.max(0,Math.round(u.hp))}/${u.maxHp}`, ux, uy-27);
+        });
+        // 召唤物也渲染
+        d.game.units.forEach(u => {
+          if (u.hp<=0 || (u.type!=='golem' && u.type!=='skeleton')) return;
+          const isMy = u.side==='my';
+          ctx.fillStyle = u.type==='golem' ? '#B388FF' : '#BDBDBD';
+          ctx.beginPath(); ctx.arc(u.x, u.y-5, 6, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle='#fff'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+          ctx.fillText(u.type==='golem'?'傀儡':'骷髅', u.x, u.y+12);
+        });
+        ctx.textAlign='start';
+      } else {
       // A单位（左）- 真实x坐标
       const ax = d.a.x + d.aAttackAnim*15;
       const aSKey = typeToSprite[d.typeA];
@@ -3350,7 +3399,8 @@ function drawCodex() {
           ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(px, py-arch, 8, 0, Math.PI*2); ctx.fill();
         }
       }
-      // 结果（底部显示，不遮挡战斗画面）
+      } // end else (1v1渲染)
+      // 结果弹窗（底部，1v1和多vs多共用）
       if (d.done) {
         ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(120, 600, 600, 100);
         ctx.strokeStyle='#FFD700'; ctx.strokeRect(120, 600, 600, 100);
@@ -3362,9 +3412,9 @@ function drawCodex() {
         ctx.fillStyle='#FF9800'; ctx.fillRect(460, 645, 180, 40);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
         ctx.fillText('重选兵种', 550, 670);
+        ctx.textAlign='start';
       }
-      ctx.textAlign='start';
-      // 日志面板（右边1/4全屏）
+      // 日志面板（右边1/4全屏，1v1和多vs多共用）
       const logX = 840, logY = 0, logW = 360, logH = 720;
       ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(logX, logY, logW, logH);
       ctx.strokeStyle='#888'; ctx.strokeRect(logX, logY, logW, logH);
