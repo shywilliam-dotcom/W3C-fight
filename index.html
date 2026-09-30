@@ -35,7 +35,6 @@
   canvas {
     background: #0f0f23; border: none;
     cursor: pointer; display: block;
-    width: 100vw; height: 100vh;
   }
   #control-panel { display: none; }
     border: 1px solid #0f3460;
@@ -3847,17 +3846,14 @@ function resizeCanvas() {
   // 竖屏旋转后，可用宽高互换
   const availW = isPortrait ? ch : cw;
   const availH = isPortrait ? cw : ch;
-  // HUD和control-panel约70px
-  const hudH = 32, panelH = 38;
-  const gameH = availH - hudH - panelH;
-  // 保持1200:720比例
-  let w = availW, h = w * 720 / 1200;
-  if (h > gameH) { h = gameH; w = h * 1200 / 720; }
+  // HUD约32px
+  const hudH = 32;
+  const gameH = availH - hudH;
+  // 填满可用空间，不保持比例（内部1200x720自动拉伸）
   const canvas = document.getElementById('gameCanvas');
-  canvas.style.width = w + 'px';
-  canvas.style.height = h + 'px';
-  document.getElementById('hud').style.width = w + 'px';
-  document.getElementById('control-panel').style.width = w + 'px';
+  canvas.style.width = availW + 'px';
+  canvas.style.height = gameH + 'px';
+  document.getElementById('hud').style.width = availW + 'px';
 }
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
