@@ -2987,7 +2987,6 @@ canvas.addEventListener('touchmove', e => {
   viewY = Math.max(0, Math.min(WORLD_H - 720, dragViewY - ddy));
 }, {passive: false});
 canvas.addEventListener('touchend', e => {
-  e.preventDefault();
   isDragging = false;
   mmDragging = false;
 }, {passive: false});
