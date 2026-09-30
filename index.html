@@ -386,7 +386,7 @@ function initGame() {
     atk:150, armor:30, flatArmor:30, baseArmor:30, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
   // 每边10个塔，绝对坐标[x, y]，用户给什么坐标就用什么
-  const tRange = 150;
+  const tRange = 200;
   // 我方塔：[x, y] 绝对坐标
   const myTowers = [
     [190, 295],  // 1号
@@ -415,11 +415,11 @@ function initGame() {
 }
 
 // AI决策：根据金币建兵营/升级
-function aiDecide(side) {
+function aiDecide(side, dt) {
   if (game.gameOver) return;
   const aiGoldKey = side==='my' ? 'my' : 'enemy';
   // AI金币 = 每秒收入 + 击杀奖励
-  game.aiGold[aiGoldKey] += 5 * 0.1; // 每帧收入（每秒约5金币）
+  game.aiGold[aiGoldKey] += 5 * (dt||0.1); // 每秒5金币
   const slots = side==='my' ? BARRACK_SLOTS : EN_BARRACK_POS;
   const existing = game.barracks.filter(b => b.side===side && b.alive);
   const gold = game.aiGold[aiGoldKey];
@@ -618,7 +618,7 @@ function doAttack(att, tgt, def) {
   if (att.multiTarget && Math.random()<att.multiTarget && tgt.type!==undefined) {
     game.units.forEach(o => {
       if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
-          Math.abs(o.x-att.x)<att.range+30) targets.push(o);
+          Math.hypot(o.x-att.x, o.y-att.y)<att.range+30) targets.push(o);
     });
   }
   // 刀盾手：固定概率攻击2次（不连锁，和破甲弩手的连锁连击不同）
@@ -732,7 +732,7 @@ function doAttack(att, tgt, def) {
     let splashHit = 0;
     game.units.forEach(o => {
       if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
-          Math.abs(o.x-tgt.x)<50) { applyDmg(att,o,dmg*0.5,def); splashHit++; }
+          Math.hypot(o.x-tgt.x, o.y-tgt.y)<50) { applyDmg(att,o,dmg*0.5,def); splashHit++; }
     });
     if (splashHit>0) {
       const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
@@ -743,7 +743,7 @@ function doAttack(att, tgt, def) {
     let splashHit = 0;
     game.units.forEach(o => {
       if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
-          Math.abs(o.x-tgt.x)<att.splashRange) { applyDmg(att,o,dmg*0.6,def); splashHit++; }
+          Math.hypot(o.x-tgt.x, o.y-tgt.y)<att.splashRange) { applyDmg(att,o,dmg*0.6,def); splashHit++; }
     });
     if (splashHit>0) {
       const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
@@ -755,7 +755,7 @@ function doAttack(att, tgt, def) {
     game.units.forEach(o => {
       if (hit>=att.aoe-1) return;
       if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
-          Math.abs(o.x-att.x)<60) { applyDmg(att,o,dmg*0.8,def); hit++; }
+          Math.hypot(o.x-att.x, o.y-att.y)<60) { applyDmg(att,o,dmg*0.8,def); hit++; }
     });
   }
   // 特斯拉连锁闪电：跳chainLightning个目标，伤害递减，目标间距离限制120
@@ -787,7 +787,7 @@ function doAttack(att, tgt, def) {
   if (att.healAlly>0) {
     let lowest = null, lowestPct = 1.1;
     game.units.forEach(o => {
-      if (o.side===att.side && o.hp>0 && o!==att && Math.abs(o.x-att.x)<150) {
+      if (o.side===att.side && o.hp>0 && o!==att && Math.hypot(o.x-att.x, o.y-att.y)<150) {
         const pct = o.hp/o.maxHp;
         if (pct < lowestPct) { lowestPct = pct; lowest = o; }
       }
@@ -822,7 +822,7 @@ function doAttack(att, tgt, def) {
         att.st.iceBlock = 1;
         game.units.forEach(o => {
           if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
-              Math.abs(o.x-att.x)<120) applyDmg(att,o,dmg,def);
+              Math.hypot(o.x-att.x, o.y-att.y)<120) applyDmg(att,o,dmg,def);
         });
         att.dodgeUltCD = 15;
         ultUsed = true;
@@ -887,7 +887,7 @@ function doAttack(att, tgt, def) {
       game.units.forEach(o => {
         if (extra>=2) return;
         if (o.lane===att.lane && o.side!==att.side && o.hp>0 && o!==tgt &&
-            Math.abs(o.x-att.x)<att.range+50) { applyDmg(att,o,dmg*0.7,def); extra++; }
+            Math.hypot(o.x-att.x, o.y-att.y)<att.range+50) { applyDmg(att,o,dmg*0.7,def); extra++; }
       });
     }
     // 火枪手大招：穿透射击，直线400内最多5个单位（35秒CD）
@@ -897,7 +897,7 @@ function doAttack(att, tgt, def) {
         game.units.forEach(o => {
           if (hit>=5) return;
           if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
-              Math.abs(o.x-att.x)<400) { applyDmg(att,o,dmg*3,def); hit++; }
+              Math.hypot(o.x-att.x, o.y-att.y)<400) { applyDmg(att,o,dmg*3,def); hit++; }
         });
         att.pierceCD = 35;
         ultUsed = true;
@@ -910,7 +910,7 @@ function doAttack(att, tgt, def) {
       if (!att.blizzardCD || att.blizzardCD<=0) {
         game.units.forEach(o => {
           if (o.lane===att.lane && o.side!==att.side && o.hp>0 &&
-              Math.abs(o.x-tgt.x)<180) {
+              Math.hypot(o.x-tgt.x, o.y-tgt.y)<180) {
             applyDmg(att,o,80*Math.pow(1.1,(att.level||1)-1),def);
             if (o.st) { o.st.stun=3; o.st.slow=5; o.st.vulnerable=5; }
           }
@@ -1003,7 +1003,7 @@ function applyDmg(att, tgt, dmg, def) {
         tgt.st.iceBlock = 1;
         game.units.forEach(o => {
           if (o.lane===tgt.lane && o.side!==tgt.side && o.hp>0 &&
-              Math.abs(o.x-tgt.x)<120) applyDmg(tgt,o,tgt.atk,def);
+              Math.hypot(o.x-tgt.x, o.y-tgt.y)<120) applyDmg(tgt,o,tgt.atk,def);
         });
         tgt.dodgeUltCD = 15;
         pushCombatLog(`⚡${tgtName} 触发一闪！无敌1秒+范围伤害`);
@@ -1129,7 +1129,7 @@ function updateUnits(game, dt) {
         u._efTimer = 0;
         let efHits = 0;
         game.units.forEach(o => {
-          if (o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<50 && Math.abs(o.y-u.y)<50) {
+          if (o.side!==u.side && o.hp>0 && Math.hypot(o.x-u.x, o.y-u.y)<50) {
             applyDmg(u, o, u.electricField, null);
             efHits++;
           }
@@ -1192,7 +1192,7 @@ function updateUnits(game, dt) {
         u.arrowRainWaves--;
         game.units.forEach(o => {
           if (o.lane===u.arrowRainLane && o.side!==u.side && o.hp>0 &&
-              Math.abs(o.x-u.arrowRainX)<150) {
+              Math.hypot(o.x-u.arrowRainX, o.y-(LANE_Y[u.arrowRainLane]||360))<150) {
             o.hp -= u.arrowRainDmg; // 范围伤害
           }
         });
@@ -1214,7 +1214,7 @@ function updateUnits(game, dt) {
       if (u.whirlwindTick<=0) {
         u.whirlwindTick = 0.5;
         game.units.forEach(o => {
-          if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<80) {
+          if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.hypot(o.x-u.x, o.y-u.y)<80) {
             applyDmg(u, o, u.atk * 1.2, null);
           }
         });
@@ -1291,7 +1291,7 @@ function updateUnits(game, dt) {
     if (u.hp<=0 && u.atkType==='siege' && !u.exploded) {
       u.exploded = true;
       game.units.forEach(o => {
-        if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.abs(o.x-u.x)<80) {
+        if (o.lane===u.lane && o.side!==u.side && o.hp>0 && Math.hypot(o.x-u.x, o.y-u.y)<80) {
           applyDmg(u,o,u.atk*2,null);
         }
       });
@@ -1324,7 +1324,7 @@ function updateUnits(game, dt) {
         var count = 0;
         game.units.forEach(o => {
           if (count>=5) return;
-          if (o.side===u.side && o.hp>0 && Math.abs(o.x-u.x)<150) {
+          if (o.side===u.side && o.hp>0 && Math.hypot(o.x-u.x, o.y-u.y)<150) {
             o.shield = Math.max(o.shield||0, shieldAmount);
             count++;
           }
@@ -1342,7 +1342,7 @@ function updateUnits(game, dt) {
       else {
         var target = null, bestHpPct = 1;
         game.units.forEach(o => {
-          if (o.side===u.side && o.hp>0 && Math.abs(o.x-u.x)<150 && o!==u) {
+          if (o.side===u.side && o.hp>0 && Math.hypot(o.x-u.x, o.y-u.y)<150 && o!==u) {
             var pct = o.hp/o.maxHp;
             if (pct < bestHpPct) { bestHpPct = pct; target = o; }
           }
@@ -1478,7 +1478,7 @@ function updateUnits(game, dt) {
   game.units.forEach(u => {
     if (u.hp<=0 && !u.deathAuraTriggered && BASE_TYPES.includes(u.type)) {
       u.deathAuraTriggered = true;
-      const allies = game.units.filter(o => o.side===u.side && o.hp>0 && o.lane===u.lane && Math.abs(o.x-u.x)<80);
+      const allies = game.units.filter(o => o.side===u.side && o.hp>0 && o.lane===u.lane && Math.hypot(o.x-u.x, o.y-u.y)<80);
       if (u.type==='mage') {
         // 牺牲：80范围友方恢复30%生命
         allies.forEach(o => { o.hp = Math.min(o.maxHp, o.hp + o.maxHp*0.3); });
@@ -1497,7 +1497,7 @@ function updateUnits(game, dt) {
     // 圣骑士死亡技能：被击杀时给附近血量最低友方回满血（大招被动低血时已自动回血，死时大招必在CD）
     if (u.hp<=0 && !u.paladinDeathHeal && u.type==='paladin') {
       u.paladinDeathHeal = true;
-      const allies = game.units.filter(o => o.side===u.side && o.hp>0 && o.lane===u.lane && Math.abs(o.x-u.x)<150);
+      const allies = game.units.filter(o => o.side===u.side && o.hp>0 && o.lane===u.lane && Math.hypot(o.x-u.x, o.y-u.y)<150);
       if (allies.length>0) {
         allies.sort((a,b) => (a.hp/a.maxHp) - (b.hp/b.maxHp));
         const target = allies[0];
@@ -1517,8 +1517,8 @@ function update(dt) {
 
   // AI决策：只有开始后才运行
   if (game.started) {
-    if (game._watchMode) { aiDecide('my'); aiDecide('enemy'); } // 模拟观战：双方AI
-    else { aiDecide('enemy'); } // 正常模式：只有敌方AI，己方玩家控制
+    if (game._watchMode) { aiDecide('my', dt); aiDecide('enemy', dt); } // 模拟观战：双方AI
+    else { aiDecide('enemy', dt); } // 正常模式：只有敌方AI，己方玩家控制
   }
 
   // 准备阶段：倒计时，不出兵不交战
