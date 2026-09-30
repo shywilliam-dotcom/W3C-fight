@@ -419,7 +419,7 @@ function aiDecide(side) {
   if (game.gameOver) return;
   const aiGoldKey = side==='my' ? 'my' : 'enemy';
   // AI金币 = 每秒收入 + 击杀奖励
-  game.aiGold[aiGoldKey] += 2 * 0.1; // 每帧收入（每秒约2金币）
+  game.aiGold[aiGoldKey] += 5 * 0.1; // 每帧收入（每秒约5金币）
   const slots = side==='my' ? BARRACK_SLOTS : EN_BARRACK_POS;
   const existing = game.barracks.filter(b => b.side===side && b.alive);
   const gold = game.aiGold[aiGoldKey];
@@ -457,9 +457,7 @@ function aiDecide(side) {
 
 // ============ 经济 =====
 function income() {
-  let base = 2;
-  let myT = game.towers.filter(t=>t.side==='my'&&t.alive&&!t.isBase).length;
-  return base + myT * 0.5;
+  return 5; // 固定5金/秒
 }
 
 // ============ 出兵 =====
@@ -1025,9 +1023,9 @@ function applyDmg(att, tgt, dmg, def) {
     }
     // 冰法被动：攻击冰法的单位攻速降低20%，持续3秒
     if (tgt.type==='ice' && att.st) att.st.slow = 3;
-    // 小兵杀小兵给5%造价金币（塔杀不算，前60秒无赏金）
-    if (tgt.hp <= 0 && UNIT_TYPES[tgt.type] && game.time >= 30) {
-      game.gold += Math.round(UNIT_TYPES[tgt.type].cost * 0.05);
+    // 单位击杀单位给10%造价金币（必须由单位击杀，塔击杀不算；前30秒无赏金）
+    if (tgt.hp <= 0 && UNIT_TYPES[tgt.type] && att.type !== undefined && game.time >= 30) {
+      game.gold += Math.round(UNIT_TYPES[tgt.type].cost * 0.10);
     }
     // 暗火法击杀后立刻召唤一个骷髅
     if (tgt.hp <= 0 && att.type==='darkfire' && att.hp>0) {
@@ -1551,9 +1549,9 @@ function update(dt) {
   game.projectiles.forEach(p=>p.p+=dt*3);
   game.projectiles = game.projectiles.filter(p=>p.p<1);
 
-  // 塔死亡
+  // 塔死亡（击杀敌方塔奖励300金）
   game.towers.forEach(t => {
-    if (t.alive && t.hp<=0) { t.alive=false; if(t.side==='enemy') game.gold+=200; }
+    if (t.alive && t.hp<=0) { t.alive=false; if(t.side==='enemy') game.gold+=300; }
   });
 
   // 胜负
