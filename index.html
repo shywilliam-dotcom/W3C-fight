@@ -1450,12 +1450,18 @@ function updateUnits(game, dt) {
         if (d < chaseD && d < u.range*4+60) { chaseD = d; chaseT = o; }
       });
       if (chaseT && chaseD > u.range) {
+        // 目标在射程外，朝目标移动
         const dx = chaseT.x - u.x;
         u.x += u.speed*(dx>0?1:-1)*dt;
+        u.animState = 'walk';
+      } else if (chaseT && chaseD <= u.range) {
+        // 目标在射程内，停下来攻击（远程单位不靠近）
+        u.animState = 'idle';
       } else {
+        // 没有附近敌人，继续往前推进
         u.x += u.speed*u.dir*dt;
+        u.animState = 'walk';
       }
-      u.animState = 'walk';
       if (u.x<30) u.x=30;
       if (u.x>1170) u.x=1170;
       // 单位不离开道路：限制y在道路范围内（半宽60，留5px余量，弯道用getRoadY）
