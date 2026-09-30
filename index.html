@@ -482,7 +482,7 @@ function spawnUnit(b) {
   else if (def.armorType === 'light') speedMul = 1.3; // 轻甲+30%
   else if (def.armorType === 'unarmored') speedMul = 0.9; // 无甲-10%
   if (isMage) speedMul = 0.9; // 法师类都-10%
-  const yOff = (Math.random()-0.5)*100; // 道路加宽后y偏移±50
+  const yOff = (Math.random()-0.5)*60; // y偏移±30，减少弯道处视觉跨路
   const u = {
     x:b.side==='my'?MY_BASE_X+40:EN_BASE_X-40, y:LANE_Y[b.lane]+yOff, yOff:yOff, lane:b.lane, side:b.side, type:b.unitType,
     name:getUnitName(b.unitType),
@@ -1386,10 +1386,9 @@ function updateUnits(game, dt) {
       const d = Math.hypot(o.x-u.x, o.y-u.y);
       if (d<=u.range && d<bestD) { bestD=d; bestT=o; }
     });
-    // 没找到移动单位再搜塔
+    // 没找到移动单位再搜塔（塔是固定建筑，不限制同路）
     if (!bestT) {
       game.towers.forEach(t => {
-        if (t.lane!==u.lane&&!t.isBase) return;
         if (t.side===u.side||!t.alive) return;
         const d = Math.hypot(t.x-u.x, t.y-u.y);
         if (d<=u.range+20 && d<bestD) { bestD=d; bestT=t; }
