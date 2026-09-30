@@ -386,7 +386,7 @@ function initGame() {
     atk:150, armor:30, flatArmor:30, baseArmor:30, atkType:'chaos', atkTimer:0, range:150, alive:true, armorType:'fort' });
 
   // 每边10个塔，绝对坐标[x, y]，用户给什么坐标就用什么
-  const tRange = 220;
+  const tRange = 150;
   // 我方塔：[x, y] 绝对坐标
   const myTowers = [
     [190, 295],  // 1号
@@ -1592,14 +1592,20 @@ function update(dt) {
   // 兵营被摧毁
   game.barracks.forEach(b => { if (b.alive && b.hp<=0) b.alive=false; });
 
-  // 塔攻击
+  // 塔攻击（塔根据y坐标自动判断所属路，攻击范围内同路敌人；基地攻击所有路）
   game.towers.forEach(t => {
     if (!t.alive) return;
     t.atkTimer-=dt;
     if (t.atkTimer<=0) {
+      // 根据塔的y坐标判断所属路（如果没有设置lane）
+      if (t.lane === undefined || t.lane === null) {
+        if (t.y < 250) t.lane = 0;
+        else if (t.y < 470) t.lane = 1;
+        else t.lane = 2;
+      }
       let best=null, bd=Infinity;
       game.units.forEach(u => {
-        if (!t.isBase && u.lane!==t.lane) return;
+        if (!t.isBase && u.lane!==t.lane) return; // 非基地塔只打同路
         if (u.side===t.side||u.hp<=0||u.st.iceBlock>0) return;
         const d = Math.hypot(u.x-t.x, u.y-t.y);
         if (d<=t.range && d<bd) { bd=d; best=u; }
