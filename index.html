@@ -375,7 +375,7 @@ function initGame() {
   game = { gold:500, time:0, speed:1, selectedType:null,
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
     goldAcc:0, upgradeMenu:null, selectedUnit:null,
-    prepTime:3, bountyAnnounced:false, aiGold:{my:500, enemy:500} };
+    prepTime:3, bountyAnnounced:false, aiGold:{my:500, enemy:500}, aiBuildCD:{my:0, enemy:0} };
   usedNames.clear();
 
   // 我方基地（1个，横跨三路）
@@ -420,12 +420,14 @@ function aiDecide(side, dt) {
   const aiGoldKey = side==='my' ? 'my' : 'enemy';
   // AI金币 = 每秒收入 + 击杀奖励
   game.aiGold[aiGoldKey] += 5 * (dt||0.1); // 每秒5金币
+  // 建兵营冷却（避免瞬间建满）
+  if (game.aiBuildCD[aiGoldKey] > 0) game.aiBuildCD[aiGoldKey] -= dt;
   const slots = side==='my' ? BARRACK_SLOTS : EN_BARRACK_POS;
   const existing = game.barracks.filter(b => b.side===side && b.alive);
   const gold = game.aiGold[aiGoldKey];
 
-  // 没兵营就先建基础兵
-  if (existing.length < 6) {
+  // 没兵营就先建基础兵（每5秒最多建1个，模拟玩家操作节奏）
+  if (existing.length < 6 && game.aiBuildCD[aiGoldKey] <= 0) {
     const emptySlots = slots.filter(s => !existing.find(b => Math.abs(b.x-s.x)<5 && Math.abs((b.y||0)-(s.y||0))<5));
     if (emptySlots.length > 0) {
       const t = ['melee','archer','mage','cannon'][Math.floor(Math.random()*4)];
@@ -434,23 +436,24 @@ function aiDecide(side, dt) {
         game.aiGold[aiGoldKey] -= cost;
         const s = emptySlots[0];
         game.barracks.push({x:s.x, y:s.y, lane:s.lane||0, dy:s.dy||0, side:side, unitType:t, level:1, hp:2000, maxHp:2000, spawnTimer:2, alive:true, armorType:'fort'});
+        game.aiBuildCD[aiGoldKey] = 5; // 建兵营冷却5秒
       }
       return;
     }
   }
 
-  // 有钱就升级到高级兵种
+  // 有钱就升级到高级兵种（成本与玩家一致：转职费=建造费×200%，等级不跳级，4级以上才能转）
   for (const b of existing) {
     if (b.level >= 10) continue;
     const upgrades = UPGRADES[b.unitType];
     if (!upgrades) continue;
-    // 升级到随机高级兵种
+    if (b.level < 4) continue; // 4级以上才能转换
     const upT = upgrades[Math.floor(Math.random()*upgrades.length)];
-    const upCost = Math.round(UNIT_TYPES[upT].cost * 0.8);
-    if (gold >= upCost && b.level < 5) {
+    const upCost = Math.round(UNIT_TYPES[b.unitType].cost * 2); // 转职费=建造费×200%
+    if (gold >= upCost) {
       game.aiGold[aiGoldKey] -= upCost;
       b.unitType = upT;
-      b.level = Math.max(b.level, Math.floor(Math.random()*3)+2);
+      // 等级保持不变，转换后可继续升级
     }
   }
 }
