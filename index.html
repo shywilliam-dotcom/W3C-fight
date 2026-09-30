@@ -191,7 +191,7 @@ const ATK_MUL = {
 // ult: whirlwind(近战系) / piercing(弓手系) / blizzard(法师系) / barrage(攻城系)
 const UNIT_TYPES = {
   melee:    { name:'刀盾手', armor:4, shape:'circle', size:10, hp:600, atk:10, atkSpeed:1.0, range:15, speed:60, cost:60, color:'#4CAF50', atkType:'melee', armorType:'heavy', ult:null,
-    skill1:null, skill2:{k:'doubleStrike',v:0.15}, desc:'高护甲+15%概率攻击2次' },
+    skill1:{k:'reflectPierce',v:0.20}, skill2:{k:'reflectMagic',v:10}, desc:'反射20%穿刺伤害+反射魔法攻击(CD10s)' },
   archer:   { name:'弓手', armor:2, shape:'triangle', size:9, hp:240, atk:7, atkSpeed:0.9, range:140, speed:70, cost:80, color:'#FF9800', atkType:'pierce', armorType:'light', ult:null,
     skill1:{k:'poison',v:0.20}, skill2:{k:'backJump',v:200}, desc:'20%毒箭+敌人近身时后跳200并定身目标' },
   mage:     { name:'法师', armor:0, shape:'diamond', size:9, hp:280, atk:16, atkSpeed:0.7, range:135, speed:65, cost:90, color:'#9C27B0', atkType:'magic', armorType:'unarmored', ult:null,
@@ -471,7 +471,9 @@ function spawnUnit(b) {
   const isMage = ['mage','arcane','ice','fire'].includes(b.unitType);
   // 统一成长系数1.1
   const mul = Math.pow(1.1, lv-1);
-  const rangeMul = 1 + (lv-1)*0.05;
+  // 只有弓手类射程成长，其他单位射程不成长
+  const isArcher = ['archer','musketeer','ranger','crossbow'].includes(b.unitType);
+  const rangeMul = isArcher ? (1 + (lv-1)*0.05) : 1.0;
   // 后期rush：300秒后新出兵攻击每60秒+15%
   const timeMul = 1 + Math.max(0, (game.time-300)/60)*0.15;
   // 移动速度按护甲类型调整
@@ -1000,6 +1002,23 @@ function applyDmg(att, tgt, dmg, def) {
     if (tgt.holyShieldT && tgt.holyShieldT>0) fd *= 0.4;
     // 易伤debuff：受到伤害+30%
     if (tgt.st.vulnerable>0) fd *= 1.3;
+    // 刀盾手被动1：反射20%穿刺伤害（不成长）
+    if (tgt.reflectPierce && att.atkType==='pierce' && att.hp>0) {
+      const reflectDmg = fd * tgt.reflectPierce;
+      att.hp -= reflectDmg;
+      const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      pushCombatLog(`🛡️${tgtName} 盾牌反射 ${attName} ${Math.round(reflectDmg)} 穿刺伤害！`);
+    }
+    // 刀盾手被动2：反射一次魔法攻击，CD10秒
+    if (tgt.reflectMagic && att.atkType==='magic' && (!tgt.reflectMagicCD || tgt.reflectMagicCD<=0) && att.hp>0) {
+      att.hp -= fd; // 完全反射这次魔法伤害
+      tgt.reflectMagicCD = tgt.reflectMagic; // CD=10秒
+      const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
+      const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
+      pushCombatLog(`✨${tgtName} 魔法反射！将 ${attName} 的 ${Math.round(fd)} 魔法伤害全部反弹！`);
+      fd = 0; // 自己不受伤害
+    }
     // 护盾吸收伤害
     if (tgt.shield>0) {
       absorbed = Math.min(tgt.shield, fd);
@@ -1140,6 +1159,7 @@ function updateUnits(game, dt) {
     }
     if (u.holyShieldT>0) u.holyShieldT-=dt;
     if (u.dodgeUltCD>0) u.dodgeUltCD-=dt;
+    if (u.reflectMagicCD && u.reflectMagicCD>0) u.reflectMagicCD-=dt;
     if (u.arrowRainCD>0) u.arrowRainCD-=dt;
     // 游侠箭雨波次：每0.5秒一次，共4次
     if (u.arrowRainWaves>0) {
