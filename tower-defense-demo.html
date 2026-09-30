@@ -565,6 +565,7 @@ function spawnUnit(b) {
 
 // ============ 战斗 =====
 function doAttack(att, tgt, def) {
+  currentLogSide = att.side || 'neutral';
   let dmg = att.atk;
   // 羁绊：四基础兵种齐全 → 全体攻击+15%
   if (att.side==='my' && game.myBuffs.fullRoster) dmg *= 1.15;
@@ -910,6 +911,7 @@ function doAttack(att, tgt, def) {
 }
 
 function applyDmg(att, tgt, dmg, def) {
+  currentLogSide = att.side || 'neutral';
   // 魔兽攻防相克：用目标的armorType
   const tgtArmor = tgt.armorType || (tgt.type===undefined ? 'fort' : 'unarmored');
   let mul = (ATK_MUL[att.atkType] && ATK_MUL[att.atkType][tgtArmor]) || 1.0;
@@ -1032,6 +1034,7 @@ function spawnProj(a,t,c) {
 function updateUnits(game, dt) {
   // 单位更新
   game.units.forEach(u => {
+    currentLogSide = u.side || 'neutral';
     if (u.st.polymorphed>0) u.st.polymorphed-=dt;
     if (u.st.burn>0) { u.st.burn-=dt; u.hp-=u.st.burnDps*dt; }
     if (u.st.poison>0) {
@@ -2496,7 +2499,7 @@ canvas.addEventListener('click', e => {
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
     // 右上角关闭按钮
-    if (cx >= 1130 && cx <= 1170 && cy >= 15 && cy <= 45) {
+    if (cx >= 1150 && cx <= 1190 && cy >= 10 && cy <= 40) {
       codexOpen = false; duelMode = false; duelPick = 0; render(); return;
     }
     // 1v1按钮
@@ -2504,14 +2507,14 @@ canvas.addEventListener('click', e => {
       duelMode = !duelMode; duelPick = 0; duelA = null; duelB = null; duelResult = null;
       render(); return;
     }
-    if (duelAnim && duelAnim.done && cx >= 240 && cx <= 400 && cy >= 225 && cy <= 260) {
+    if (duelAnim && duelAnim.done && cx >= 290 && cx <= 450 && cy >= 335 && cy <= 375) {
       startDuel(duelA, duelB, duelLv); render(); return;
     }
-    if (duelAnim && duelAnim.done && cx >= 420 && cx <= 580 && cy >= 225 && cy <= 260) {
+    if (duelAnim && duelAnim.done && cx >= 470 && cx <= 630 && cy >= 335 && cy <= 375) {
       duelAnim = null; duelPick = 0; duelA = null; duelB = null; render(); return;
     }
     // 点击日志区域：回到底部并恢复自动滚动
-    if (duelAnim && cx >= 760 && cx <= 1160 && cy >= 80 && cy <= 580) {
+    if (duelAnim && cx >= 900 && cx <= 1200 && cy >= 0 && cy <= 720) {
       duelLogAutoScroll = true;
       duelLogScroll = 0;
       render(); return;
@@ -2682,8 +2685,9 @@ let codexOpen = false, codexSel = 0;
 let duelMode = false, duelPick = 0, duelA = null, duelB = null, duelLv = 6;
 let duelAnim = null; // {a:{hp,maxHp,cd,anim}, b:{...}, time, done}
 let globalCombatLog = []; // 全局战斗日志，doAttack写入，1v1读取
-function pushCombatLog(msg) {
-  globalCombatLog.push(msg);
+let currentLogSide = 'neutral'; // 当前日志所属阵营，doAttack/updateUnits自动设置
+function pushCombatLog(msg, side) {
+  globalCombatLog.push({msg, side: side || currentLogSide || 'neutral'});
   if (globalCombatLog.length > 200) globalCombatLog.shift();
 }
 let duelLogScroll = 0; // 日志滚动偏移（像素），0=底部
@@ -2791,7 +2795,7 @@ function startDuel(typeA, typeB, lv) {
   // 创建跟主游戏一样的unit（y=360中路，lane=1）
   const unitA = createDuelUnit(typeA, 'my', lv, 100);
   unitA.y = 360; unitA.lane = 1; unitA.yOff = 0;
-  const unitB = createDuelUnit(typeB, 'enemy', lv, 1100);
+  const unitB = createDuelUnit(typeB, 'enemy', lv, 800);
   unitB.y = 360; unitB.lane = 1; unitB.yOff = 0;
   // 虚拟game环境（完整结构，复用主游戏updateUnits）
   duelGame = {
@@ -2823,7 +2827,7 @@ function updateDuel(dt) {
 
   // 同步全局战斗日志到1v1日志
   if (globalCombatLog.length > 0) {
-    globalCombatLog.forEach(msg => d.logs.push(`[${d.time.toFixed(1)}s] ${msg}`));
+    globalCombatLog.forEach(entry => d.logs.push({time: d.time.toFixed(1), msg: entry.msg, side: entry.side}));
     globalCombatLog = [];
   }
 
@@ -2939,14 +2943,14 @@ function drawCodex() {
   ctx.fillStyle = 'rgba(0,0,0,0.9)';
   ctx.fillRect(0, 0, 1200, 720);
   if (duelMode) {
-    // 右上角关闭按钮
+    // 右上角关闭按钮（日志框内）
     ctx.fillStyle = '#e94560';
-    ctx.fillRect(1130, 15, 40, 30);
+    ctx.fillRect(1150, 10, 40, 30);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('✕', 1150, 36);
+    ctx.fillText('✕', 1170, 31);
     ctx.textAlign = 'start';
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '1v1对战', 600, 35);
+    ctx.fillText(duelPick===0 ? '选择第一个兵种' : duelPick===1 ? '选择第二个兵种' : '1v1对战', 450, 35);
     ctx.textAlign='start';
     if (duelPick===2 && !duelAnim) {
       // 等级选择界面
@@ -2972,9 +2976,9 @@ function drawCodex() {
     }
     if (duelAnim && duelPick===2) {
       const d = duelAnim;
-      // 战场背景
-      ctx.fillStyle='#3a3a5a'; ctx.fillRect(60, 80, 680, 450);
-      ctx.strokeStyle='#888'; ctx.strokeRect(60, 80, 680, 450);
+      // 战场背景（左边3/4全屏）
+      ctx.fillStyle='#3a3a5a'; ctx.fillRect(0, 0, 900, 720);
+      ctx.strokeStyle='#888'; ctx.strokeRect(0, 0, 900, 720);
       // A单位（左）- 真实x坐标
       const ax = d.a.x + d.aAttackAnim*15;
       const aSKey = typeToSprite[d.typeA];
@@ -2983,7 +2987,7 @@ function drawCodex() {
       const flipTypes = ['mage','ice','arcane','fire','musketeer','melee','barbarian','archer','cannon','siege','rocket','tesla'];
       if (aImg && aImg.complete && aImg.naturalWidth > 0 && aImg._ready!==false) {
         ctx.save();
-        ctx.translate(ax, 320);
+        ctx.translate(ax, 360);
         // A方朝右，原图朝左的兵种需要翻转
         if (flipTypes.includes(d.typeA)) ctx.scale(-2.5, 2.5);
         else ctx.scale(2.5, 2.5);
@@ -2991,16 +2995,16 @@ function drawCodex() {
         ctx.restore();
       } else {
         ctx.fillStyle='#4FC3F7';
-        ctx.beginPath(); ctx.arc(ax, 285, 8, 0, Math.PI*2); ctx.fill();
-        ctx.fillRect(ax-8, 293, 16, 25);
+        ctx.beginPath(); ctx.arc(ax, 325, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillRect(ax-8, 333, 16, 25);
       }
       ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(UNIT_TYPES[d.typeA].name, ax, 225);
+      ctx.fillText(UNIT_TYPES[d.typeA].name, ax, 265);
       // A血条跟随单位（上方）
-      ctx.fillStyle='#333'; ctx.fillRect(ax-50, 230, 100, 12);
-      ctx.fillStyle='#4CAF50'; ctx.fillRect(ax-50, 230, 100*Math.max(0,d.a.hp/d.a.maxHp), 12);
+      ctx.fillStyle='#333'; ctx.fillRect(ax-50, 270, 100, 12);
+      ctx.fillStyle='#4CAF50'; ctx.fillRect(ax-50, 270, 100*Math.max(0,d.a.hp/d.a.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
-      ctx.fillText(`${Math.max(0,Math.round(d.a.hp))}/${d.a.maxHp}`, ax, 240);
+      ctx.fillText(`${Math.max(0,Math.round(d.a.hp))}/${d.a.maxHp}`, ax, 280);
       // A方召唤物（傀儡/骷髅）- 从duelGame.units读取
       d.game.units.forEach(u => {
         if (u.side !== 'my' || u.hp <= 0) return;
@@ -3009,15 +3013,15 @@ function drawCodex() {
         const gKey = typeToSprite[u.type] || u.type;
         const gImg = spriteImgs[gKey];
         if (gImg && gImg.complete && gImg.naturalWidth > 0) {
-          ctx.save(); ctx.translate(gx, 320); ctx.scale(-2, 2); ctx.drawImage(gImg, -12, -20, 24, 32); ctx.restore();
+          ctx.save(); ctx.translate(gx, 360); ctx.scale(-2, 2); ctx.drawImage(gImg, -12, -20, 24, 32); ctx.restore();
         } else {
-          ctx.fillStyle = u.type==='golem'?'#8B4513':'#EEE'; ctx.beginPath(); ctx.arc(gx, 300, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 308, 20, 20);
+          ctx.fillStyle = u.type==='golem'?'#8B4513':'#EEE'; ctx.beginPath(); ctx.arc(gx, 340, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 348, 20, 20);
         }
         const gName = u.type==='golem'?'傀儡':'骷髅';
         ctx.fillStyle='#4CAF50'; ctx.font='10px sans-serif'; ctx.textAlign='center';
-        ctx.fillText(gName, gx, 270);
-        ctx.fillStyle='#333'; ctx.fillRect(gx-25, 275, 50, 6);
-        ctx.fillStyle='#4CAF50'; ctx.fillRect(gx-25, 275, 50*Math.max(0,u.hp/u.maxHp), 6);
+        ctx.fillText(gName, gx, 310);
+        ctx.fillStyle='#333'; ctx.fillRect(gx-25, 315, 50, 6);
+        ctx.fillStyle='#4CAF50'; ctx.fillRect(gx-25, 315, 50*Math.max(0,u.hp/u.maxHp), 6);
       });
       // B单位（右）- 真实x坐标
       const bx = d.b.x - d.bAttackAnim*15;
@@ -3025,7 +3029,7 @@ function drawCodex() {
       const bImg = bSKey ? spriteImgs[bSKey] : null;
       if (bImg && bImg.complete && bImg.naturalWidth > 0 && bImg._ready!==false) {
         ctx.save();
-        ctx.translate(bx, 320);
+        ctx.translate(bx, 360);
         // B方朝左，原图朝左的兵种不需要翻转，原图朝右的需要翻转
         if (flipTypes.includes(d.typeB)) ctx.scale(2.5, 2.5);
         else ctx.scale(-2.5, 2.5);
@@ -3033,16 +3037,16 @@ function drawCodex() {
         ctx.restore();
       } else {
         ctx.fillStyle='#EF5350';
-        ctx.beginPath(); ctx.arc(bx, 285, 8, 0, Math.PI*2); ctx.fill();
-        ctx.fillRect(bx-8, 293, 16, 25);
+        ctx.beginPath(); ctx.arc(bx, 325, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillRect(bx-8, 333, 16, 25);
       }
       ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
-      ctx.fillText(UNIT_TYPES[d.typeB].name, bx, 400);
+      ctx.fillText(UNIT_TYPES[d.typeB].name, bx, 440);
       // B血条跟随单位（下方）
-      ctx.fillStyle='#333'; ctx.fillRect(bx-50, 380, 100, 12);
-      ctx.fillStyle='#F44336'; ctx.fillRect(bx-50, 380, 100*Math.max(0,d.b.hp/d.b.maxHp), 12);
+      ctx.fillStyle='#333'; ctx.fillRect(bx-50, 420, 100, 12);
+      ctx.fillStyle='#F44336'; ctx.fillRect(bx-50, 420, 100*Math.max(0,d.b.hp/d.b.maxHp), 12);
       ctx.fillStyle='#fff'; ctx.font='10px sans-serif';
-      ctx.fillText(`${Math.max(0,Math.round(d.b.hp))}/${d.b.maxHp}`, bx, 390);
+      ctx.fillText(`${Math.max(0,Math.round(d.b.hp))}/${d.b.maxHp}`, bx, 430);
       // B方召唤物（傀儡/骷髅）- 从duelGame.units读取
       d.game.units.forEach(u => {
         if (u.side !== 'enemy' || u.hp <= 0) return;
@@ -3051,21 +3055,21 @@ function drawCodex() {
         const gKey = typeToSprite[u.type] || u.type;
         const gImg = spriteImgs[gKey];
         if (gImg && gImg.complete && gImg.naturalWidth > 0) {
-          ctx.save(); ctx.translate(gx, 320); ctx.scale(2, 2); ctx.drawImage(gImg, -12, -20, 24, 32); ctx.restore();
+          ctx.save(); ctx.translate(gx, 360); ctx.scale(2, 2); ctx.drawImage(gImg, -12, -20, 24, 32); ctx.restore();
         } else {
-          ctx.fillStyle = u.type==='golem'?'#8B4513':'#EEE'; ctx.beginPath(); ctx.arc(gx, 300, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 308, 20, 20);
+          ctx.fillStyle = u.type==='golem'?'#8B4513':'#EEE'; ctx.beginPath(); ctx.arc(gx, 340, 10, 0, Math.PI*2); ctx.fill(); ctx.fillRect(gx-10, 348, 20, 20);
         }
         const gName = u.type==='golem'?'傀儡':'骷髅';
         ctx.fillStyle='#F44336'; ctx.font='10px sans-serif'; ctx.textAlign='center';
-        ctx.fillText(gName, gx, 420);
-        ctx.fillStyle='#333'; ctx.fillRect(gx-25, 410, 50, 6);
-        ctx.fillStyle='#F44336'; ctx.fillRect(gx-25, 410, 50*Math.max(0,u.hp/u.maxHp), 6);
+        ctx.fillText(gName, gx, 460);
+        ctx.fillStyle='#333'; ctx.fillRect(gx-25, 450, 50, 6);
+        ctx.fillStyle='#F44336'; ctx.fillRect(gx-25, 450, 50*Math.max(0,u.hp/u.maxHp), 6);
       });
       // 攻击特效：用真实坐标
       if (d.aAttackAnim > 0.3) {
         const prog = 1 - d.aAttackAnim;
         const px = ax + (bx - ax) * prog;
-        const py = 320;
+        const py = 360;
         if (UNIT_TYPES[d.typeA].atkType === 'melee') {
           ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
           ctx.beginPath(); ctx.arc(bx-10, py, 25, -Math.PI/4, Math.PI/4); ctx.stroke();
@@ -3083,7 +3087,7 @@ function drawCodex() {
       if (d.bAttackAnim > 0.3) {
         const prog = 1 - d.bAttackAnim;
         const px = bx + (ax - bx) * prog;
-        const py = 320;
+        const py = 360;
         if (UNIT_TYPES[d.typeB].atkType === 'melee') {
           ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
           ctx.beginPath(); ctx.arc(ax+10, py, 25, Math.PI*3/4, Math.PI*5/4); ctx.stroke();
@@ -3100,35 +3104,36 @@ function drawCodex() {
       }
       // 结果
       if (d.done) {
-        ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(200, 150, 400, 120);
+        ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(250, 250, 400, 150);
         ctx.fillStyle='#FFD700'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
-        ctx.fillText(`胜者: ${d.winner}`, 400, 185);
+        ctx.fillText(`胜者: ${d.winner}`, 450, 290);
         ctx.fillStyle='#fff'; ctx.font='14px sans-serif';
-        ctx.fillText(`用时: ${d.time.toFixed(1)}秒`, 400, 210);
-        ctx.fillStyle='#4CAF50'; ctx.fillRect(240, 225, 160, 35);
+        ctx.fillText(`用时: ${d.time.toFixed(1)}秒`, 450, 315);
+        ctx.fillStyle='#4CAF50'; ctx.fillRect(290, 335, 160, 40);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
-        ctx.fillText('再模拟一场', 320, 248);
-        ctx.fillStyle='#FF9800'; ctx.fillRect(420, 225, 160, 35);
+        ctx.fillText('再模拟一场', 370, 360);
+        ctx.fillStyle='#FF9800'; ctx.fillRect(470, 335, 160, 40);
         ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif';
-        ctx.fillText('重选兵种', 500, 248);
+        ctx.fillText('重选兵种', 550, 360);
       }
       ctx.textAlign='start';
-      // 日志面板（可滚动）
-      const logX = 760, logY = 80, logW = 400, logH = 500;
-      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(logX, logY, logW, logH);
+      // 日志面板（右边1/4全屏）
+      const logX = 900, logY = 0, logW = 300, logH = 720;
+      ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(logX, logY, logW, logH);
       ctx.strokeStyle='#888'; ctx.strokeRect(logX, logY, logW, logH);
-      ctx.fillStyle='#FFD700'; ctx.font='bold 12px sans-serif';
-      ctx.fillText('⚔️ 战斗日志', logX+10, logY+18);
+      ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
+      ctx.fillText('⚔️ 战斗日志', logX+10, logY+22);
       const allLines = [];
       d.logs.forEach(log => {
-        let s = log;
-        while (s.length > 28) { allLines.push({text:s.slice(0,28), log:log}); s = s.slice(28); }
-        allLines.push({text:s, log:log});
+        const logObj = typeof log === 'string' ? {time:'', msg:log, side:'neutral'} : log;
+        let s = logObj.time ? `[${logObj.time}s] ${logObj.msg}` : logObj.msg;
+        while (s.length > 22) { allLines.push({text:s.slice(0,22), side:logObj.side}); s = s.slice(22); }
+        allLines.push({text:s, side:logObj.side});
       });
-      const lineH = 15;
+      const lineH = 16;
       const contentH = allLines.length * lineH;
-      const visibleTop = logY + 25;
-      const visibleH = logH - 30;
+      const visibleTop = logY + 30;
+      const visibleH = logH - 50;
       if (duelLogAutoScroll) duelLogScroll = Math.max(0, contentH - visibleH);
       // 限制滚动范围，确保首行和末行都能看到
       duelLogScroll = Math.max(0, Math.min(duelLogScroll, Math.max(0, contentH - visibleH)));
@@ -3139,9 +3144,13 @@ function drawCodex() {
       allLines.forEach((line, i) => {
         const ly = visibleTop + i*lineH - duelLogScroll;
         if (ly < visibleTop - lineH || ly > visibleTop + visibleH + lineH) return;
-        ctx.fillStyle = line.log.includes('⭐') ? '#FFD700' : (line.log.includes(UNIT_TYPES[d.typeB].name) ? '#EF5350' : '#4FC3F7');
-        ctx.font='12px monospace';
-        ctx.fillText(line.text, logX+10, ly);
+        // 按side区分颜色：我方蓝色，敌方红色，中立黄色
+        if (line.side === 'my') ctx.fillStyle = '#4FC3F7';
+        else if (line.side === 'enemy') ctx.fillStyle = '#EF5350';
+        else if (line.text.includes('⭐') || line.text.includes('大招') || line.text.includes('释放')) ctx.fillStyle = '#FFD700';
+        else ctx.fillStyle = '#CCC';
+        ctx.font='13px monospace';
+        ctx.fillText(line.text, logX+8, ly);
       });
       ctx.restore();
       if (contentH > visibleH) {
@@ -3151,7 +3160,7 @@ function drawCodex() {
         ctx.fillRect(logX+logW-8, barY, 4, barH);
       }
       ctx.fillStyle='#666'; ctx.font='10px sans-serif';
-      ctx.fillText('滚轮滚动查看历史', logX+10, logY+logH-8);
+      ctx.fillText('滚轮滚动查看历史', logX+10, logY+logH-10);
     }
     // 画兵种列表（对战中不画）—— 用统一函数getCodexButtonRect，确保与点击坐标严格一致
     if (duelPick === 2) return;
