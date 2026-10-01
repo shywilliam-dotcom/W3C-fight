@@ -2988,16 +2988,17 @@ canvas.addEventListener('wheel', e => {
 canvas.addEventListener('click', e => {
   if (game.gameOver) return;
   const rect = canvas.getBoundingClientRect();
-  const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
+  // 用offsetX/offsetY更可靠，再映射到内部坐标
+  const ox = e.offsetX !== undefined ? e.offsetX : (e.clientX - rect.left);
+  const oy = e.offsetY !== undefined ? e.offsetY : (e.clientY - rect.top);
   let cx, cy;
   if (window.innerWidth < window.innerHeight) {
-    cx = dy / rect.height * 1200;
-    cy = (rect.width - dx) / rect.width * 720;
+    cx = oy / rect.height * 1200;
+    cy = (rect.width - ox) / rect.width * 720;
   } else {
-    cx = dx / rect.width * 1200;
-    cy = dy / rect.height * 720;
+    cx = ox / rect.width * 1200;
+    cy = oy / rect.height * 720;
   }
-
   // 开始对战按钮（优先处理，不受拖拽影响）
   if (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) {
     game.started = true; dragMoved = false; render(); return;
