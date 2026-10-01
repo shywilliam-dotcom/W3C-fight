@@ -1981,6 +1981,7 @@ function endGame(win) {
 
 // ============ 渲染 =====
 function render() {
+  try {
   if (codexOpen) { drawCodex(); return; }
   ctx.clearRect(0,0,1200,720);
   // 淡色背景
@@ -2958,6 +2959,14 @@ function render() {
 
   // 图鉴覆盖层
   drawCodex();
+  } catch(e) {
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(0, 0, 1200, 100);
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px monospace';
+    ctx.fillText('RENDER ERROR: ' + e.message, 10, 20);
+    ctx.fillText(e.stack ? e.stack.split('\\n').slice(0,3).join(' | ') : '', 10, 45);
+  }
 }
 
 function shade(c,p) {
