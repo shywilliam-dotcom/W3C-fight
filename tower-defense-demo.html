@@ -2987,18 +2987,23 @@ canvas.addEventListener('wheel', e => {
 
 canvas.addEventListener('click', e => {
   if (game.gameOver) return;
-  if (dragMoved || mmDragging) { dragMoved = false; mmDragging = false; return; } // 拖拽后不触发点击
   const rect = canvas.getBoundingClientRect();
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
   let cx, cy;
   if (window.innerWidth < window.innerHeight) {
-    // 竖屏旋转90度：坐标映射
     cx = dy / rect.height * 1200;
     cy = (rect.width - dx) / rect.width * 720;
   } else {
     cx = dx / rect.width * 1200;
     cy = dy / rect.height * 720;
   }
+
+  // 开始对战按钮（优先处理，不受拖拽影响）
+  if (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) {
+    game.started = true; dragMoved = false; render(); return;
+  }
+
+  if (dragMoved || mmDragging) { dragMoved = false; mmDragging = false; return; }
 
   // 小地图点击跳转
   const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
@@ -3010,10 +3015,6 @@ canvas.addEventListener('click', e => {
     render(); return;
   }
 
-  // 开始对战按钮
-  if (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) {
-    game.started = true; render(); return;
-  }
   // canvas左下角按钮检测（从右下角移到左下角）
   const btnW = 70, btnH = 30;
   const btnStartX = 10, btnStartY = 620;
@@ -3355,8 +3356,20 @@ canvas.addEventListener('mousedown', e => {
     viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
     return;
   }
-  const inUI = (cx >= 10 && cx <= 155 && cy >= 620 && cy <= 685) || // 左下角按钮
-               (cx >= 200 && cy >= 600); // 底部信息栏
+  // 判断是否点击在UI区域（UI区域不触发拖拽）
+  let inUI = (cx >= 10 && cx <= 240 && cy >= 615 && cy <= 690) || // 左下角按钮区（3列2行）
+             (cx >= 200 && cy >= 600) || // 底部信息栏
+             (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) || // 开始按钮
+             (game.altarPickMenu) || // 祭坛选英雄菜单
+             (game.buildMenu); // 建造菜单
+  // 祭坛区域也排除拖拽
+  if (!inUI) {
+    for (const altar of game.altars) {
+      if (altar.side === 'my' && Math.abs(cx - altar.x) <= 120 && Math.abs(cy - altar.y) <= 200) {
+        inUI = true; break;
+      }
+    }
+  }
   if (!inUI && cy < 600) {
     isDragging = true; dragStartX = cx; dragStartY = cy;
     dragViewX = viewX; dragViewY = viewY; dragMoved = false;
