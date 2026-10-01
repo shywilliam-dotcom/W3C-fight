@@ -2994,7 +2994,6 @@ canvas.addEventListener('wheel', e => {
 }, {passive: false});
 
 canvas.addEventListener('click', e => {
-  try {
   if (game.gameOver) return;
   const rect = canvas.getBoundingClientRect();
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
@@ -3335,13 +3334,11 @@ canvas.addEventListener('click', e => {
   }
   game.selectedUnit = null;
   game.selectedTower = null;
-  } catch(e) { console.error('点击事件异常:', e); }
 });
 
 // 视口拖拽
 let isDragging = false, dragStartX = 0, dragStartY = 0, dragViewX = 0, dragViewY = 0, dragMoved = false;
 canvas.addEventListener('mousedown', e => {
-  try {
   if (codexOpen || game.gameOver) return;
   const rect = canvas.getBoundingClientRect();
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
@@ -3380,7 +3377,6 @@ canvas.addEventListener('mousedown', e => {
     isDragging = true; dragStartX = cx; dragStartY = cy;
     dragViewX = viewX; dragViewY = viewY; dragMoved = false;
   }
-  } catch(e) { console.error('mousedown异常:', e); }
 });
 canvas.addEventListener('mousemove', e => {
   if (mmDragging) {
@@ -3429,7 +3425,6 @@ function getTouchPos(e) {
 }
 let mmDragging = false; // 小地图滑动中
 canvas.addEventListener('touchstart', e => {
-  try {
   if (codexOpen || game.gameOver) return;
   const {cx, cy} = getTouchPos(e);
   const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
@@ -3461,7 +3456,6 @@ canvas.addEventListener('touchstart', e => {
     isDragging = true; dragStartX = cx; dragStartY = cy;
     dragViewX = viewX; dragViewY = viewY; dragMoved = false;
   }
-  } catch(e) { console.error('touchstart异常:', e); }
 }, {passive: false});
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
