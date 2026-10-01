@@ -3423,11 +3423,11 @@ function getTouchPos(e) {
 let mmDragging = false; // 小地图滑动中
 canvas.addEventListener('touchstart', e => {
   if (codexOpen || game.gameOver) return;
-  e.preventDefault();
   const {cx, cy} = getTouchPos(e);
   const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
   // 小地图触摸：启动滑动跟随
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
+    e.preventDefault();
     mmDragging = true;
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
@@ -3435,9 +3435,20 @@ canvas.addEventListener('touchstart', e => {
     viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
     return;
   }
-  const inUI = (cx >= 10 && cx <= 155 && cy >= 620 && cy <= 685) ||
-               (cx >= 200 && cy >= 600);
+  // 判断是否点击在UI区域
+  let inUI = (cx >= 10 && cx <= 240 && cy >= 615 && cy <= 690) || // 左下角按钮
+             (cx >= 200 && cy >= 600) || // 底部信息栏
+             (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) || // 开始按钮
+             (game.altarPickMenu) || (game.buildMenu);
+  if (!inUI) {
+    for (const altar of game.altars) {
+      if (altar.side === 'my' && Math.abs(cx - altar.x) <= 120 && Math.abs(cy - altar.y) <= 200) {
+        inUI = true; break;
+      }
+    }
+  }
   if (!inUI && cy < 600) {
+    e.preventDefault(); // 只有拖拽区域才preventDefault
     isDragging = true; dragStartX = cx; dragStartY = cy;
     dragViewX = viewX; dragViewY = viewY; dragMoved = false;
   }
