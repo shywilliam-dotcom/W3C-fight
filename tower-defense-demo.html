@@ -96,7 +96,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.25';
+const VERSION = 'v11.27';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 3600, WORLD_H = 2160; // 战场实际尺寸（1200×3, 720×3）
@@ -4397,6 +4397,14 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
 resizeCanvas();
+
+// 空格键开始游戏
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !game.started) {
+    game.started = true;
+    render();
+  }
+});
 
 // ============ 主循环 =====
 let lastT=0;
