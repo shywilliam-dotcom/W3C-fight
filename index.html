@@ -63,6 +63,8 @@
 </head>
 <body><div id="game-container">
 
+<div id="orientation-marker" style="position:absolute;top:0;left:0;z-index:100;color:#FF4081;font-weight:bold;font-size:18px;padding:4px 8px;background:rgba(0,0,0,0.3);border-right:2px solid #FF4081;border-bottom:2px solid #FF4081;">3C</div>
+
 <div id="hud">
   <div>💰 <span id="gold-display">0</span></div>
   <div>⏱ <b id="time-display">0:00</b></div>
@@ -2822,15 +2824,6 @@ function render() {
     ctx.textAlign='start';
   }
   ctx.restore();
-
-  // 左上角方向标记（固定在canvas坐标系(0,0)，用于判断横屏/竖屏朝向）
-  // 横屏时在视觉左上，竖屏旋转90度后在视觉右上
-  ctx.fillStyle = '#FF4081';
-  ctx.fillRect(0, 0, 55, 5);
-  ctx.fillRect(0, 0, 5, 55);
-  ctx.fillStyle = '#FF4081';
-  ctx.font = 'bold 16px sans-serif';
-  ctx.fillText('3C', 12, 32);
 
   // 开始对战按钮（未开始时显示）
   if (!game.started) {
