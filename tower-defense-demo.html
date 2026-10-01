@@ -3363,10 +3363,11 @@ canvas.addEventListener('mousedown', e => {
              (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) || // 开始按钮
              (game.altarPickMenu) || // 祭坛选英雄菜单
              (game.buildMenu); // 建造菜单
-  // 祭坛区域也排除拖拽
+  // 祭坛区域也排除拖拽（注意：祭坛用大战场坐标，需要加viewX/viewY转换）
   if (!inUI) {
+    const fcx = cx + viewX, fcy = cy + viewY;
     for (const altar of game.altars) {
-      if (altar.side === 'my' && Math.abs(cx - altar.x) <= 120 && Math.abs(cy - altar.y) <= 200) {
+      if (altar.side === 'my' && Math.abs(fcx - altar.x) <= 120 && Math.abs(fcy - altar.y) <= 200) {
         inUI = true; break;
       }
     }
@@ -3442,8 +3443,9 @@ canvas.addEventListener('touchstart', e => {
              (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) || // 开始按钮
              (game.altarPickMenu) || (game.buildMenu);
   if (!inUI) {
+    const fcx = cx + viewX, fcy = cy + viewY;
     for (const altar of game.altars) {
-      if (altar.side === 'my' && Math.abs(cx - altar.x) <= 120 && Math.abs(cy - altar.y) <= 200) {
+      if (altar.side === 'my' && Math.abs(fcx - altar.x) <= 120 && Math.abs(fcy - altar.y) <= 200) {
         inUI = true; break;
       }
     }
