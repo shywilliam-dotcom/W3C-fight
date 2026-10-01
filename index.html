@@ -4374,6 +4374,11 @@ window.addEventListener('error', (e) => {
   errDiv.textContent = 'JS ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno;
   document.body.appendChild(errDiv);
 });
+// 调试：确认JS执行到这里
+const debugDiv2 = document.createElement('div');
+debugDiv2.style.cssText = 'position:fixed;top:40px;left:0;background:#00f;color:#fff;padding:5px;z-index:99999;font-size:11px;';
+debugDiv2.textContent = 'JS loaded, about to resizeCanvas';
+document.body.appendChild(debugDiv2);
 resizeCanvas();
 
 // ============ 主循环 =====
