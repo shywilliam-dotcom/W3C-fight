@@ -4386,6 +4386,12 @@ function loop(t) {
   requestAnimationFrame(loop);
 }
 initGame();
+// 调试信息
+const debugDiv = document.createElement('div');
+debugDiv.id = 'debug-info';
+debugDiv.style.cssText = 'position:fixed;bottom:0;left:0;background:#000;color:#0f0;padding:5px;z-index:99999;font-size:11px;font-family:monospace;';
+debugDiv.textContent = 'INIT: towers=' + game.towers.length + ' gold=' + game.gold + ' altars=' + game.altars.length;
+document.body.appendChild(debugDiv);
 requestAnimationFrame(loop);
 </script>
 </body>
