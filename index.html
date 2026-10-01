@@ -3010,7 +3010,7 @@ canvas.addEventListener('click', e => {
     cy = dy / rect.height * 720;
   }
   // 开始对战按钮（优先处理，不受拖拽影响）
-  if (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) {
+  if (!game.started && cx >= 400 && cx <= 800 && cy >= 280 && cy <= 380) {
     game.started = true; dragMoved = false; render(); return;
   }
 
@@ -3367,7 +3367,7 @@ canvas.addEventListener('mousedown', e => {
   // 判断是否点击在UI区域（UI区域不触发拖拽）
   let inUI = (cx >= 10 && cx <= 240 && cy >= 615 && cy <= 690) || // 左下角按钮区（3列2行）
              (cx >= 200 && cy >= 600) || // 底部信息栏
-             (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) || // 开始按钮
+             (!game.started && cx >= 400 && cx <= 800 && cy >= 280 && cy <= 380) || // 开始按钮
              (game.altarPickMenu) || // 祭坛选英雄菜单
              (game.buildMenu); // 建造菜单
   // 祭坛区域也排除拖拽（注意：祭坛用大战场坐标，需要加viewX/viewY转换）
@@ -3449,7 +3449,7 @@ canvas.addEventListener('touchstart', e => {
   // 判断是否点击在UI区域
   let inUI = (cx >= 10 && cx <= 240 && cy >= 615 && cy <= 690) || // 左下角按钮
              (cx >= 200 && cy >= 600) || // 底部信息栏
-             (!game.started && cx >= 450 && cx <= 750 && cy >= 300 && cy <= 360) || // 开始按钮
+             (!game.started && cx >= 400 && cx <= 800 && cy >= 280 && cy <= 380) || // 开始按钮
              (game.altarPickMenu) || (game.buildMenu);
   if (!inUI) {
     const fcx = cx + viewX, fcy = cy + viewY;
@@ -4417,3 +4417,4 @@ requestAnimationFrame(loop);
 </script>
 </body>
 </html>
+ 
