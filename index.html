@@ -4392,10 +4392,15 @@ resizeCanvas();
 // ============ 主循环 =====
 let lastT=0;
 function loop(t) {
-  const dt = Math.min((t-lastT)/1000, 0.1)*game.speed;
-  lastT = t;
-  if (!simRunning) update(dt);
-  render();
+  try {
+    const dt = Math.min((t-lastT)/1000, 0.1)*game.speed;
+    lastT = t;
+    if (!simRunning) update(dt);
+    render();
+  } catch(e) {
+    console.error('游戏循环异常:', e);
+    pushCombatLog('⚠️ 系统异常已捕获，游戏继续运行');
+  }
   requestAnimationFrame(loop);
 }
 initGame();
