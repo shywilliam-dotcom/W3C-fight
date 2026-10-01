@@ -199,6 +199,16 @@ const EN_ALTAR_POS = [
   {x:3495, y:1740, lane:2}
 ];
 const HEROES_PER_ALTAR = 4;
+const ALTAR_SLOT_W = 100, ALTAR_SLOT_H = 100; // 栏位尺寸（加大便于点击）
+// 统一获取祭坛4个栏位的中心坐标（2×2排列），渲染和点击共用，避免不一致
+function getAltarSlotPositions(altar) {
+  return [
+    {x: altar.x-55, y: altar.y-140},
+    {x: altar.x+55, y: altar.y-140},
+    {x: altar.x-55, y: altar.y-30},
+    {x: altar.x+55, y: altar.y-30}
+  ];
+}
 
 // 经验升级曲线：本级所需经验 = 200 + (lv-1)*120 + (lv-1)^2*20
 function expToLevel(lv) {
@@ -2128,13 +2138,8 @@ function render() {
     ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('祭坛', altar.x, altar.y-160);
     // 4个栏位（2×2排列）
-    const slotW = 80, slotH = 80;
-    const slotPositions = [
-      {x: altar.x-45, y: altar.y-130},
-      {x: altar.x+45, y: altar.y-130},
-      {x: altar.x-45, y: altar.y-30},
-      {x: altar.x+45, y: altar.y-30}
-    ];
+    const slotW = ALTAR_SLOT_W, slotH = ALTAR_SLOT_H;
+    const slotPositions = getAltarSlotPositions(altar);
     altar.slots.forEach((slot, i) => {
       const sp = slotPositions[i];
       if (!slot.unlocked) {
@@ -3066,16 +3071,11 @@ canvas.addEventListener('click', e => {
   let altarClicked = false;
   game.altars.forEach((altar, ai) => {
     if (altar.side !== 'my') return;
-    if (Math.abs(fcX - altar.x) > 120 || Math.abs(fcY - altar.y) > 200) return;
-    const slotPositions = [
-      {x: altar.x-45, y: altar.y-130},
-      {x: altar.x+45, y: altar.y-130},
-      {x: altar.x-45, y: altar.y-30},
-      {x: altar.x+45, y: altar.y-30}
-    ];
+    if (Math.abs(fcX - altar.x) > 130 || Math.abs(fcY - altar.y) > 210) return;
+    const slotPositions = getAltarSlotPositions(altar);
     altar.slots.forEach((slot, si) => {
       const sp = slotPositions[si];
-      if (Math.abs(fcX - sp.x) > 45 || Math.abs(fcY - sp.y) > 45) return;
+      if (Math.abs(fcX - sp.x) > ALTAR_SLOT_W/2 || Math.abs(fcY - sp.y) > ALTAR_SLOT_H/2) return;
       altarClicked = true;
       if (!slot.unlocked) {
         // 未解锁：打开选英雄菜单
@@ -3368,7 +3368,7 @@ canvas.addEventListener('mousedown', e => {
   if (!inUI) {
     const fcx = cx + viewX, fcy = cy + viewY;
     for (const altar of game.altars) {
-      if (altar.side === 'my' && Math.abs(fcx - altar.x) <= 120 && Math.abs(fcy - altar.y) <= 200) {
+      if (altar.side === 'my' && Math.abs(fcx - altar.x) <= 130 && Math.abs(fcy - altar.y) <= 210) {
         inUI = true; break;
       }
     }
@@ -3446,7 +3446,7 @@ canvas.addEventListener('touchstart', e => {
   if (!inUI) {
     const fcx = cx + viewX, fcy = cy + viewY;
     for (const altar of game.altars) {
-      if (altar.side === 'my' && Math.abs(fcx - altar.x) <= 120 && Math.abs(fcy - altar.y) <= 200) {
+      if (altar.side === 'my' && Math.abs(fcx - altar.x) <= 130 && Math.abs(fcy - altar.y) <= 210) {
         inUI = true; break;
       }
     }
