@@ -2,6 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>三路兵营战 - Demo</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -92,14 +95,8 @@
 </div>
 
 <script>
-document.title = 'JS-OK-v11.23';
-window.onerror = function(msg, url, line, col, err) {
-  document.getElementById('unit-count').textContent = 'JS ERR: ' + msg + ' @line' + line;
-  return false;
-};
-window.__debug = 'SCRIPT START';
 // ============ 布局 ============
-const VERSION = 'v11.14';
+const VERSION = 'v11.25';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 3600, WORLD_H = 2160; // 战场实际尺寸（1200×3, 720×3）
@@ -491,7 +488,6 @@ function initGame() {
   });
 
   document.getElementById('game-over').style.display = 'none';
-  window.__debug = 'initGame OK: towers=' + game.towers.length + ' altars=' + game.altars.length;
 }
 
 // AI决策：根据金币建兵营/升级
@@ -1987,7 +1983,6 @@ function update(dt) {
   document.getElementById('my-towers').textContent = game.towers.filter(t=>t.side==='my'&&t.alive).length;
   document.getElementById('enemy-towers').textContent = game.towers.filter(t=>t.side==='enemy'&&t.alive).length;
   document.getElementById('unit-count').textContent = game.units.length + '(战' + game.units.filter(u=>u.type!=='skeleton'&&u.type!=='golem').length + '/召' + game.units.filter(u=>u.type==='skeleton'||u.type==='golem').length + ')';
-  if (window.__debug) document.getElementById('unit-count').textContent += ' | ' + window.__debug;
 }
 
 function endGame(win) {
@@ -4413,14 +4408,11 @@ function loop(t) {
     render();
   } catch(e) {
     console.error('游戏循环异常:', e);
-    window.__debug = 'LOOP ERR: ' + e.message + ' | towers=' + (game.towers?game.towers.length:'?');
     pushCombatLog('⚠️ 系统异常已捕获，游戏继续运行');
   }
   requestAnimationFrame(loop);
 }
-window.__debug = 'BEFORE initGame';
 initGame();
-window.__debug = 'AFTER initGame';
 requestAnimationFrame(loop);
 </script>
 </body>
