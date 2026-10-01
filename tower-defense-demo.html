@@ -90,7 +90,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.00';
+const VERSION = 'v11.06';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 3600, WORLD_H = 2160; // 战场实际尺寸（1200×3, 720×3）
@@ -1981,7 +1981,6 @@ function endGame(win) {
 
 // ============ 渲染 =====
 function render() {
-  try {
   if (codexOpen) { drawCodex(); return; }
   ctx.clearRect(0,0,1200,720);
   // 淡色背景
@@ -2959,14 +2958,6 @@ function render() {
 
   // 图鉴覆盖层
   drawCodex();
-  } catch(e) {
-    ctx.fillStyle = '#f00';
-    ctx.fillRect(0, 0, 1200, 100);
-    ctx.fillStyle = '#fff';
-    ctx.font = '14px monospace';
-    ctx.fillText('RENDER ERROR: ' + e.message, 10, 20);
-    ctx.fillText(e.stack ? e.stack.split('\\n').slice(0,3).join(' | ') : '', 10, 45);
-  }
 }
 
 function shade(c,p) {
@@ -4368,17 +4359,6 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
-window.addEventListener('error', (e) => {
-  const errDiv = document.createElement('div');
-  errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f00;color:#fff;padding:10px;z-index:99999;font-size:12px;white-space:pre-wrap;';
-  errDiv.textContent = 'JS ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno;
-  document.body.appendChild(errDiv);
-});
-// 调试：确认JS执行到这里
-const debugDiv2 = document.createElement('div');
-debugDiv2.style.cssText = 'position:fixed;top:40px;left:0;background:#00f;color:#fff;padding:5px;z-index:99999;font-size:11px;';
-debugDiv2.textContent = 'JS loaded, about to resizeCanvas';
-document.body.appendChild(debugDiv2);
 resizeCanvas();
 
 // ============ 主循环 =====
@@ -4391,12 +4371,6 @@ function loop(t) {
   requestAnimationFrame(loop);
 }
 initGame();
-// 调试信息
-const debugDiv = document.createElement('div');
-debugDiv.id = 'debug-info';
-debugDiv.style.cssText = 'position:fixed;bottom:0;left:0;background:#000;color:#0f0;padding:5px;z-index:99999;font-size:11px;font-family:monospace;';
-debugDiv.textContent = 'INIT: towers=' + game.towers.length + ' gold=' + game.gold + ' altars=' + game.altars.length;
-document.body.appendChild(debugDiv);
 requestAnimationFrame(loop);
 </script>
 </body>
