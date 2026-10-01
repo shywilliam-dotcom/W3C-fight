@@ -92,6 +92,7 @@
 </div>
 
 <script>
+window.__debug = 'SCRIPT START';
 // ============ 布局 ============
 const VERSION = 'v11.14';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -4412,7 +4413,9 @@ function loop(t) {
   }
   requestAnimationFrame(loop);
 }
+window.__debug = 'BEFORE initGame';
 initGame();
+window.__debug = 'AFTER initGame';
 requestAnimationFrame(loop);
 </script>
 </body>
