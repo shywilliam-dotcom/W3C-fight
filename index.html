@@ -77,7 +77,7 @@
   <button class="btn btn-restart" onclick="restartGame()">重开</button>
   <button class="btn btn-restart" onclick="startSimulation(1)" style="background:#0f0;color:#000;">模拟1局</button>
   <button class="btn btn-restart" onclick="showCodex()" style="background:#9b59b6;color:#fff;">📖图鉴</button>
-  <span id="info">点空兵营槽位建造，点兵营升级，点单位看状态</span>
+  <span id="info">点祭坛?选择英雄，点阵亡英雄复活，AUTO自动复活</span>
 </div>
 
 </div><!-- /game-container -->
@@ -183,6 +183,54 @@ const EN_BARRACK_POS = [
   {x:3585, y:1620, lane:2}, {x:3585, y:1860, lane:2}
 ];
 
+// ============ 祭坛系统（英雄制） ============
+// 每路1个祭坛，共3个，每个祭坛4个英雄栏位
+const ALTAR_SLOTS = [
+  {x:105, y:420, lane:0},  // 上路祭坛（原4个兵营合并）
+  {x:105, y:1080, lane:1}, // 中路祭坛
+  {x:105, y:1740, lane:2}  // 下路祭坛
+];
+const EN_ALTAR_POS = [
+  {x:3495, y:420, lane:0},
+  {x:3495, y:1080, lane:1},
+  {x:3495, y:1740, lane:2}
+];
+const HEROES_PER_ALTAR = 4;
+
+// 经验升级曲线：本级所需经验 = 200 + (lv-1)*120 + (lv-1)^2*20
+function expToLevel(lv) {
+  return 200 + (lv-1)*120 + (lv-1)*(lv-1)*20;
+}
+const MAX_HERO_LEVEL = 10;
+const EXP_SHARE_RANGE = 1500; // 经验均分范围（大战场×3后）
+
+// 复活费用 = 造价 × 30% × (1 + 等级×10%)
+function getReviveCost(unitType, level) {
+  const def = UNIT_TYPES[unitType];
+  if (!def) return 50;
+  return Math.round(def.cost * 0.3 * (1 + level * 0.1));
+}
+// 复活时间 = 5 + 等级×2 秒
+function getReviveTime(level) {
+  return 5 + level * 2;
+}
+
+// 创建祭坛
+function createAltar(x, y, lane, side) {
+  const slots = [];
+  for (let i = 0; i < HEROES_PER_ALTAR; i++) {
+    slots.push({
+      unlocked: false,
+      unitType: null,
+      heroId: null,
+      state: 'empty', // empty(未解锁) / alive(存活) / dead(阵亡待复活) / reviving(复活中)
+      reviveTimer: 0,
+      reviveCost: 0
+    });
+  }
+  return {x, y, lane, side, slots, hp:3000, maxHp:3000, alive:true, armorType:'fort'};
+}
+
 // ============ 兵种（魔兽攻防相克） =====// atkType: normal(普通) / pierce(穿刺) / magic(魔法) / siege(攻城)
 // armorType: unarmored(无甲小兵) / fort(城甲塔/基地)
 // 攻防相克表（魔兽争霸3原版）
@@ -251,7 +299,8 @@ const UPGRADE_PATHS = {
 // ============ 状态 =====
 let game = { gold:300, time:0, speed:1, selectedType:null,
   towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
-  goldAcc:0, upgradeMenu:null, selectedUnit:null
+  goldAcc:0, upgradeMenu:null, selectedUnit:null,
+  altars:[], autoRevive:false, heroIdCounter:0
 };
 
 const canvas = document.getElementById('gameCanvas');
@@ -384,7 +433,8 @@ function initGame() {
   game = { gold:500, time:0, speed:1, selectedType:null,
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
     goldAcc:0, upgradeMenu:null, selectedUnit:null,
-    prepTime:3, bountyAnnounced:false, aiGold:{my:500, enemy:500}, aiBuildCD:{my:0, enemy:0} };
+    prepTime:3, bountyAnnounced:false, aiGold:{my:500, enemy:500}, aiBuildCD:{my:0, enemy:0},
+    altars:[], autoRevive:false, heroIdCounter:0 };
   usedNames.clear();
 
   // 我方基地（1个，横跨三路，y=1080=360×3）
@@ -394,32 +444,33 @@ function initGame() {
   game.towers.push({ x:EN_BASE_X, y:1080, side:'enemy', isBase:true, hp:3000, maxHp:3000,
     atk:150, armor:30, flatArmor:30, baseArmor:30, atkType:'chaos', atkTimer:0, range:450, alive:true, armorType:'fort' });
 
-  // 每边10个塔，绝对坐标[x, y]（×3），用户给什么坐标就用什么
+  // 每边10个塔，攻击力降至17（原50的1/3）
   const tRange = 600; // 200×3
+  const tAtk = 17; // 降低至1/3，避免英雄对塔完全没战斗力
   // 我方塔：[x, y] 绝对坐标（×3）
   const myTowers = [
-    [570, 885],   // 1号 190×3, 295×3
-    [570, 1275],  // 2号
-    [540, 393],   // 3号
-    [540, 1767],  // 4号
-    [960, 621],   // 5号
-    [960, 1539],  // 6号
-    [1275, 195],  // 7号
-    [1275, 885],  // 8号
-    [1275, 1275], // 9号
-    [1275, 1965], // 10号
+    [570, 885], [570, 1275], [540, 393], [540, 1767],
+    [960, 621], [960, 1539], [1275, 195], [1275, 885],
+    [1275, 1275], [1275, 1965],
   ];
   myTowers.forEach(([tx, ty]) => {
     game.towers.push({ x:tx, y:ty, lane:0, side:'my', isBase:false,
-      hp:3000, maxHp:3000, atk:50, armor:0, flatArmor:0, baseArmor:0, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+      hp:3000, maxHp:3000, atk:tAtk, armor:0, flatArmor:0, baseArmor:0, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
-  // 敌方镜像：x=3600-tx，y相同
+  // 敌方镜像
   myTowers.forEach(([tx, ty]) => {
     game.towers.push({ x:3600-tx, y:ty, lane:0, side:'enemy', isBase:false,
-      hp:3000, maxHp:3000, atk:50, armor:0, flatArmor:0, baseArmor:0, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
+      hp:3000, maxHp:3000, atk:tAtk, armor:0, flatArmor:0, baseArmor:0, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
 
-  // AI兵营：空槽位，游戏过程中AI自动建和升级
+  // 初始化祭坛：每方3个，每路1个
+  ALTAR_SLOTS.forEach(s => {
+    game.altars.push(createAltar(s.x, s.y, s.lane, 'my'));
+  });
+  EN_ALTAR_POS.forEach(s => {
+    game.altars.push(createAltar(s.x, s.y, s.lane, 'enemy'));
+  });
+
   document.getElementById('game-over').style.display = 'none';
 }
 
@@ -427,42 +478,45 @@ function initGame() {
 function aiDecide(side, dt) {
   if (game.gameOver) return;
   const aiGoldKey = side==='my' ? 'my' : 'enemy';
-  // AI金币 = 每秒收入 + 击杀奖励
-  game.aiGold[aiGoldKey] += 5 * (dt||0.1); // 每秒5金币
-  // 建兵营冷却（避免瞬间建满）
+  game.aiGold[aiGoldKey] += 5 * (dt||0.1);
   if (game.aiBuildCD[aiGoldKey] > 0) game.aiBuildCD[aiGoldKey] -= dt;
-  const slots = side==='my' ? BARRACK_SLOTS : EN_BARRACK_POS;
-  const existing = game.barracks.filter(b => b.side===side && b.alive);
   const gold = game.aiGold[aiGoldKey];
+  const altars = game.altars.filter(a => a.side === side);
 
-  // 没兵营就先建基础兵（每5秒最多建1个，模拟玩家操作节奏）
-  if (existing.length < 6 && game.aiBuildCD[aiGoldKey] <= 0) {
-    const emptySlots = slots.filter(s => !existing.find(b => Math.abs(b.x-s.x)<5 && Math.abs((b.y||0)-(s.y||0))<5));
-    if (emptySlots.length > 0) {
-      const t = ['melee','archer','mage','cannon'][Math.floor(Math.random()*4)];
-      const cost = UNIT_TYPES[t].cost;
-      if (gold >= cost) {
-        game.aiGold[aiGoldKey] -= cost;
-        const s = emptySlots[0];
-        game.barracks.push({x:s.x, y:s.y, lane:s.lane||0, dy:s.dy||0, side:side, unitType:t, level:1, hp:2000, maxHp:2000, spawnTimer:2, alive:true, armorType:'fort'});
-        game.aiBuildCD[aiGoldKey] = 5; // 建兵营冷却5秒
+  // 1. 优先解锁未解锁的栏位（每5秒最多解锁1个）
+  if (game.aiBuildCD[aiGoldKey] <= 0) {
+    for (const altar of altars) {
+      for (let i = 0; i < altar.slots.length; i++) {
+        const slot = altar.slots[i];
+        if (!slot.unlocked) {
+          const t = ['melee','archer','mage','cannon','barbarian','paladin','fighter','musketeer','ranger','crossbow','arcane','ice','fire','rocket','tesla','siege'][Math.floor(Math.random()*16)];
+          const cost = UNIT_TYPES[t].cost;
+          if (gold >= cost) {
+            game.aiGold[aiGoldKey] -= cost;
+            slot.unlocked = true;
+            slot.unitType = t;
+            slot.state = 'dead';
+            slot.heroLevel = 1;
+            slot.heroExp = 0;
+            slot.reviveTimer = 0;
+            slot.reviveCost = getReviveCost(t, 1);
+            spawnHero(altar, i);
+            game.aiBuildCD[aiGoldKey] = 5;
+            return;
+          }
+        }
       }
-      return;
     }
   }
 
-  // 有钱就升级到高级兵种（成本与玩家一致：转职费=建造费×200%，等级不跳级，4级以上才能转）
-  for (const b of existing) {
-    if (b.level >= 10) continue;
-    const upgrades = UPGRADES[b.unitType];
-    if (!upgrades) continue;
-    if (b.level < 4) continue; // 4级以上才能转换
-    const upT = upgrades[Math.floor(Math.random()*upgrades.length)];
-    const upCost = Math.round(UNIT_TYPES[b.unitType].cost * 2); // 转职费=建造费×200%
-    if (gold >= upCost) {
-      game.aiGold[aiGoldKey] -= upCost;
-      b.unitType = upT;
-      // 等级保持不变，转换后可继续升级
+  // 2. 复活阵亡英雄（AI自动复活）
+  for (const altar of altars) {
+    for (let i = 0; i < altar.slots.length; i++) {
+      const slot = altar.slots[i];
+      if (slot.state === 'dead' && slot.reviveTimer <= 0 && gold >= slot.reviveCost) {
+        game.aiGold[aiGoldKey] -= slot.reviveCost;
+        spawnHero(altar, i);
+      }
     }
   }
 }
@@ -576,6 +630,215 @@ function spawnUnit(b) {
     u.hp = u.maxHp;
   }
   game.units.push(u);
+}
+
+// ============ 英雄系统 ============
+// 从祭坛召唤英雄
+function spawnHero(altar, slotIdx) {
+  const slot = altar.slots[slotIdx];
+  if (!slot.unlocked || slot.state !== 'dead') return null;
+  const def = UNIT_TYPES[slot.unitType];
+  const lv = slot.heroLevel || 1;
+  const isMage = ['mage','arcane','ice','fire'].includes(slot.unitType);
+  const mul = Math.pow(1.15, lv-1); // 英雄每级+15%
+  const isArcher = ['archer','musketeer','ranger','crossbow'].includes(slot.unitType);
+  const rangeMul = isArcher ? (1 + (lv-1)*0.05) : 1.0;
+  let speedMul = 1.0;
+  if (def.armorType === 'fort') speedMul = 0.8;
+  else if (def.armorType === 'light') speedMul = 1.3;
+  else if (def.armorType === 'unarmored') speedMul = 0.9;
+  if (isMage) speedMul = 0.9;
+  const yOff = (slotIdx - 1.5) * 50; // 4个英雄在祭坛前后排开
+  const heroId = ++game.heroIdCounter;
+  const u = {
+    x:altar.x + (altar.side==='my'?60:-60), y:altar.y+yOff, yOff:yOff, lane:altar.lane, side:altar.side, type:slot.unitType,
+    name:slot.heroName || getUnitName(slot.unitType),
+    isHero:true, heroId:heroId, altarRef:{altarIdx:game.altars.indexOf(altar), slotIdx:slotIdx},
+    dir: altar.side==='my'?1:-1, level:lv, exp:slot.heroExp||0, expToNext:expToLevel(lv),
+    atkType: def.atkType || 'normal',
+    armorType: def.armorType || 'unarmored',
+    flatArmor: def.armor || 0, baseArmor: def.armor || 0,
+    hp:Math.round(def.hp*mul), maxHp:Math.round(def.hp*mul),
+    atk:Math.round(def.atk*mul), atkSpeed:def.atkSpeed,
+    range:def.range*rangeMul*SCALE, speed:def.speed*speedMul*SCALE, atkTimer:0.3,
+    crit:['cannon','rocket','tesla','siege'].includes(slot.unitType)?0:(slot.unitType==='fighter'?0.10:0.05)*mul,
+    dodge:['cannon','rocket','tesla','siege'].includes(slot.unitType)?0:(slot.unitType==='fighter'?0.15:0.05)*mul,
+    instantKill:0, polymorpth:0, burnDps:0, poison:0, poisonDps:0, splash:0,
+    doubleStrike:0, doubleAttack:0, reflectPierce:0, reflectMagic:0, reflectMagicCD:0, multiTarget:0, splashRange:0,
+    focusFire:0, focusStacks:0, focusTarget:null, doubleStrikeBonus:0,
+    aoe:0, dmgReduce:0, buildingDamage:0,
+    iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
+    armorPierce:false, armorReduce:0, summonGolem:0, chainLightning:0, longRange:0,
+    stun:0, vulnerable:0, dodgeCounter:false, execute:0, electricField:0,
+    summonSkeleton:0, skeletonTimer:0, burnStack:0,
+    currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
+    shieldWall:0, shieldCD:0, shield:0, shieldAlly:0, shieldAllyCD:0,
+    golemCD:0, charge:0, chargeCD:0, rocketCd:0,
+    airSlugCD:0, airSlugStacks:0, stunBlastCD:0, stunBlastStacks:0,
+    pierceCD:0, blizzardCD:0, whirlwindCD:0, whirlwindActive:0,
+    backJumpCD:0, knockback:0, strikeStun:0, healAlly:0,
+    ultimate: lv>=6 ? def.ult : null,
+    st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, poisonStacks:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 },
+    _retreatTimer:0, _aiTarget:null
+  };
+  // 保存英雄名字到slot
+  slot.heroName = u.name;
+  slot.heroId = heroId;
+  slot.state = 'alive';
+  slot.heroLevel = lv;
+  slot.heroExp = u.exp;
+  // 应用技能
+  [def.skill1, def.skill2, def.skill3].forEach(s => {
+    if (!s) return;
+    if (s.k==='dmgReduce') u.dmgReduce = s.v*mul;
+    else if (s.k==='crit') u.crit = Math.max(u.crit, s.v*mul);
+    else if (s.k==='dodge') u.dodge = Math.max(u.dodge, s.v*mul);
+    else if (s.k==='instantKill') u.instantKill = s.v;
+    else if (s.k==='polymorph') u.polymorpth = s.v*mul;
+    else if (s.k==='burnDps') u.burnDps = s.v*mul;
+    else if (s.k==='poison') { u.poison = s.v*mul; u.poisonDps = s.dps || 0; }
+    else if (s.k==='splash') { u.splash = s.v*mul; u.splashRange = s.range || 40; }
+    else if (s.k==='doubleStrike') u.doubleStrike = s.v*mul;
+    else if (s.k==='doubleAttack') u.doubleAttack = s.v;
+    else if (s.k==='reflectPierce') u.reflectPierce = s.v;
+    else if (s.k==='reflectMagic') u.reflectMagic = s.v;
+    else if (s.k==='focusFire') u.focusFire = s.v;
+    else if (s.k==='armorReduce') u.armorReduce = s.v;
+    else if (s.k==='stun') u.stun = s.v*mul;
+    else if (s.k==='vulnerable') u.vulnerable = s.v*mul;
+    else if (s.k==='execute') u.execute = s.v;
+    else if (s.k==='chainLightning') u.chainLightning = s.v;
+    else if (s.k==='parryArcher') u.parryArcher = s.v;
+    else if (s.k==='healAlly') u.healAlly = s.v;
+    else if (s.k==='electricField') u.electricField = s.v;
+    else if (s.k==='longRange') u.longRange = s.v;
+    else if (s.k==='multiTarget') u.multiTarget = s.v;
+    else if (s.k==='dodgeCounter') u.dodgeCounter = true;
+    else if (s.k==='summonGolem') u.summonGolem = s.v;
+    else if (s.k==='summonSkeleton') u.summonSkeleton = s.v;
+  });
+  if (slot.unitType==='fighter') u.dodge += (lv-1)*0.05;
+  game.units.push(u);
+  pushCombatLog(`⚔ ${u.name}（${def.name} Lv.${lv}）登场！`, u.side);
+  return u;
+}
+
+// 给击杀点附近英雄分配经验
+function giveExp(killer, x, y, amount) {
+  if (!amount || amount <= 0) return;
+  const side = killer.side;
+  // 找到1500范围内的友方英雄
+  const heroes = game.units.filter(u => u.isHero && u.side===side && u.hp>0 && Math.hypot(u.x-x, u.y-y) <= EXP_SHARE_RANGE);
+  if (heroes.length === 0) return;
+  // 击杀者额外+20%
+  const baseShare = amount / heroes.length;
+  heroes.forEach(h => {
+    let gain = baseShare;
+    if (h === killer) gain *= 1.2;
+    gain = Math.round(gain);
+    h.exp += gain;
+    // 检查升级
+    while (h.exp >= h.expToNext && h.level < MAX_HERO_LEVEL) {
+      h.exp -= h.expToNext;
+      h.level++;
+      h.expToNext = expToLevel(h.level);
+      // 升级属性成长
+      const mul = 1.15;
+      const oldMaxHp = h.maxHp;
+      h.maxHp = Math.round(h.maxHp * mul);
+      h.hp += (h.maxHp - oldMaxHp); // 升级回血
+      h.atk = Math.round(h.atk * mul);
+      if (h.level === 6) {
+        const def = UNIT_TYPES[h.type];
+        h.ultimate = def.ult;
+        pushCombatLog(`✨ ${h.name} 升到Lv.${h.level}！解锁大招！`, h.side);
+      } else {
+        pushCombatLog(`✨ ${h.name} 升到Lv.${h.level}！`, h.side);
+      }
+    }
+    // 同步到祭坛slot
+    if (h.altarRef) {
+      const altar = game.altars[h.altarRef.altarIdx];
+      if (altar) {
+        const slot = altar.slots[h.altarRef.slotIdx];
+        if (slot) { slot.heroLevel = h.level; slot.heroExp = h.exp; }
+      }
+    }
+  });
+}
+
+// 英雄死亡处理
+function onHeroDeath(hero) {
+  if (!hero.isHero || !hero.altarRef) return;
+  const altar = game.altars[hero.altarRef.altarIdx];
+  if (!altar) return;
+  const slot = altar.slots[hero.altarRef.slotIdx];
+  if (!slot) return;
+  slot.state = 'dead';
+  slot.heroLevel = hero.level;
+  slot.heroExp = hero.exp;
+  slot.heroName = hero.name;
+  slot.reviveCost = getReviveCost(hero.type, hero.level);
+  slot.reviveTimer = getReviveTime(hero.level);
+  pushCombatLog(`💀 ${hero.name} 阵亡！复活需${slot.reviveTimer.toFixed(0)}秒，费用${slot.reviveCost}金`, hero.side);
+}
+
+// 更新祭坛（复活倒计时、自动复活）
+function updateAltars(dt) {
+  game.altars.forEach(altar => {
+    altar.slots.forEach(slot => {
+      if (slot.state === 'dead') {
+        slot.reviveTimer -= dt;
+        if (slot.reviveTimer <= 0) {
+          slot.reviveTimer = 0;
+          // 自动复活模式
+          if (game.autoRevive || altar.side === 'enemy') {
+            const goldKey = altar.side === 'my' ? 'gold' : null;
+            const availableGold = altar.side === 'my' ? game.gold : game.aiGold.enemy;
+            if (availableGold >= slot.reviveCost) {
+              if (altar.side === 'my') game.gold -= slot.reviveCost;
+              else game.aiGold.enemy -= slot.reviveCost;
+              spawnHero(altar, altar.slots.indexOf(slot));
+            }
+          }
+        }
+      }
+    });
+  });
+}
+
+// 手动复活英雄
+function manualRevive(altarIdx, slotIdx) {
+  const altar = game.altars[altarIdx];
+  if (!altar || altar.side !== 'my') return false;
+  const slot = altar.slots[slotIdx];
+  if (!slot || slot.state !== 'dead' || slot.reviveTimer > 0) return false;
+  if (game.gold < slot.reviveCost) return false;
+  game.gold -= slot.reviveCost;
+  spawnHero(altar, slotIdx);
+  return true;
+}
+
+// 解锁祭坛栏位（选择英雄种类）
+function unlockAltarSlot(altarIdx, slotIdx, unitType) {
+  const altar = game.altars[altarIdx];
+  if (!altar || altar.side !== 'my') return false;
+  const slot = altar.slots[slotIdx];
+  if (!slot || slot.unlocked) return false;
+  const def = UNIT_TYPES[unitType];
+  if (!def) return false;
+  if (game.gold < def.cost) return false;
+  game.gold -= def.cost;
+  slot.unlocked = true;
+  slot.unitType = unitType;
+  slot.state = 'dead';
+  slot.heroLevel = 1;
+  slot.heroExp = 0;
+  slot.reviveTimer = 0;
+  slot.reviveCost = getReviveCost(unitType, 1);
+  // 解锁后立即召唤（首次免费）
+  spawnHero(altar, slotIdx);
+  return true;
 }
 
 // ============ 战斗 =====
@@ -1070,6 +1333,11 @@ function applyDmg(att, tgt, dmg, def) {
     // 单位击杀单位给10%造价金币（必须由单位击杀，塔击杀不算）
     if (tgt.hp <= 0 && UNIT_TYPES[tgt.type] && att.type !== undefined) {
       game.gold += Math.round(UNIT_TYPES[tgt.type].cost * 0.10);
+      // 英雄击杀获得经验
+      if (att.isHero) {
+        const expGain = tgt.isHero ? (tgt.level || 1) * 60 : 30;
+        giveExp(att, tgt.x, tgt.y, expGain);
+      }
     }
     // 暗火法击杀后立刻召唤一个骷髅
     if (tgt.hp <= 0 && att.type==='darkfire' && att.hp>0) {
@@ -1390,6 +1658,52 @@ function updateUnits(game, dt) {
     // 破甲弩手专注射击：同一目标每次攻击攻速+6%，最高300%
     if (u.focusFire>0 && u.focusStacks>0) atkSpd *= (1 + Math.min(3.0, u.focusStacks * u.focusFire));
 
+    // ===== 英雄AI行为 =====
+    if (u.isHero) {
+      // 1. 低血量后撤：血量<30%且附近有敌人时，向后撤
+      if (u.hp < u.maxHp * 0.3) {
+        const nearbyEnemies = game.units.filter(o => o.side!==u.side && o.hp>0 && Math.hypot(o.x-u.x,o.y-u.y) < u.range*2);
+        if (nearbyEnemies.length >= 2) {
+          u._retreatTimer = 2;
+        }
+      }
+      if (u._retreatTimer > 0) {
+        u._retreatTimer -= dt;
+        u.x -= u.speed * u.dir * dt * 0.8; // 向后撤
+        u.dir = u.side==='my'?1:-1;
+        return;
+      }
+
+      // 2. 野蛮人优先找低血量目标斩杀
+      if (u.type === 'barbarian' && u.execute) {
+        let lowTarget = null, lowHp = Infinity;
+        game.units.forEach(o => {
+          if (o.side===u.side||o.hp<=0) return;
+          const d = Math.hypot(o.x-u.x, o.y-u.y);
+          if (d <= u.range*3 && o.hp < o.maxHp*0.15 && o.hp < lowHp) {
+            lowHp = o.hp; lowTarget = o;
+          }
+        });
+        if (lowTarget) {
+          // 朝低血量目标移动
+          const dx = lowTarget.x - u.x, dy = lowTarget.y - u.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > u.range) {
+            u.x += u.speed * (dx/dist) * dt;
+            u.y += u.speed * (dy/dist) * dt * 0.5;
+          }
+        }
+      }
+
+      // 3. 单个英雄不单独冲塔：附近没有友方英雄时，不主动攻击塔
+      const nearbyAllies = game.units.filter(o => o.isHero && o.side===u.side && o.hp>0 && Math.hypot(o.x-u.x,o.y-u.y) < 400);
+      if (nearbyAllies.length < 2) {
+        u._waitForTeam = true;
+      } else {
+        u._waitForTeam = false;
+      }
+    }
+
     // 找目标：优先攻击移动单位，其次塔
     let bestT=null, bestD=Infinity;
     // 先搜移动单位（优先）
@@ -1398,8 +1712,8 @@ function updateUnits(game, dt) {
       const d = Math.hypot(o.x-u.x, o.y-u.y);
       if (d<=u.range && d<bestD) { bestD=d; bestT=o; }
     });
-    // 没找到移动单位再搜塔（塔是固定建筑，不限制同路）
-    if (!bestT) {
+    // 没找到移动单位再搜塔（英雄不单独冲塔）
+    if (!bestT && !(u.isHero && u._waitForTeam)) {
       game.towers.forEach(t => {
         if (t.side===u.side||!t.alive) return;
         const d = Math.hypot(t.x-u.x, t.y-u.y);
@@ -1585,23 +1899,18 @@ function update(dt) {
     });
   }
 
-  // 出兵（攻城车类20秒，其他15秒）
-  game.barracks.forEach(b => {
-    if (!b.alive) return;
-    b.spawnTimer -= dt;
-    if (b.spawnTimer<=0) {
-      spawnUnit(b);
-      const isSiege = ['cannon','rocket','tesla','siege'].includes(b.unitType);
-      let interval = isSiege ? 20 : 15;
-      // 羁绊：工程车3种齐全 → 出兵间隔-2秒
-      if (b.side==='my' && game.myBuffs.siegeMaster) interval -= 2;
-      b.spawnTimer = interval;
-    }
-  });
+  // 祭坛更新（复活倒计时、自动复活）
+  updateAltars(dt);
 
   updateUnits(game, dt);
-  // 兵营被摧毁
-  game.barracks.forEach(b => { if (b.alive && b.hp<=0) b.alive=false; });
+
+  // 英雄死亡处理
+  game.units.forEach(u => {
+    if (u.isHero && u.hp <= 0 && !u._deathHandled) {
+      u._deathHandled = true;
+      onHeroDeath(u);
+    }
+  });
 
   // 塔攻击（攻击所有范围内敌方单位，不限制路）
   game.towers.forEach(t => {
@@ -1624,9 +1933,25 @@ function update(dt) {
   game.projectiles.forEach(p=>p.p+=dt*3);
   game.projectiles = game.projectiles.filter(p=>p.p<1);
 
-  // 塔死亡（击杀敌方塔奖励300金）
+  // 塔死亡（击杀敌方塔奖励300金+100经验）
   game.towers.forEach(t => {
-    if (t.alive && t.hp<=0) { t.alive=false; if(t.side==='enemy') game.gold+=300; }
+    if (t.alive && t.hp<=0) {
+      t.alive=false;
+      if(t.side==='enemy') {
+        game.gold+=300;
+        // 给附近我方英雄100经验
+        const nearbyHeroes = game.units.filter(u => u.isHero && u.side==='my' && u.hp>0 && Math.hypot(u.x-t.x, u.y-t.y) <= EXP_SHARE_RANGE);
+        if (nearbyHeroes.length > 0) {
+          nearbyHeroes.forEach(h => giveExp(h, t.x, t.y, 100 / nearbyHeroes.length));
+        }
+      }
+      if(t.side==='my') {
+        const nearbyHeroes = game.units.filter(u => u.isHero && u.side==='enemy' && u.hp>0 && Math.hypot(u.x-t.x, u.y-t.y) <= EXP_SHARE_RANGE);
+        if (nearbyHeroes.length > 0) {
+          nearbyHeroes.forEach(h => giveExp(h, t.x, t.y, 100 / nearbyHeroes.length));
+        }
+      }
+    }
   });
 
   // 胜负
@@ -1786,43 +2111,70 @@ function render() {
     ctx.fillRect(t.x-45, t.y+9, 90*pct, 10);
   });
 
-  // 空兵营槽位（视口内，×3）
-  BARRACK_SLOTS.forEach(slot => {
-    const y = slot.y || (LANE_Y[slot.lane] + (slot.dy||0));
-    const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<15&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-y)<15);
-    if (!ex) {
-      ctx.beginPath(); ctx.arc(slot.x, y, 90, 0, Math.PI*2);
-      if (game.selectedType) { ctx.fillStyle='rgba(76,175,80,0.4)'; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=3; }
-      else { ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.strokeStyle='#4A6FA5'; ctx.lineWidth=2; }
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = game.selectedType?'#4CAF50':'#4A6FA5';
-      ctx.font='32px sans-serif'; ctx.textAlign='center'; ctx.fillText('+', slot.x, y+10); ctx.textAlign='start';
-    }
-  });
-
-  // 兵营（×3）
-  game.barracks.forEach(b => {
-    const y = b.y || (LANE_Y[b.lane] + (b.dy||0));
-    if (!b.alive) {
-      ctx.fillStyle='#333';
-      ctx.fillRect(b.x-120, y-150, 240, 240);
-      ctx.strokeStyle='#555'; ctx.strokeRect(b.x-120, y-150, 240, 240);
-      return;
-    }
-    ctx.fillStyle = b.side==='my'?'#2196F3':'#F44336';
-    ctx.fillRect(b.x-120, y-150, 240, 240);
-    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.strokeRect(b.x-120, y-150, 240, 240);
-    const iconMap = {melee:'👊', barbarian:'👊', paladin:'👊', fighter:'👊',
-      archer:'🏹', musketeer:'🏹', ranger:'🏹', crossbow:'🏹',
-      mage:'🧙‍♂️', ice:'🧙‍♂️', arcane:'🧙‍♂️', fire:'🧙‍♂️', darkfire:'🧙‍♂️',
-      cannon:'💣', rocket:'💣', tesla:'💣', siege:'💣'};
-    ctx.font = '64px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(iconMap[b.unitType]||'❓', b.x, y-30);
-    if (b.level>1) {
-      ctx.fillStyle='#FFD700'; ctx.font='bold 18px sans-serif';
-      ctx.fillText('Lv'+b.level, b.x, y+20);
-    }
-    ctx.textAlign='start';
+  // 祭坛渲染（每路1个，每祭坛4个英雄栏位）
+  game.altars.forEach(altar => {
+    if (altar.x < viewX-200 || altar.x > viewX+1400) return;
+    // 祭坛底座
+    ctx.fillStyle = altar.side==='my' ? 'rgba(33,150,243,0.3)' : 'rgba(244,67,54,0.3)';
+    ctx.fillRect(altar.x-100, altar.y-180, 200, 360);
+    ctx.strokeStyle = altar.side==='my' ? '#2196F3' : '#F44336';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(altar.x-100, altar.y-180, 200, 360);
+    // 祭坛标题
+    ctx.fillStyle = altar.side==='my' ? '#4FC3F7' : '#EF5350';
+    ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('祭坛', altar.x, altar.y-160);
+    // 4个栏位（2×2排列）
+    const slotW = 80, slotH = 80;
+    const slotPositions = [
+      {x: altar.x-45, y: altar.y-130},
+      {x: altar.x+45, y: altar.y-130},
+      {x: altar.x-45, y: altar.y-30},
+      {x: altar.x+45, y: altar.y-30}
+    ];
+    altar.slots.forEach((slot, i) => {
+      const sp = slotPositions[i];
+      if (!slot.unlocked) {
+        // 未解锁：显示"？"
+        ctx.fillStyle = 'rgba(100,100,100,0.5)';
+        ctx.fillRect(sp.x-slotW/2, sp.y-slotH/2, slotW, slotH);
+        ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
+        ctx.strokeRect(sp.x-slotW/2, sp.y-slotH/2, slotW, slotH);
+        ctx.fillStyle = '#888'; ctx.font = '28px sans-serif';
+        ctx.fillText('?', sp.x, sp.y+10);
+      } else if (slot.state === 'alive') {
+        // 存活：显示英雄头像
+        const def = UNIT_TYPES[slot.unitType];
+        ctx.fillStyle = altar.side==='my' ? 'rgba(76,175,80,0.4)' : 'rgba(244,67,54,0.4)';
+        ctx.fillRect(sp.x-slotW/2, sp.y-slotH/2, slotW, slotH);
+        ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 2;
+        ctx.strokeRect(sp.x-slotW/2, sp.y-slotH/2, slotW, slotH);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(def?def.name:'?', sp.x, sp.y-15);
+        ctx.fillStyle = '#FFD700'; ctx.font = 'bold 12px sans-serif';
+        ctx.fillText('Lv'+(slot.heroLevel||1), sp.x, sp.y+5);
+        ctx.fillStyle = '#aaa'; ctx.font = '9px sans-serif';
+        ctx.fillText((slot.heroName||'').substring(0,4), sp.x, sp.y+20);
+      } else if (slot.state === 'dead') {
+        // 阵亡：显示复活按钮
+        ctx.fillStyle = 'rgba(100,100,100,0.6)';
+        ctx.fillRect(sp.x-slotW/2, sp.y-slotH/2, slotW, slotH);
+        ctx.strokeStyle = '#F44336'; ctx.lineWidth = 2;
+        ctx.strokeRect(sp.x-slotW/2, sp.y-slotH/2, slotW, slotH);
+        ctx.fillStyle = '#F44336'; ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('阵亡', sp.x, sp.y-15);
+        if (slot.reviveTimer > 0) {
+          ctx.fillStyle = '#FFD700'; ctx.font = 'bold 14px sans-serif';
+          ctx.fillText(slot.reviveTimer.toFixed(0)+'s', sp.x, sp.y+5);
+        } else {
+          ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 10px sans-serif';
+          ctx.fillText('复活', sp.x, sp.y+5);
+          ctx.fillStyle = '#FFD700'; ctx.font = '9px sans-serif';
+          ctx.fillText(slot.reviveCost+'金', sp.x, sp.y+20);
+        }
+      }
+    });
+    ctx.textAlign = 'start';
   });
 
   // 单位（视口内，去掉旧的translate/scale）
@@ -1894,9 +2246,24 @@ function render() {
         }
         ctx.restore();
         // 名字（×3）
-        ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
-        ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y - 78);
+        if (u.isHero) {
+          // 英雄：名字+等级+经验条
+          ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
+          ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText(u.name, u.x, u.y - 85);
+          ctx.fillStyle = '#FFD700'; ctx.font = 'bold 12px sans-serif';
+          ctx.fillText('Lv.'+u.level, u.x, u.y - 68);
+          // 经验条
+          const expW = 50, expH = 4;
+          ctx.fillStyle = 'rgba(0,0,0,0.7)';
+          ctx.fillRect(u.x-expW/2, u.y-62, expW, expH);
+          ctx.fillStyle = '#9C27B0';
+          ctx.fillRect(u.x-expW/2, u.y-62, expW * Math.min(1, u.exp/u.expToNext), expH);
+        } else {
+          ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
+          ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y - 78);
+        }
         ctx.textAlign = 'start';
         return;
       }
@@ -2466,14 +2833,15 @@ function render() {
     ctx.fillText('开始对战', 600, 340);
     ctx.textAlign='start';
   }
-  // 左下角按钮 2x2（从右下角移到左下角）
+  // 左下角按钮（从右下角移到左下角）
   const btnW = 70, btnH = 30;
   const btnStartX = 10, btnStartY = 620;
   const btns = [
-    {x:0, y:0, label:'1x', color:'#607D8B'},
-    {x:1, y:0, label:'设置', color:'#FF9800'},
-    {x:0, y:1, label:'图鉴', color:'#9C27B0'},
-    {x:1, y:1, label:'模拟', color:'#4CAF50'}
+    {x:0, y:0, label:game.speed+'x', color:'#607D8B'},
+    {x:1, y:0, label:game.autoRevive?'AUTO✓':'AUTO', color:game.autoRevive?'#4CAF50':'#795548'},
+    {x:0, y:1, label:'设置', color:'#FF9800'},
+    {x:1, y:1, label:'图鉴', color:'#9C27B0'},
+    {x:2, y:0, label:'模拟', color:'#4CAF50'}
   ];
   btns.forEach(b => {
     const bx = btnStartX + b.x*(btnW+5);
@@ -2556,6 +2924,38 @@ function render() {
     ctx.fillText('点击空白处或✕关闭', 920, 665);
   }
 
+  // 祭坛选英雄菜单
+  if (game.altarPickMenu) {
+    ctx.fillStyle='rgba(0,0,0,0.95)';
+    ctx.fillRect(280, 80, 640, 360);
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
+    ctx.strokeRect(280, 80, 640, 360);
+    // 关闭按钮
+    ctx.fillStyle='#666'; ctx.fillRect(1140, 80, 40, 30);
+    ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('✕', 1160, 100); ctx.textAlign='start';
+    ctx.fillStyle='#FFD700'; ctx.font='bold 18px sans-serif';
+    ctx.fillText('选择英雄（花费=兵种造价）', 300, 110);
+    const heroTypes = ['melee','barbarian','paladin','fighter','archer','musketeer','ranger','crossbow','mage','ice','arcane','fire','cannon','rocket','tesla','siege'];
+    const menuX = 300, menuY = 130, btnW = 140, btnH = 60, gap = 10;
+    heroTypes.forEach((t, i) => {
+      const col = i % 4, row = Math.floor(i / 4);
+      const bx = menuX + col*(btnW+gap), by = menuY + row*(btnH+gap);
+      const def = UNIT_TYPES[t];
+      const canAfford = game.gold >= def.cost;
+      ctx.fillStyle = canAfford ? 'rgba(76,175,80,0.3)' : 'rgba(100,100,100,0.3)';
+      ctx.fillRect(bx, by, btnW, btnH);
+      ctx.strokeStyle = canAfford ? '#4CAF50' : '#666'; ctx.lineWidth=1;
+      ctx.strokeRect(bx, by, btnW, btnH);
+      ctx.fillStyle = canAfford ? '#fff' : '#888'; ctx.font='bold 13px sans-serif';
+      ctx.fillText(def.name, bx+8, by+22);
+      ctx.fillStyle='#FFD700'; ctx.font='11px sans-serif';
+      ctx.fillText(def.cost+'金', bx+8, by+40);
+      ctx.fillStyle='#aaa'; ctx.font='10px sans-serif';
+      ctx.fillText('HP'+def.hp+' ATK'+def.atk, bx+8, by+54);
+    });
+  }
+
   // 图鉴覆盖层
   drawCodex();
 }
@@ -2619,15 +3019,17 @@ canvas.addEventListener('click', e => {
   const btnStartX = 10, btnStartY = 620;
   const btns = [
     {x:0, y:0, act:'speed'},
-    {x:1, y:0, act:'settings'},
-    {x:0, y:1, act:'codex'},
-    {x:1, y:1, act:'sim'}
+    {x:1, y:0, act:'auto'},
+    {x:0, y:1, act:'settings'},
+    {x:1, y:1, act:'codex'},
+    {x:2, y:0, act:'sim'}
   ];
   for (const b of btns) {
     const bx = btnStartX + b.x*(btnW+5);
     const by = btnStartY + b.y*(btnH+5);
     if (cx >= bx && cx <= bx+btnW && cy >= by && cy <= by+btnH) {
       if (b.act==='speed') { game.speed = game.speed>=4?1:game.speed*2; }
+      else if (b.act==='auto') { game.autoRevive = !game.autoRevive; pushCombatLog(game.autoRevive?'💚 自动复活已开启':'💔 自动复活已关闭'); }
       else if (b.act==='settings') { game.settingsOpen = !game.settingsOpen; }
       else if (b.act==='codex') { showCodex(); }
       else if (b.act==='sim') { game.simOpen = !game.simOpen; }
@@ -2656,6 +3058,65 @@ canvas.addEventListener('click', e => {
   // 战场坐标：屏幕坐标 + 视口偏移
   const fcX = cx + viewX;
   const fcY = cy + viewY;
+
+  // ===== 祭坛点击处理 =====
+  let altarClicked = false;
+  game.altars.forEach((altar, ai) => {
+    if (altar.side !== 'my') return;
+    if (Math.abs(fcX - altar.x) > 120 || Math.abs(fcY - altar.y) > 200) return;
+    const slotPositions = [
+      {x: altar.x-45, y: altar.y-130},
+      {x: altar.x+45, y: altar.y-130},
+      {x: altar.x-45, y: altar.y-30},
+      {x: altar.x+45, y: altar.y-30}
+    ];
+    altar.slots.forEach((slot, si) => {
+      const sp = slotPositions[si];
+      if (Math.abs(fcX - sp.x) > 45 || Math.abs(fcY - sp.y) > 45) return;
+      altarClicked = true;
+      if (!slot.unlocked) {
+        // 未解锁：打开选英雄菜单
+        game.altarPickMenu = {altarIdx: ai, slotIdx: si};
+        render();
+      } else if (slot.state === 'dead' && slot.reviveTimer <= 0) {
+        // 阵亡且可复活：手动复活
+        if (manualRevive(ai, si)) {
+          pushCombatLog(`💚 手动复活 ${slot.heroName}！`);
+        } else {
+          pushCombatLog(`❌ 金币不足，无法复活（需${slot.reviveCost}金）`);
+        }
+        render();
+      }
+    });
+  });
+  if (altarClicked) return;
+
+  // 祭坛选英雄菜单点击
+  if (game.altarPickMenu) {
+    const menu = game.altarPickMenu;
+    // 关闭按钮
+    if (cx >= 1140 && cx <= 1180 && cy >= 80 && cy <= 110) {
+      game.altarPickMenu = null; render(); return;
+    }
+    // 16个英雄选项（4列×4行）
+    const heroTypes = ['melee','barbarian','paladin','fighter','archer','musketeer','ranger','crossbow','mage','ice','arcane','fire','cannon','rocket','tesla','siege'];
+    const menuX = 300, menuY = 100, btnW = 140, btnH = 60, gap = 10;
+    for (let i = 0; i < heroTypes.length; i++) {
+      const col = i % 4, row = Math.floor(i / 4);
+      const bx = menuX + col*(btnW+gap), by = menuY + row*(btnH+gap);
+      if (cx >= bx && cx <= bx+btnW && cy >= by && cy <= by+btnH) {
+        const t = heroTypes[i];
+        if (unlockAltarSlot(menu.altarIdx, menu.slotIdx, t)) {
+          pushCombatLog(`🆕 解锁英雄：${UNIT_TYPES[t].name}！`);
+        } else {
+          pushCombatLog(`❌ 金币不足（需${UNIT_TYPES[t].cost}金）`);
+        }
+        game.altarPickMenu = null;
+        render(); return;
+      }
+    }
+    return;
+  }
 
   // ===== 图鉴模式优先处理 =====
   if (codexOpen) {
