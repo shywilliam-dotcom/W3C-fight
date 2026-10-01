@@ -4359,6 +4359,12 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+window.addEventListener('error', (e) => {
+  const errDiv = document.createElement('div');
+  errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f00;color:#fff;padding:10px;z-index:99999;font-size:12px;white-space:pre-wrap;';
+  errDiv.textContent = 'JS ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno;
+  document.body.appendChild(errDiv);
+});
 resizeCanvas();
 
 // ============ 主循环 =====
