@@ -92,6 +92,10 @@
 </div>
 
 <script>
+window.onerror = function(msg, url, line, col, err) {
+  document.getElementById('unit-count').textContent = 'JS ERR: ' + msg + ' @line' + line;
+  return false;
+};
 window.__debug = 'SCRIPT START';
 // ============ 布局 ============
 const VERSION = 'v11.14';
