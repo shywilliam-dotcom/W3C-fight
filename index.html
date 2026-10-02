@@ -96,7 +96,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.27';
+const VERSION = 'v11.28';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 3600, WORLD_H = 2160; // 战场实际尺寸（1200×3, 720×3）
@@ -2905,16 +2905,18 @@ function render() {
   ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
   ctx.fillText('小地图', mmX+mmW-4, mmY+12); ctx.textAlign = 'start';
 
-  // 模拟菜单
+  // 模拟菜单（挨着模拟按钮，在按钮上方）
   if (game.simOpen) {
     ctx.fillStyle='rgba(0,0,0,0.9)';
-    ctx.fillRect(870, 500, 280, 110);
+    ctx.fillRect(10, 480, 280, 130);
     ctx.strokeStyle='#4CAF50'; ctx.lineWidth=2;
-    ctx.strokeRect(870, 500, 280, 110);
+    ctx.strokeRect(10, 480, 280, 130);
     ctx.fillStyle='#9C27B0'; ctx.font='bold 14px sans-serif';
-    ctx.fillText('1v1对战模拟', 890, 530);
-    ctx.fillStyle='#FF9800'; ctx.fillText('多vs多模拟', 890, 560);
-    ctx.fillStyle='#2196F3'; ctx.fillText('对局模拟（AI互打）', 890, 590);
+    ctx.fillText('1v1对战模拟', 30, 510);
+    ctx.fillStyle='#FF9800'; ctx.fillText('多vs多模拟', 30, 540);
+    ctx.fillStyle='#2196F3'; ctx.fillText('对局模拟（AI互打）', 30, 570);
+    ctx.fillStyle='#888'; ctx.font='11px sans-serif';
+    ctx.fillText('点击空白处关闭', 30, 598);
   }
   // 设置菜单
   if (game.settingsOpen) {
@@ -2946,8 +2948,8 @@ function render() {
     ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif'; ctx.textAlign='center';
     ctx.fillText('✕', 1160, 100); ctx.textAlign='start';
     ctx.fillStyle='#FFD700'; ctx.font='bold 18px sans-serif';
-    ctx.fillText('选择英雄（花费=兵种造价）', 300, 110);
-    const heroTypes = ['melee','barbarian','paladin','fighter','archer','musketeer','ranger','crossbow','mage','ice','arcane','fire','cannon','rocket','tesla','siege'];
+    ctx.fillText('选择英雄（基础兵种）', 300, 110);
+    const heroTypes = ['melee','archer','mage','cannon'];
     const menuX = 300, menuY = 130, btnW = 140, btnH = 60, gap = 10;
     heroTypes.forEach((t, i) => {
       const col = i % 4, row = Math.floor(i / 4);
@@ -3062,9 +3064,11 @@ canvas.addEventListener('click', e => {
   }
   // 模拟菜单点击
   if (game.simOpen) {
-    if (cx >= 870 && cx <= 1150 && cy >= 515 && cy <= 545) { game.simOpen=false; showCodex(); duelMode=true; duelPick=0; duelA=null; duelB=null; duelAnim=null; duelTeamA=[]; duelTeamB=[]; render(); return; }
-    if (cx >= 870 && cx <= 1150 && cy >= 545 && cy <= 575) { game.simOpen=false; showCodex(); duelMode=true; duelPick=10; duelTeamA=[]; duelTeamB=[]; duelAnim=null; render(); return; }
-    if (cx >= 870 && cx <= 1150 && cy >= 575 && cy <= 605) { game.simOpen=false; startSimulation(1); return; }
+    if (cx >= 10 && cx <= 290 && cy >= 495 && cy <= 525) { game.simOpen=false; showCodex(); duelMode=true; duelPick=0; duelA=null; duelB=null; duelAnim=null; duelTeamA=[]; duelTeamB=[]; render(); return; }
+    if (cx >= 10 && cx <= 290 && cy >= 525 && cy <= 555) { game.simOpen=false; showCodex(); duelMode=true; duelPick=10; duelTeamA=[]; duelTeamB=[]; duelAnim=null; render(); return; }
+    if (cx >= 10 && cx <= 290 && cy >= 555 && cy <= 585) { game.simOpen=false; startSimulation(1); return; }
+    // 点击菜单外关闭
+    if (!(cx >= 10 && cx <= 290 && cy >= 480 && cy <= 610)) { game.simOpen=false; render(); return; }
   }
 
   // 战场坐标：屏幕坐标 + 视口偏移
@@ -3105,9 +3109,9 @@ canvas.addEventListener('click', e => {
     if (cx >= 1140 && cx <= 1180 && cy >= 80 && cy <= 110) {
       game.altarPickMenu = null; render(); return;
     }
-    // 16个英雄选项（4列×4行）
-    const heroTypes = ['melee','barbarian','paladin','fighter','archer','musketeer','ranger','crossbow','mage','ice','arcane','fire','cannon','rocket','tesla','siege'];
-    const menuX = 300, menuY = 100, btnW = 140, btnH = 60, gap = 10;
+    // 4个基础英雄选项
+    const heroTypes = ['melee','archer','mage','cannon'];
+    const menuX = 300, menuY = 130, btnW = 140, btnH = 60, gap = 10;
     for (let i = 0; i < heroTypes.length; i++) {
       const col = i % 4, row = Math.floor(i / 4);
       const bx = menuX + col*(btnW+gap), by = menuY + row*(btnH+gap);
@@ -3369,7 +3373,9 @@ canvas.addEventListener('mousedown', e => {
              (cx >= 200 && cy >= 600) || // 底部信息栏
              (!game.started && cx >= 400 && cx <= 800 && cy >= 280 && cy <= 380) || // 开始按钮
              (game.altarPickMenu) || // 祭坛选英雄菜单
-             (game.buildMenu); // 建造菜单
+             (game.buildMenu) || // 建造菜单
+             (game.simOpen && cx >= 10 && cx <= 290 && cy >= 480 && cy <= 610) || // 模拟菜单
+             (game.settingsOpen && cx >= 900 && cx <= 1180 && cy >= 550 && cy <= 680); // 设置菜单
   // 祭坛区域也排除拖拽（注意：祭坛用大战场坐标，需要加viewX/viewY转换）
   if (!inUI) {
     const fcx = cx + viewX, fcy = cy + viewY;
@@ -3450,7 +3456,9 @@ canvas.addEventListener('touchstart', e => {
   let inUI = (cx >= 10 && cx <= 240 && cy >= 615 && cy <= 690) || // 左下角按钮
              (cx >= 200 && cy >= 600) || // 底部信息栏
              (!game.started && cx >= 400 && cx <= 800 && cy >= 280 && cy <= 380) || // 开始按钮
-             (game.altarPickMenu) || (game.buildMenu);
+             (game.altarPickMenu) || (game.buildMenu) ||
+             (game.simOpen && cx >= 10 && cx <= 290 && cy >= 480 && cy <= 610) || // 模拟菜单
+             (game.settingsOpen && cx >= 900 && cx <= 1180 && cy >= 550 && cy <= 680); // 设置菜单
   if (!inUI) {
     const fcx = cx + viewX, fcy = cy + viewY;
     for (const altar of game.altars) {
