@@ -97,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.35';
+const VERSION = 'v11.36';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度（全canvas渲染）
 const CANVAS_W = 1200, CANVAS_H = 720 + HUD_H; // canvas总尺寸
@@ -1746,13 +1746,20 @@ function updateUnits(game, dt) {
           }
         });
         if (lowTarget) {
-          // 朝低血量目标移动
-          const dx = lowTarget.x - u.x, dy = lowTarget.y - u.y;
-          const dist = Math.hypot(dx, dy);
+          // 朝低血量目标移动（只移x，y由道路约束自动修正，避免乱跑）
+          const dx = lowTarget.x - u.x;
+          const dist = Math.abs(dx);
           if (dist > u.range) {
-            u.x += u.speed * (dx/dist) * dt;
-            u.y += u.speed * (dy/dist) * dt * 0.5;
+            u.x += u.speed * (dx>0?1:-1) * dt;
+            u.animState = 'walk';
           }
+          // y方向缓慢回归道路中心，避免横向抖动
+          const laneCenter = getRoadY(u.lane, u.x);
+          const dy = laneCenter - u.y;
+          if (Math.abs(dy) > 5) u.y += Math.sign(dy) * u.speed * dt * 0.3;
+          u._barbarianChasing = true;
+        } else {
+          u._barbarianChasing = false;
         }
       }
 
@@ -1874,13 +1881,21 @@ function updateUnits(game, dt) {
         });
       }
       if (chaseT && chaseD > u.range) {
-        // 目标在射程外，朝目标移动
+        // 目标在射程外，朝目标移动（只移x，y缓慢回归道路中心）
         const dx = chaseT.x - u.x;
         u.x += u.speed*(dx>0?1:-1)*dt;
         u.animState = 'walk';
+        // y方向缓慢回归道路中心，避免横向抖动乱跑
+        const laneCenter = getRoadY(u.lane, u.x);
+        const dyC = laneCenter - u.y;
+        if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * u.speed * dt * 0.25;
       } else if (chaseT && chaseD <= u.range) {
         // 目标在射程内，停下来攻击（远程单位不靠近）
         u.animState = 'idle';
+        // 停战时也缓慢回正道路中心
+        const laneCenter = getRoadY(u.lane, u.x);
+        const dyC = laneCenter - u.y;
+        if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * u.speed * dt * 0.15;
       } else {
         // 没有附近敌人，继续往前推进（英雄需跟随大部队）
         if (u.isHero && u._holdPosition) {
@@ -3058,14 +3073,16 @@ function render() {
     ctx.fillRect(280, 80, 640, 360);
     ctx.strokeStyle='#FFD700'; ctx.lineWidth=2;
     ctx.strokeRect(280, 80, 640, 360);
-    // 关闭按钮
-    ctx.fillStyle='#666'; ctx.fillRect(1140, 80, 40, 30);
-    ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif'; ctx.textAlign='center';
-    ctx.fillText('✕', 1160, 100); ctx.textAlign='start';
+    // 关闭按钮（放大到60x40，方便点击）
+    ctx.fillStyle='#e94560'; ctx.fillRect(860, 90, 60, 40);
+    ctx.fillStyle='#fff'; ctx.font='bold 20px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('✕', 890, 112); ctx.textAlign='start';
     ctx.fillStyle='#FFD700'; ctx.font='bold 18px sans-serif';
     ctx.fillText('选择英雄（基础兵种）', 300, 110);
+    ctx.fillStyle='#888'; ctx.font='12px sans-serif';
+    ctx.fillText('点击✕或菜单外区域关闭', 300, 425);
     const heroTypes = ['melee','archer','mage','cannon'];
-    const menuX = 300, menuY = 130, btnW = 140, btnH = 60, gap = 10;
+    const menuX = 300, menuY = 140, btnW = 140, btnH = 80, gap = 15;
     heroTypes.forEach((t, i) => {
       const col = i % 4, row = Math.floor(i / 4);
       const bx = menuX + col*(btnW+gap), by = menuY + row*(btnH+gap);
@@ -3073,14 +3090,14 @@ function render() {
       const canAfford = game.gold >= def.cost;
       ctx.fillStyle = canAfford ? 'rgba(76,175,80,0.3)' : 'rgba(100,100,100,0.3)';
       ctx.fillRect(bx, by, btnW, btnH);
-      ctx.strokeStyle = canAfford ? '#4CAF50' : '#666'; ctx.lineWidth=1;
+      ctx.strokeStyle = canAfford ? '#4CAF50' : '#666'; ctx.lineWidth=2;
       ctx.strokeRect(bx, by, btnW, btnH);
-      ctx.fillStyle = canAfford ? '#fff' : '#888'; ctx.font='bold 13px sans-serif';
-      ctx.fillText(def.name, bx+8, by+22);
-      ctx.fillStyle='#FFD700'; ctx.font='11px sans-serif';
-      ctx.fillText(def.cost+'金', bx+8, by+40);
-      ctx.fillStyle='#aaa'; ctx.font='10px sans-serif';
-      ctx.fillText('HP'+def.hp+' ATK'+def.atk, bx+8, by+54);
+      ctx.fillStyle = canAfford ? '#fff' : '#888'; ctx.font='bold 15px sans-serif';
+      ctx.fillText(def.name, bx+10, by+25);
+      ctx.fillStyle='#FFD700'; ctx.font='13px sans-serif';
+      ctx.fillText(def.cost+'金', bx+10, by+48);
+      ctx.fillStyle='#aaa'; ctx.font='11px sans-serif';
+      ctx.fillText('HP'+def.hp+' ATK'+def.atk, bx+10, by+68);
     });
   }
 
@@ -3298,13 +3315,17 @@ canvas.addEventListener('click', e => {
   // 祭坛选英雄菜单点击
   if (game.altarPickMenu) {
     const menu = game.altarPickMenu;
-    // 关闭按钮
-    if (cx >= 1140 && cx <= 1180 && cy >= 80 && cy <= 110) {
+    // 关闭按钮（放大后坐标：860-920, 90-130）
+    if (cx >= 860 && cx <= 920 && cy >= 90 && cy <= 130) {
       game.altarPickMenu = null; render(); return;
     }
-    // 4个基础英雄选项
+    // 点击菜单外区域：关闭菜单
+    if (cx < 280 || cx > 920 || cy < 80 || cy > 440) {
+      game.altarPickMenu = null; render(); return;
+    }
+    // 4个基础英雄选项（放大后坐标）
     const heroTypes = ['melee','archer','mage','cannon'];
-    const menuX = 300, menuY = 130, btnW = 140, btnH = 60, gap = 10;
+    const menuX = 300, menuY = 140, btnW = 140, btnH = 80, gap = 15;
     for (let i = 0; i < heroTypes.length; i++) {
       const col = i % 4, row = Math.floor(i / 4);
       const bx = menuX + col*(btnW+gap), by = menuY + row*(btnH+gap);
@@ -3319,7 +3340,7 @@ canvas.addEventListener('click', e => {
         render(); return;
       }
     }
-    return;
+    return; // 菜单内其他点击不做任何事，但也不关闭
   }
 
   // ===== 图鉴模式优先处理 =====
