@@ -96,7 +96,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.28';
+const VERSION = 'v11.29';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 3600, WORLD_H = 2160; // 战场实际尺寸（1200×3, 720×3）
@@ -1804,7 +1804,7 @@ function updateUnits(game, dt) {
         u.animState = 'walk';
       }
       if (u.x<30) u.x=30;
-      if (u.x>1170) u.x=1170;
+      if (u.x>WORLD_W-30) u.x=WORLD_W-30;
       // 单位不离开道路：限制y在道路范围内（半宽60，留5px余量，弯道用getRoadY）
       const laneCenter = getRoadY(u.lane, u.x);
       if (u.y < laneCenter - 55) u.y = laneCenter - 55;
