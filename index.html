@@ -96,7 +96,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.31';
+const VERSION = 'v11.32';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 4200, WORLD_H = 2160; // 战场实际尺寸（拉大宽度，中间更多空白地）
@@ -1383,14 +1383,11 @@ function applyDmg(att, tgt, dmg, def) {
     }
     // 冰法被动：攻击冰法的单位攻速降低20%，持续3秒
     if (tgt.type==='ice' && att.st) att.st.slow = 3;
-    // 单位击杀单位给10%造价金币（必须由单位击杀，塔击杀不算）
-    if (tgt.hp <= 0 && UNIT_TYPES[tgt.type] && att.type !== undefined) {
+    // 只有英雄击杀单位才给金币和经验（小兵击杀不给，塔击杀不给）
+    if (tgt.hp <= 0 && UNIT_TYPES[tgt.type] && att.isHero) {
       game.gold += Math.round(UNIT_TYPES[tgt.type].cost * 0.10);
-      // 英雄击杀获得经验
-      if (att.isHero) {
-        const expGain = tgt.isHero ? (tgt.level || 1) * 60 : 30;
-        giveExp(att, tgt.x, tgt.y, expGain);
-      }
+      const expGain = tgt.isHero ? (tgt.level || 1) * 60 : 30;
+      giveExp(att, tgt.x, tgt.y, expGain);
     }
     // 暗火法击杀后立刻召唤一个骷髅
     if (tgt.hp <= 0 && att.type==='darkfire' && att.hp>0) {
@@ -1769,12 +1766,26 @@ function updateUnits(game, dt) {
 
     // 找目标：优先攻击移动单位，其次塔
     let bestT=null, bestD=Infinity;
+    // 英雄补刀：优先找血量<35%的敌方小兵（最后一击）
+    if (u.isHero) {
+      let lastHitTarget = null, lastHitHp = Infinity;
+      game.units.forEach(o => {
+        if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+        const d = Math.hypot(o.x-u.x, o.y-u.y);
+        if (d<=u.range && o.hp < o.maxHp*0.35 && o.hp < lastHitHp) {
+          lastHitHp = o.hp; lastHitTarget = o;
+        }
+      });
+      if (lastHitTarget) { bestT = lastHitTarget; bestD = 0; }
+    }
     // 先搜移动单位（优先）
-    game.units.forEach(o => {
-      if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
-      const d = Math.hypot(o.x-u.x, o.y-u.y);
-      if (d<=u.range && d<bestD) { bestD=d; bestT=o; }
-    });
+    if (!bestT) {
+      game.units.forEach(o => {
+        if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+        const d = Math.hypot(o.x-u.x, o.y-u.y);
+        if (d<=u.range && d<bestD) { bestD=d; bestT=o; }
+      });
+    }
     // 没找到移动单位再搜塔（英雄不单独冲塔）
     if (!bestT && !(u.isHero && u._waitForTeam)) {
       game.towers.forEach(t => {
@@ -1832,11 +1843,25 @@ function updateUnits(game, dt) {
     } else {
       // 附近有敌人时朝敌人靠近，而不是继续往前冲
       let chaseT = null, chaseD = Infinity;
-      game.units.forEach(o => {
-        if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
-        const d = Math.hypot(o.x-u.x, o.y-u.y);
-        if (d < chaseD && d < u.range*4+60) { chaseD = d; chaseT = o; }
-      });
+      // 英雄补刀走位：优先朝血量<35%的敌方小兵移动
+      if (u.isHero) {
+        let lastHitTarget = null, lastHitHp = Infinity;
+        game.units.forEach(o => {
+          if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+          const d = Math.hypot(o.x-u.x, o.y-u.y);
+          if (d < u.range*4+60 && o.hp < o.maxHp*0.35 && o.hp < lastHitHp) {
+            lastHitHp = o.hp; lastHitTarget = o;
+          }
+        });
+        if (lastHitTarget) { chaseT = lastHitTarget; chaseD = Math.hypot(lastHitTarget.x-u.x, lastHitTarget.y-u.y); }
+      }
+      if (!chaseT) {
+        game.units.forEach(o => {
+          if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+          const d = Math.hypot(o.x-u.x, o.y-u.y);
+          if (d < chaseD && d < u.range*4+60) { chaseD = d; chaseT = o; }
+        });
+      }
       if (chaseT && chaseD > u.range) {
         // 目标在射程外，朝目标移动
         const dx = chaseT.x - u.x;
