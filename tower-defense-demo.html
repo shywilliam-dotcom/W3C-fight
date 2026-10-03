@@ -96,10 +96,10 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.29';
+const VERSION = 'v11.30';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
-const WORLD_W = 3600, WORLD_H = 2160; // 战场实际尺寸（1200×3, 720×3）
+const WORLD_W = 4200, WORLD_H = 2160; // 战场实际尺寸（拉大宽度，中间更多空白地）
 const SCALE = 3; // 放大倍数
 let viewX = 0, viewY = 720; // 视口左上角在战场中的位置（初始显示我方基地，y=1080在视口中心）
 const VIEW_W = 1200, VIEW_H = 720; // 视口尺寸（canvas大小）
@@ -118,19 +118,19 @@ function toWorldY(y) { return y + viewY; }
 const LANE_Y = [390, 1080, 1770]; // 三路y坐标（×3）
 const LANE_NAMES = ['上路','中路','下路'];
 const MY_BASE_X = 150; // ×3
-const EN_BASE_X = 3450; // ×3
+const EN_BASE_X = 4050; // ×3
 
 // 计算道路上任意x处的中心y坐标（处理弯道，所有坐标×3）
 function getRoadY(lane, x) {
   const laneY = LANE_Y[lane];
-  if (x >= 1140 && x <= 2460) return laneY; // 直道（380×3=1140, 820×3=2460）
+  if (x >= 1140 && x <= 3060) return laneY; // 直道（拉大中间空白地）
   if (x < 1140) {
     // 我方弯道：P0(150,1080) P1(600,laneY) P2(1140,laneY)
     const t = (-900 + Math.sqrt(756000 + 360*x)) / 180;
     return 1080 + t*(2*laneY-2160) + t*t*(1080-laneY);
   } else {
-    // 敌方弯道：P0(2460,laneY) P1(3000,laneY) P2(3450,1080)
-    const t = (1080 - Math.sqrt(2052000 - 360*x)) / 180;
+    // 敌方弯道：P0(3060,laneY) P1(3600,laneY) P2(4050,1080)
+    const t = (1080 - Math.sqrt(2268000 - 360*x)) / 180;
     return laneY + t*t*(1080-laneY);
   }
 }
@@ -147,7 +147,7 @@ const BARRACK_SLOTS = [
 // 我方塔x坐标（×3）
 const MY_TOWER_X = [690, 819, 945];
 // 敌方塔x坐标（×3）
-const EN_TOWER_X = [2655, 2781, 2910];
+const EN_TOWER_X = [3255, 3381, 3510];
 // ============ 名字库 ============
 const NAME_POOLS = {
   melee: ['赵铁柱','王大力','李铁山','张铁柱','刘大勇','陈石头','杨守义','黄开山','赵铁柱','孙铁柱','周大勇','吴铁牛','郑石头','马守山','朱开山','林铁柱','何大勇','高铁山','罗石头','郑守义','梁铁柱','宋大勇','唐铁牛','许石头','韩开山','冯铁柱','邓大勇','曹铁山','彭石头','萧守义','田铁柱','董大勇','袁铁牛','潘石头','蒋开山','蔡铁柱','余大勇','于铁山','杜石头','叶守义'],
@@ -181,12 +181,12 @@ function getUnitName(type) {
 
 // 敌方兵营（镜像，所有坐标×3）
 const EN_BARRACK_POS = [
-  {x:3405, y:300, lane:0}, {x:3405, y:540, lane:0},
-  {x:3585, y:300, lane:0}, {x:3585, y:540, lane:0},
-  {x:3405, y:960, lane:1}, {x:3405, y:1200, lane:1},
-  {x:3585, y:960, lane:1}, {x:3585, y:1200, lane:1},
-  {x:3405, y:1620, lane:2}, {x:3405, y:1860, lane:2},
-  {x:3585, y:1620, lane:2}, {x:3585, y:1860, lane:2}
+  {x:4005, y:300, lane:0}, {x:4005, y:540, lane:0},
+  {x:4185, y:300, lane:0}, {x:4185, y:540, lane:0},
+  {x:4005, y:960, lane:1}, {x:4005, y:1200, lane:1},
+  {x:4185, y:960, lane:1}, {x:4185, y:1200, lane:1},
+  {x:4005, y:1620, lane:2}, {x:4005, y:1860, lane:2},
+  {x:4185, y:1620, lane:2}, {x:4185, y:1860, lane:2}
 ];
 
 // ============ 祭坛系统（英雄制） ============
@@ -197,9 +197,9 @@ const ALTAR_SLOTS = [
   {x:105, y:1740, lane:2}  // 下路祭坛
 ];
 const EN_ALTAR_POS = [
-  {x:3495, y:420, lane:0},
-  {x:3495, y:1080, lane:1},
-  {x:3495, y:1740, lane:2}
+  {x:4095, y:420, lane:0},
+  {x:4095, y:1080, lane:1},
+  {x:4095, y:1740, lane:2}
 ];
 const HEROES_PER_ALTAR = 4;
 const ALTAR_SLOT_W = 100, ALTAR_SLOT_H = 100; // 栏位尺寸（加大便于点击）
@@ -2065,8 +2065,8 @@ function render() {
     ctx.beginPath();
     ctx.moveTo(150, 1080);
     ctx.quadraticCurveTo(600, y, 1140, y);
-    ctx.lineTo(2460, y);
-    ctx.quadraticCurveTo(3000, y, 3450, 1080);
+    ctx.lineTo(3060, y);
+    ctx.quadraticCurveTo(3600, y, 4050, 1080);
     ctx.stroke();
   });
   ctx.lineWidth = 2; ctx.strokeStyle = '#0f3460';
@@ -2074,8 +2074,8 @@ function render() {
     ctx.beginPath();
     ctx.moveTo(150, 1080);
     ctx.quadraticCurveTo(600, y, 1140, y);
-    ctx.lineTo(2460, y);
-    ctx.quadraticCurveTo(3000, y, 3450, 1080);
+    ctx.lineTo(3060, y);
+    ctx.quadraticCurveTo(3600, y, 4050, 1080);
     ctx.stroke();
   });
   ctx.lineCap = 'butt';
@@ -2650,10 +2650,10 @@ function render() {
     }
   }
 
-  // 左下角版本号（分两行）
+  // 左下角版本号+当前时间
   ctx.fillStyle='#FFF'; ctx.font='bold 14px sans-serif';
   ctx.fillText(VERSION, 10, 700);
-  ctx.fillText(UPDATE_TIME, 10, 720);
+  ctx.fillText(new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), 10, 720);
 
   // 统一信息栏（底部贴边）
   ctx.fillStyle='rgba(0,0,0,0.85)';
@@ -2867,7 +2867,7 @@ function render() {
   });
 
   // 右下角小地图（220x132）
-  const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
   const mmScaleX = mmW / WORLD_W, mmScaleY = mmH / WORLD_H;
   ctx.fillStyle = 'rgba(0,0,0,0.8)';
   ctx.fillRect(mmX, mmY, mmW, mmH);
@@ -2879,8 +2879,8 @@ function render() {
     ctx.beginPath();
     ctx.moveTo(mmX + 150*mmScaleX, mmY + 1080*mmScaleY);
     ctx.quadraticCurveTo(mmX + 600*mmScaleX, mmY + y*mmScaleY, mmX + 1140*mmScaleX, mmY + y*mmScaleY);
-    ctx.lineTo(mmX + 2460*mmScaleX, mmY + y*mmScaleY);
-    ctx.quadraticCurveTo(mmX + 3000*mmScaleX, mmY + y*mmScaleY, mmX + 3450*mmScaleX, mmY + 1080*mmScaleY);
+    ctx.lineTo(mmX + 3060*mmScaleX, mmY + y*mmScaleY);
+    ctx.quadraticCurveTo(mmX + 3600*mmScaleX, mmY + y*mmScaleY, mmX + 4050*mmScaleX, mmY + 1080*mmScaleY);
     ctx.stroke();
   });
   ctx.lineCap = 'butt';
@@ -3019,7 +3019,7 @@ canvas.addEventListener('click', e => {
   if (dragMoved || mmDragging) { dragMoved = false; mmDragging = false; return; }
 
   // 小地图点击跳转
-  const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
@@ -3315,16 +3315,18 @@ canvas.addEventListener('click', e => {
     }
   }
 
-  // 找最近单位（点击范围×3）
+  // 找最近单位（点击范围扩大到100，大战场坐标）
   let nearUnit = null, nd = Infinity;
   game.units.forEach(u => {
     if (u.hp<=0) return;
     const d = Math.hypot(fcX-u.x, fcY-u.y);
-    if (d < nd && d < 60) { nd = d; nearUnit = u; }
+    if (d < nd && d < 100) { nd = d; nearUnit = u; }
   });
   if (nearUnit) {
     game.selectedUnit = nearUnit;
+    game.selectedTower = null;
     game.upgradeMenu = null;
+    render();
     return;
   }
   // 找最近防御塔/基地（点击范围×3）
@@ -3359,7 +3361,7 @@ canvas.addEventListener('mousedown', e => {
     cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
   }
   // 小地图点击/拖拽
-  const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
     mmDragging = true;
     const wx = (cx - mmX) / mmW * WORLD_W;
@@ -3401,7 +3403,7 @@ canvas.addEventListener('mousemove', e => {
     } else {
       cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
     }
-    const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+    const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
     viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
@@ -3441,7 +3443,7 @@ canvas.addEventListener('touchstart', e => {
   try {
   if (codexOpen || game.gameOver) return;
   const {cx, cy} = getTouchPos(e);
-  const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
   // 小地图触摸：启动滑动跟随
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
     e.preventDefault();
@@ -3479,7 +3481,7 @@ canvas.addEventListener('touchmove', e => {
   const {cx, cy} = getTouchPos(e);
   // 小地图滑动跟随
   if (mmDragging) {
-    const mmW = 429, mmH = 258, mmX = 1200-mmW-10, mmY = 720-mmH-10;
+    const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
     viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
