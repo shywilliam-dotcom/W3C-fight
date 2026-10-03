@@ -68,7 +68,7 @@
 </head>
 <body><div id="game-container">
 
-<div id="hud">
+<div id="hud" style="display:none;">
   <div style="color:#FF4081;font-weight:bold;font-size:16px;">3C</div>
   <div>💰 <span id="gold-display">0</span></div>
   <div>⏱ <b id="time-display">0:00</b></div>
@@ -77,7 +77,7 @@
   <div>👾 小兵Lv:<b id="minion-level">1</b></div>
 </div>
 
-<canvas id="gameCanvas" width="1200" height="720"></canvas>
+<canvas id="gameCanvas" width="1200" height="780"></canvas>
 
 <div id="control-panel">
   <button class="btn btn-speed" id="speed-btn">1x</button>
@@ -89,7 +89,7 @@
 
 </div><!-- /game-container -->
 
-<div id="game-over">
+<div id="game-over" style="display:none;">
   <h2 id="go-title">胜利！</h2>
   <p id="go-desc"></p>
   <button class="btn btn-restart" onclick="restartGame()">再来</button>
@@ -97,8 +97,10 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.34';
+const VERSION = 'v11.35';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+const HUD_H = 60; // 顶部HUD栏高度（全canvas渲染）
+const CANVAS_W = 1200, CANVAS_H = 720 + HUD_H; // canvas总尺寸
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 4200, WORLD_H = 2160; // 战场实际尺寸（拉大宽度，中间更多空白地）
 const SCALE = 3; // 放大倍数
@@ -2096,21 +2098,25 @@ function update(dt) {
 
 function endGame(win) {
   game.gameOver = true;
-  document.getElementById('go-title').textContent = win?'胜利！':'失败...';
-  document.getElementById('go-title').style.color = win?'#4CAF50':'#F44336';
-  document.getElementById('go-desc').textContent = win?
-    `用时${Math.floor(game.time/60)}分${Math.floor(game.time%60)}秒`:
-    '基地被摧毁了...';
-  document.getElementById('game-over').style.display='block';
+  game.gameOverWin = win;
 }
 
 // ============ 渲染 =====
 function render() {
   if (codexOpen) { drawCodex(); return; }
-  ctx.clearRect(0,0,1200,720);
+  ctx.clearRect(0,0,CANVAS_W,CANVAS_H);
+  // 顶部HUD背景
+  ctx.fillStyle = '#2a3a5e';
+  ctx.fillRect(0,0,CANVAS_W,HUD_H);
+  ctx.strokeStyle = '#0f3460'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,HUD_H); ctx.lineTo(CANVAS_W,HUD_H); ctx.stroke();
+
+  // 游戏内容区（y=HUD_H以下）
+  ctx.save();
+  ctx.translate(0, HUD_H);
   // 淡色背景
   ctx.fillStyle = '#3a3a5a';
-  ctx.fillRect(0,0,1200,720);
+  ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
 
   // ===== Buff图标（UI层，不随视口移动）=====
   const buffDefs = [
@@ -3080,6 +3086,74 @@ function render() {
 
   // 图鉴覆盖层
   drawCodex();
+
+  ctx.restore(); // 结束游戏内容区translate
+
+  // 游戏结束弹窗（canvas渲染）
+  if (game.gameOver) {
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+    const pw=400, ph=250, px=(CANVAS_W-pw)/2, py=(CANVAS_H-ph)/2;
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(px,py,pw,ph);
+    ctx.strokeStyle = game.gameOverWin?'#4CAF50':'#F44336';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(px,py,pw,ph);
+    ctx.fillStyle = game.gameOverWin?'#4CAF50':'#F44336';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(game.gameOverWin?'胜利！':'失败...', CANVAS_W/2, py+60);
+    ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif';
+    ctx.fillText(game.gameOverWin?
+      `用时${Math.floor(game.time/60)}分${Math.floor(game.time%60)}秒`:
+      '基地被摧毁了...', CANVAS_W/2, py+110);
+    // 再来按钮
+    const bw=160, bh=50, bx=(CANVAS_W-bw)/2, by=py+150;
+    ctx.fillStyle = '#e94560';
+    ctx.fillRect(bx,by,bw,bh);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillText('再来', CANVAS_W/2, by+bh/2);
+    game._restartBtn = {x:bx, y:by, w:bw, h:bh};
+    ctx.textAlign = 'left';
+  }
+
+  // ===== 顶部HUD（canvas渲染，替代DOM）=====
+  drawHUD();
+}
+
+// 顶部HUD栏（canvas渲染）
+function drawHUD() {
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textBaseline = 'middle';
+  let hx = 12;
+  // 3C标记
+  ctx.fillStyle = '#FF4081';
+  ctx.fillText('3C', hx, HUD_H/2);
+  hx += 35;
+  // 金币
+  ctx.fillStyle = '#ffd700';
+  ctx.fillText('💰 ' + Math.floor(game.gold), hx, HUD_H/2);
+  hx += 100;
+  // 时间
+  const m=Math.floor(game.time/60), s=Math.floor(game.time%60);
+  ctx.fillStyle = '#fff';
+  ctx.fillText('⏱ '+m+':'+String(s).padStart(2,'0'), hx, HUD_H/2);
+  hx += 90;
+  // 塔数
+  const myT = game.towers.filter(t=>t.side==='my'&&t.alive).length;
+  const enT = game.towers.filter(t=>t.side==='enemy'&&t.alive).length;
+  ctx.fillStyle = '#4CAF50'; ctx.fillText('🛡我方:'+myT, hx, HUD_H/2);
+  hx += 75;
+  ctx.fillStyle = '#F44336'; ctx.fillText('敌方:'+enT, hx, HUD_H/2);
+  hx += 75;
+  // 单位数
+  const totalU = game.units.length;
+  const combatU = game.units.filter(u=>u.type!=='skeleton'&&u.type!=='golem').length;
+  const summonU = game.units.filter(u=>u.type==='skeleton'||u.type==='golem').length;
+  ctx.fillStyle = '#fff'; ctx.fillText('⚔单位:'+totalU+'(战'+combatU+'/召'+summonU+')', hx, HUD_H/2);
+  hx += 160;
+  // 小兵等级
+  ctx.fillStyle = '#aaa'; ctx.fillText('👾小兵Lv:'+(Math.floor(game.time/100)+1), hx, HUD_H/2);
 }
 
 function shade(c,p) {
@@ -3109,17 +3183,27 @@ canvas.addEventListener('wheel', e => {
 
 canvas.addEventListener('click', e => {
   try {
-  if (game.gameOver) return;
   const rect = canvas.getBoundingClientRect();
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
   let cx, cy;
   if (window.innerWidth < window.innerHeight) {
-    cx = dy / rect.height * 1200;
-    cy = (rect.width - dx) / rect.width * 720;
+    cx = dy / rect.height * CANVAS_W;
+    cy = (rect.width - dx) / rect.width * CANVAS_H;
   } else {
-    cx = dx / rect.width * 1200;
-    cy = dy / rect.height * 720;
+    cx = dx / rect.width * CANVAS_W;
+    cy = dy / rect.height * CANVAS_H;
   }
+  // 游戏结束时：点击"再来"按钮重启
+  if (game.gameOver) {
+    if (game._restartBtn && cx >= game._restartBtn.x && cx <= game._restartBtn.x+game._restartBtn.w &&
+        cy >= game._restartBtn.y && cy <= game._restartBtn.y+game._restartBtn.h) {
+      restartGame();
+    }
+    return;
+  }
+  // 点击HUD区域不处理游戏逻辑
+  if (cy < HUD_H) return;
+  cy -= HUD_H; // 转换为游戏区域坐标(0-720)
   // 开始对战按钮（优先处理，不受拖拽影响）
   if (!game.started && cx >= 400 && cx <= 800 && cy >= 280 && cy <= 380) {
     game.started = true; dragMoved = false; render(); return;
@@ -3465,10 +3549,12 @@ canvas.addEventListener('mousedown', e => {
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
   let cx, cy;
   if (window.innerWidth < window.innerHeight) {
-    cx = dy / rect.height * 1200; cy = (rect.width - dx) / rect.width * 720;
+    cx = dy / rect.height * CANVAS_W; cy = (rect.width - dx) / rect.width * CANVAS_H;
   } else {
-    cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
+    cx = dx / rect.width * CANVAS_W; cy = dy / rect.height * CANVAS_H;
   }
+  if (cy < HUD_H) return;
+  cy -= HUD_H;
   // 小地图点击/拖拽
   const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
@@ -3508,9 +3594,9 @@ canvas.addEventListener('mousemove', e => {
     const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
     let cx, cy;
     if (window.innerWidth < window.innerHeight) {
-      cx = dy / rect.height * 1200; cy = (rect.width - dx) / rect.width * 720;
+      cx = dy / rect.height * CANVAS_W; cy = (rect.width - dx) / rect.width * CANVAS_H; if(cy>=HUD_H)cy-=HUD_H;
     } else {
-      cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
+      cx = dx / rect.width * CANVAS_W; cy = dy / rect.height * CANVAS_H; if(cy>=HUD_H)cy-=HUD_H;
     }
     const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
     const wx = (cx - mmX) / mmW * WORLD_W;
@@ -3524,9 +3610,9 @@ canvas.addEventListener('mousemove', e => {
   const dx = e.clientX - rect.left, dy = e.clientY - rect.top;
   let cx, cy;
   if (window.innerWidth < window.innerHeight) {
-    cx = dy / rect.height * 1200; cy = (rect.width - dx) / rect.width * 720;
+    cx = dy / rect.height * CANVAS_W; cy = (rect.width - dx) / rect.width * CANVAS_H; if(cy>=HUD_H)cy-=HUD_H;
   } else {
-    cx = dx / rect.width * 1200; cy = dy / rect.height * 720;
+    cx = dx / rect.width * CANVAS_W; cy = dy / rect.height * CANVAS_H; if(cy>=HUD_H)cy-=HUD_H;
   }
   const ddx = cx - dragStartX, ddy = cy - dragStartY;
   if (Math.abs(ddx) > 3 || Math.abs(ddy) > 3) dragMoved = true;
@@ -3541,11 +3627,14 @@ function getTouchPos(e) {
   const t = e.touches[0] || e.changedTouches[0];
   const rect = canvas.getBoundingClientRect();
   const dx = t.clientX - rect.left, dy = t.clientY - rect.top;
+  let cx, cy;
   if (window.innerWidth < window.innerHeight) {
-    return { cx: dy / rect.height * 1200, cy: (rect.width - dx) / rect.width * 720 };
+    cx = dy / rect.height * CANVAS_W; cy = (rect.width - dx) / rect.width * CANVAS_H;
   } else {
-    return { cx: dx / rect.width * 1200, cy: dy / rect.height * 720 };
+    cx = dx / rect.width * CANVAS_W; cy = dy / rect.height * CANVAS_H;
   }
+  if (cy >= HUD_H) cy -= HUD_H;
+  return { cx, cy };
 }
 let mmDragging = false; // 小地图滑动中
 canvas.addEventListener('touchstart', e => {
@@ -3940,7 +4029,7 @@ function getCodexButtonRect(idx) {
 function drawCodex() {
   if (!codexOpen) return;
   ctx.fillStyle = 'rgba(0,0,0,0.9)';
-  ctx.fillRect(0, 0, 1200, 720);
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   if (duelMode) {
     // 右上角关闭按钮（放大方便点击）
     ctx.fillStyle = '#e94560';
@@ -4501,17 +4590,11 @@ function startSimulation(rounds) {
 function resizeCanvas() {
   const cw = window.innerWidth, ch = window.innerHeight;
   const isPortrait = cw < ch;
-  // 竖屏旋转后，可用宽高互换
   const availW = isPortrait ? ch : cw;
   const availH = isPortrait ? cw : ch;
-  // HUD约32px
-  const hudH = 32;
-  const gameH = availH - hudH;
-  // 填满可用空间，不保持比例（内部1200x720自动拉伸）
   const canvas = document.getElementById('gameCanvas');
   canvas.style.width = availW + 'px';
-  canvas.style.height = gameH + 'px';
-  document.getElementById('hud').style.width = availW + 'px';
+  canvas.style.height = availH + 'px';
 }
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
