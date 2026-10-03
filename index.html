@@ -97,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.33';
+const VERSION = 'v11.34';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 4200, WORLD_H = 2160; // 战场实际尺寸（拉大宽度，中间更多空白地）
@@ -1975,6 +1975,17 @@ function update(dt) {
       spawnMinion('my', lane);
       spawnMinion('enemy', lane);
     }
+  }
+
+  // 英雄缓慢回血：每5秒回0.5%最大生命
+  game.heroRegenTimer = (game.heroRegenTimer||0) + dt;
+  if (game.heroRegenTimer >= 5) {
+    game.heroRegenTimer = 0;
+    game.units.forEach(u => {
+      if (u.isHero && u.hp > 0 && u.hp < u.maxHp) {
+        u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.005);
+      }
+    });
   }
 
   // 羁绊检测（每秒更新一次）
