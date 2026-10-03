@@ -74,6 +74,7 @@
   <div>⏱ <b id="time-display">0:00</b></div>
   <div>🛡 我方塔:<b id="my-towers">0</b> 敌方塔:<b id="enemy-towers">0</b></div>
   <div>⚔ 单位:<b id="unit-count">0</b></div>
+  <div>👾 小兵Lv:<b id="minion-level">1</b></div>
 </div>
 
 <canvas id="gameCanvas" width="1200" height="720"></canvas>
@@ -96,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.32';
+const VERSION = 'v11.33';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 4200, WORLD_H = 2160; // 战场实际尺寸（拉大宽度，中间更多空白地）
@@ -303,7 +304,7 @@ const UNIT_TYPES = {
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标每单位15%概率晕1秒+电圈50范围20/s | 大招:下3次攻击必晕2秒并丢失目标CD40s（后期强）' },
   siege:    { name:'攻城炮', armor:3, shape:'square', size:13, hp:400, atk:100, atkSpeed:0.35, range:170, speed:50, cost:260, color:'#8B0000', atkType:'siege', armorType:'heavy', ult:'airSlug',
     skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射 | 大招:下2次攻击200%伤害+击飞+丢失目标CD40s（早期强）' },
-  minion:   { name:'小兵', armor:0, shape:'circle', size:8, hp:150, atk:8, atkSpeed:1.0, range:15, speed:70, cost:0, color:'#AAAAAA', atkType:'normal', armorType:'unarmored', ult:null,
+  minion:   { name:'小兵', armor:0, shape:'circle', size:8, hp:150, atk:8, atkSpeed:1.0, range:15, speed:70, cost:20, color:'#AAAAAA', atkType:'normal', armorType:'unarmored', ult:null,
     skill1:null, skill2:null, desc:'基地自动刷新的无技能小兵' }
 };
 
@@ -655,14 +656,17 @@ function spawnUnit(b) {
 function spawnMinion(side, lane) {
   const myCount = game.units.filter(u => u.side===side && u.type==='minion').length;
   if (myCount >= 20) return; // 每方最多20个小兵
+  // 小兵等级：每100秒+1级，属性+10%/级
+  const mLevel = Math.floor(game.time / 100) + 1;
+  const mMul = 1 + (mLevel - 1) * 0.1;
   const yOff = (Math.random()-0.5)*120;
   const u = {
     x: side==='my'?MY_BASE_X+60:EN_BASE_X-60,
     y: LANE_Y[lane]+yOff, yOff:yOff, lane:lane, side:side, type:'minion',
-    name:'小兵', dir: side==='my'?1:-1, level:1,
+    name:'小兵', dir: side==='my'?1:-1, level:mLevel,
     atkType:'normal', armorType:'unarmored',
     flatArmor:0, baseArmor:0,
-    hp:150, maxHp:150, atk:8, atkSpeed:1.0,
+    hp:Math.round(150*mMul), maxHp:Math.round(150*mMul), atk:Math.round(8*mMul), atkSpeed:1.0,
     range:15*SCALE, speed:70*SCALE, atkTimer:0,
     crit:0, dodge:0, instantKill:0, polymorpth:0,
     burnDps:0, poison:0, poisonDps:0, splash:0,
@@ -934,11 +938,12 @@ function doAttack(att, tgt, def) {
     const attName = UNIT_TYPES[att.type] ? UNIT_TYPES[att.type].name : (att.name||'单位');
     const tgtName = UNIT_TYPES[tgt.type] ? UNIT_TYPES[tgt.type].name : (tgt.name||'单位');
     pushCombatLog(`⚔️${attName} 斩杀了 ${tgtName}！回血+攻+攻速`);
-    // 狂战：回10%血，攻+10%，攻速+70%持续3秒
+    // 狂战：回10%血，攻+10%持续15秒，攻速+70%持续3秒
     if (att.hp>0) {
       att.hp = Math.min(att.maxHp, att.hp + att.maxHp*0.1);
-      att.atk = (att.atk||0) * 1.1;
-      att.rampageCD = 3; // 持续3秒
+      att.atkBuff = 0.1;
+      att.atkBuffT = 15;
+      att.rampageCD = 3; // 攻速加成持续3秒
     }
     return;
   }
@@ -1385,8 +1390,12 @@ function applyDmg(att, tgt, dmg, def) {
     if (tgt.type==='ice' && att.st) att.st.slow = 3;
     // 只有英雄击杀单位才给金币和经验（小兵击杀不给，塔击杀不给）
     if (tgt.hp <= 0 && UNIT_TYPES[tgt.type] && att.isHero) {
-      game.gold += Math.round(UNIT_TYPES[tgt.type].cost * 0.10);
-      const expGain = tgt.isHero ? (tgt.level || 1) * 60 : 30;
+      // 击杀小兵给50%造价金币，击杀英雄给10%造价金币
+      const goldRate = tgt.type==='minion' ? 0.50 : 0.10;
+      const tgtCost = tgt.type==='minion' ? (20 * (1 + (tgt.level||1-1)*0.1)) : UNIT_TYPES[tgt.type].cost;
+      game.gold += Math.round(tgtCost * goldRate);
+      // 经验：英雄等级×60，小兵等级×30（每100秒小兵升级）
+      const expGain = tgt.isHero ? (tgt.level || 1) * 60 : (tgt.level || 1) * 30;
       giveExp(att, tgt.x, tgt.y, expGain);
     }
     // 暗火法击杀后立刻召唤一个骷髅
@@ -2071,6 +2080,7 @@ function update(dt) {
   document.getElementById('my-towers').textContent = game.towers.filter(t=>t.side==='my'&&t.alive).length;
   document.getElementById('enemy-towers').textContent = game.towers.filter(t=>t.side==='enemy'&&t.alive).length;
   document.getElementById('unit-count').textContent = game.units.length + '(战' + game.units.filter(u=>u.type!=='skeleton'&&u.type!=='golem').length + '/召' + game.units.filter(u=>u.type==='skeleton'||u.type==='golem').length + ')';
+  document.getElementById('minion-level').textContent = Math.floor(game.time/100)+1;
 }
 
 function endGame(win) {
