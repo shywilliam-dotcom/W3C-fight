@@ -96,7 +96,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.30';
+const VERSION = 'v11.31';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 // ============ 大战场坐标系统（3倍放大+视口滚动） ============
 const WORLD_W = 4200, WORLD_H = 2160; // 战场实际尺寸（拉大宽度，中间更多空白地）
@@ -302,7 +302,9 @@ const UNIT_TYPES = {
   tesla:    { name:'特斯拉', armor:0, shape:'square', size:11, hp:360, atk:100, atkSpeed:0.3, range:190, speed:50, cost:260, color:'#00FFFF', atkType:'magic', armorType:'unarmored', ult:'stunBlast',
     skill1:{k:'chainLightning',v:8}, skill2:{k:'electricField',v:20}, desc:'连锁闪电8目标每单位15%概率晕1秒+电圈50范围20/s | 大招:下3次攻击必晕2秒并丢失目标CD40s（后期强）' },
   siege:    { name:'攻城炮', armor:3, shape:'square', size:13, hp:400, atk:100, atkSpeed:0.35, range:170, speed:50, cost:260, color:'#8B0000', atkType:'siege', armorType:'heavy', ult:'airSlug',
-    skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射 | 大招:下2次攻击200%伤害+击飞+丢失目标CD40s（早期强）' }
+    skill1:{k:'buildingDamage',v:3}, skill2:{k:'splashRange',v:50}, desc:'对塔3倍+溅射 | 大招:下2次攻击200%伤害+击飞+丢失目标CD40s（早期强）' },
+  minion:   { name:'小兵', armor:0, shape:'circle', size:8, hp:150, atk:8, atkSpeed:1.0, range:15, speed:70, cost:0, color:'#AAAAAA', atkType:'normal', armorType:'unarmored', ult:null,
+    skill1:null, skill2:null, desc:'基地自动刷新的无技能小兵' }
 };
 
 const UPGRADE_PATHS = {
@@ -316,7 +318,8 @@ const UPGRADE_PATHS = {
 let game = { gold:300, time:0, speed:1, selectedType:null,
   towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
   goldAcc:0, upgradeMenu:null, selectedUnit:null,
-  altars:[], autoRevive:false, heroIdCounter:0
+  altars:[], autoRevive:false, heroIdCounter:0,
+  minionTimer:0
 };
 
 const canvas = document.getElementById('gameCanvas');
@@ -450,7 +453,7 @@ function initGame() {
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
     goldAcc:0, upgradeMenu:null, selectedUnit:null,
     prepTime:3, bountyAnnounced:false, aiGold:{my:500, enemy:500}, aiBuildCD:{my:0, enemy:0},
-    altars:[], autoRevive:false, heroIdCounter:0 };
+    altars:[], autoRevive:false, heroIdCounter:0, minionTimer:0 };
   usedNames.clear();
 
   // 我方基地（1个，横跨三路，y=1080=360×3）
@@ -475,7 +478,7 @@ function initGame() {
   });
   // 敌方镜像
   myTowers.forEach(([tx, ty]) => {
-    game.towers.push({ x:3600-tx, y:ty, lane:0, side:'enemy', isBase:false,
+    game.towers.push({ x:WORLD_W-tx, y:ty, lane:0, side:'enemy', isBase:false,
       hp:3000, maxHp:3000, atk:tAtk, armor:0, flatArmor:0, baseArmor:0, atkType:'chaos', atkTimer:0, range:tRange, alive:true, armorType:'fort' });
   });
 
@@ -645,6 +648,40 @@ function spawnUnit(b) {
     u.maxHp = Math.round(u.maxHp*1.15);
     u.hp = u.maxHp;
   }
+  game.units.push(u);
+}
+
+// 生成无技能小兵（基地每2秒刷3个，分走3路）
+function spawnMinion(side, lane) {
+  const myCount = game.units.filter(u => u.side===side && u.type==='minion').length;
+  if (myCount >= 20) return; // 每方最多20个小兵
+  const yOff = (Math.random()-0.5)*120;
+  const u = {
+    x: side==='my'?MY_BASE_X+60:EN_BASE_X-60,
+    y: LANE_Y[lane]+yOff, yOff:yOff, lane:lane, side:side, type:'minion',
+    name:'小兵', dir: side==='my'?1:-1, level:1,
+    atkType:'normal', armorType:'unarmored',
+    flatArmor:0, baseArmor:0,
+    hp:150, maxHp:150, atk:8, atkSpeed:1.0,
+    range:15*SCALE, speed:70*SCALE, atkTimer:0,
+    crit:0, dodge:0, instantKill:0, polymorpth:0,
+    burnDps:0, poison:0, poisonDps:0, splash:0,
+    doubleStrike:0, doubleAttack:0, reflectPierce:0, reflectMagic:0, reflectMagicCD:0,
+    multiTarget:0, splashRange:0, focusFire:0, focusStacks:0, focusTarget:null,
+    doubleStrikeBonus:0, aoe:0, dmgReduce:0, buildingDamage:0,
+    iceBlock:false, berserk:false, holyHeal:false, holyHealCD:0,
+    armorPierce:false, armorReduce:0, summonGolem:0, chainLightning:0, longRange:0,
+    stun:0, vulnerable:0, dodgeCounter:false, execute:0, electricField:0,
+    summonSkeleton:0, skeletonTimer:0, burnStack:0,
+    currentTarget:null, targetSwitchTimer:0, firstAttackDone:false,
+    shieldWall:0, shieldCD:0, shield:0, shieldAlly:0, shieldAllyCD:0,
+    golemCD:0, charge:0, chargeCD:0, rocketCd:0,
+    airSlugCD:0, airSlugStacks:0, stunBlastCD:0, stunBlastStacks:0,
+    pierceCD:0, blizzardCD:0, whirlwindCD:0, whirlwindActive:0,
+    backJumpCD:0, knockback:0, strikeStun:0, healAlly:0,
+    ultimate:null, isHero:false,
+    st:{ polymorphed:0, burn:0, burnDps:0, poison:0, poisonDps:0, poisonStacks:0, iceBlock:0, iceBlockCD:0, stun:0, vulnerable:0, burnStacks:0, slow:0 }
+  };
   game.units.push(u);
 }
 
@@ -1718,6 +1755,16 @@ function updateUnits(game, dt) {
       } else {
         u._waitForTeam = false;
       }
+
+      // 4. 跟随大部队推进：检测附近友方小兵数量，不足时不贸然推进
+      const nearbyMinions = game.units.filter(o => o.type==='minion' && o.side===u.side && o.hp>0 && Math.hypot(o.x-u.x,o.y-u.y) < 500);
+      const enemyInRange = game.units.some(o => o.side!==u.side && o.hp>0 && Math.hypot(o.x-u.x,o.y-u.y) < u.range*2);
+      if (nearbyMinions.length < 3 && !enemyInRange) {
+        // 小兵不足且无敌人在射程内：在原地等待/缓慢移动，不莽撞推进
+        u._holdPosition = true;
+      } else {
+        u._holdPosition = false;
+      }
     }
 
     // 找目标：优先攻击移动单位，其次塔
@@ -1799,9 +1846,15 @@ function updateUnits(game, dt) {
         // 目标在射程内，停下来攻击（远程单位不靠近）
         u.animState = 'idle';
       } else {
-        // 没有附近敌人，继续往前推进
-        u.x += u.speed*u.dir*dt;
-        u.animState = 'walk';
+        // 没有附近敌人，继续往前推进（英雄需跟随大部队）
+        if (u.isHero && u._holdPosition) {
+          // 英雄等待大部队，缓慢移动或原地待命
+          u.x += u.speed*u.dir*dt*0.2;
+          u.animState = 'idle';
+        } else {
+          u.x += u.speed*u.dir*dt;
+          u.animState = 'walk';
+        }
       }
       if (u.x<30) u.x=30;
       if (u.x>WORLD_W-30) u.x=WORLD_W-30;
@@ -1879,6 +1932,16 @@ function update(dt) {
 
   game.goldAcc += income()*dt;
   if (game.goldAcc>=1) { let g=Math.floor(game.goldAcc); game.gold+=g; game.goldAcc-=g; }
+
+  // 基地每2秒刷3个无技能小兵，分走上中下3路
+  game.minionTimer = (game.minionTimer||0) + dt;
+  if (game.minionTimer >= 2) {
+    game.minionTimer = 0;
+    for (let lane = 0; lane < 3; lane++) {
+      spawnMinion('my', lane);
+      spawnMinion('enemy', lane);
+    }
+  }
 
   // 羁绊检测（每秒更新一次）
   game.buffTimer = (game.buffTimer||0) - dt;
