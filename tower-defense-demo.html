@@ -97,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.36';
+const VERSION = 'v11.37';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度（全canvas渲染）
 const CANVAS_W = 1200, CANVAS_H = 720 + HUD_H; // canvas总尺寸
@@ -194,15 +194,16 @@ const EN_BARRACK_POS = [
 
 // ============ 祭坛系统（英雄制） ============
 // 每路1个祭坛，共3个，每个祭坛4个英雄栏位
+// 向外侧移动，让开基地，避免重叠
 const ALTAR_SLOTS = [
-  {x:105, y:420, lane:0},  // 上路祭坛（原4个兵营合并）
-  {x:105, y:1080, lane:1}, // 中路祭坛
-  {x:105, y:1740, lane:2}  // 下路祭坛
+  {x:60, y:360, lane:0},   // 上路祭坛（外侧，避开基地）
+  {x:60, y:1080, lane:1},  // 中路祭坛（外侧，x=60与基地x=150拉开距离）
+  {x:60, y:1800, lane:2}   // 下路祭坛（外侧）
 ];
 const EN_ALTAR_POS = [
-  {x:4095, y:420, lane:0},
-  {x:4095, y:1080, lane:1},
-  {x:4095, y:1740, lane:2}
+  {x:4140, y:360, lane:0},
+  {x:4140, y:1080, lane:1},
+  {x:4140, y:1800, lane:2}
 ];
 const HEROES_PER_ALTAR = 4;
 const ALTAR_SLOT_W = 100, ALTAR_SLOT_H = 100; // 栏位尺寸（加大便于点击）
@@ -1782,13 +1783,18 @@ function updateUnits(game, dt) {
       }
     }
 
+    // 判断是否在己方基地附近（基地附近不局限同路，遇敌直接开战）
+    const baseX = u.side==='my' ? MY_BASE_X : EN_BASE_X;
+    const nearBase = Math.abs(u.x - baseX) < 700;
+
     // 找目标：优先攻击移动单位，其次塔
     let bestT=null, bestD=Infinity;
     // 英雄补刀：优先找血量<35%的敌方小兵（最后一击）
     if (u.isHero) {
       let lastHitTarget = null, lastHitHp = Infinity;
       game.units.forEach(o => {
-        if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+        if (o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+        if (!nearBase && o.lane!==u.lane) return; // 基地附近不限制路
         const d = Math.hypot(o.x-u.x, o.y-u.y);
         if (d<=u.range && o.hp < o.maxHp*0.35 && o.hp < lastHitHp) {
           lastHitHp = o.hp; lastHitTarget = o;
@@ -1799,7 +1805,8 @@ function updateUnits(game, dt) {
     // 先搜移动单位（优先）
     if (!bestT) {
       game.units.forEach(o => {
-        if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+        if (o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+        if (!nearBase && o.lane!==u.lane) return; // 基地附近不限制路
         const d = Math.hypot(o.x-u.x, o.y-u.y);
         if (d<=u.range && d<bestD) { bestD=d; bestT=o; }
       });
@@ -1812,19 +1819,7 @@ function updateUnits(game, dt) {
         if (d<=u.range+20 && d<bestD) { bestD=d; bestT=t; }
       });
     }
-    // 找兵营：该路所有塔被摧毁后才能打兵营
-    if (bestD > u.range+20) {
-      const enemySide = u.side==='my'?'enemy':'my';
-      const laneTowers = game.towers.filter(t=>t.side===enemySide&&t.lane===u.lane&&t.alive&&!t.isBase);
-      if (laneTowers.length===0) {
-        game.barracks.forEach(b => {
-          if (b.side===enemySide&&b.lane===u.lane&&b.alive) {
-            const d = Math.abs(b.x-u.x);
-            if (d<=u.range+20 && d<bestD) { bestD=d; bestT=b; }
-          }
-        });
-      }
-    }
+    // 兵营已移除，小兵按时刷新，不再有兵营目标
 
     u.atkTimer-=dt;
     // 动画计时：attack/cast持续0.25秒后回walk
@@ -1860,12 +1855,16 @@ function updateUnits(game, dt) {
       }
     } else {
       // 附近有敌人时朝敌人靠近，而不是继续往前冲
+      // 基地附近不限制路，其他区域只追同路敌人
+      const baseX2 = u.side==='my' ? MY_BASE_X : EN_BASE_X;
+      const nearBase2 = Math.abs(u.x - baseX2) < 700;
       let chaseT = null, chaseD = Infinity;
       // 英雄补刀走位：优先朝血量<35%的敌方小兵移动
       if (u.isHero) {
         let lastHitTarget = null, lastHitHp = Infinity;
         game.units.forEach(o => {
-          if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+          if (o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+          if (!nearBase2 && o.lane!==u.lane) return;
           const d = Math.hypot(o.x-u.x, o.y-u.y);
           if (d < u.range*4+60 && o.hp < o.maxHp*0.35 && o.hp < lastHitHp) {
             lastHitHp = o.hp; lastHitTarget = o;
@@ -1875,20 +1874,29 @@ function updateUnits(game, dt) {
       }
       if (!chaseT) {
         game.units.forEach(o => {
-          if (o.lane!==u.lane||o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+          if (o.side===u.side||o.hp<=0||o.st.iceBlock>0) return;
+          if (!nearBase2 && o.lane!==u.lane) return;
           const d = Math.hypot(o.x-u.x, o.y-u.y);
           if (d < chaseD && d < u.range*4+60) { chaseD = d; chaseT = o; }
         });
       }
       if (chaseT && chaseD > u.range) {
-        // 目标在射程外，朝目标移动（只移x，y缓慢回归道路中心）
+        // 目标在射程外，朝目标移动（基地附近可跨路移动，其他区域只移x）
         const dx = chaseT.x - u.x;
-        u.x += u.speed*(dx>0?1:-1)*dt;
+        if (nearBase2) {
+          // 基地附近：自由移动朝目标（x和y都移）
+          const dy = chaseT.y - u.y;
+          const dist = Math.hypot(dx, dy);
+          u.x += u.speed * (dx/dist) * dt;
+          u.y += u.speed * (dy/dist) * dt * 0.7;
+        } else {
+          u.x += u.speed*(dx>0?1:-1)*dt;
+          // y方向缓慢回归道路中心，避免横向抖动乱跑
+          const laneCenter = getRoadY(u.lane, u.x);
+          const dyC = laneCenter - u.y;
+          if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * u.speed * dt * 0.25;
+        }
         u.animState = 'walk';
-        // y方向缓慢回归道路中心，避免横向抖动乱跑
-        const laneCenter = getRoadY(u.lane, u.x);
-        const dyC = laneCenter - u.y;
-        if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * u.speed * dt * 0.25;
       } else if (chaseT && chaseD <= u.range) {
         // 目标在射程内，停下来攻击（远程单位不靠近）
         u.animState = 'idle';
@@ -1909,10 +1917,18 @@ function updateUnits(game, dt) {
       }
       if (u.x<30) u.x=30;
       if (u.x>WORLD_W-30) u.x=WORLD_W-30;
-      // 单位不离开道路：限制y在道路范围内（半宽60，留5px余量，弯道用getRoadY）
-      const laneCenter = getRoadY(u.lane, u.x);
-      if (u.y < laneCenter - 55) u.y = laneCenter - 55;
-      if (u.y > laneCenter + 55) u.y = laneCenter + 55;
+      // 单位不离开道路：限制y在道路范围内（基地附近跨路追击时放宽限制）
+      const baseX3 = u.side==='my' ? MY_BASE_X : EN_BASE_X;
+      const nearBase3 = Math.abs(u.x - baseX3) < 700;
+      if (!nearBase3) {
+        const laneCenter = getRoadY(u.lane, u.x);
+        if (u.y < laneCenter - 55) u.y = laneCenter - 55;
+        if (u.y > laneCenter + 55) u.y = laneCenter + 55;
+      } else {
+        // 基地附近：限制y在整个战场范围内，允许跨路
+        if (u.y < 100) u.y = 100;
+        if (u.y > WORLD_H-100) u.y = WORLD_H-100;
+      }
     }
   });
   // 召唤者死亡时召唤物也死亡
@@ -2025,20 +2041,7 @@ function update(dt) {
     game.enemyBuffs = checkBuff('enemy');
   }
 
-  // AI升级：每5秒随机升级一个兵营（需要扣钱）
-  game.aiTimer = (game.aiTimer||5) - dt;
-  if (game.aiTimer <= 0) {
-    game.aiTimer = 5;
-    game.barracks.forEach(b => {
-      if (b.alive && Math.random()<0.3) {
-        const cost = (b.level||1)*100;
-        if (game.gold >= cost) {
-          game.gold -= cost;
-          b.level = Math.min(10, (b.level||1)+1);
-        }
-      }
-    });
-  }
+  // AI升级已移除（兵营系统废弃）
 
   // 祭坛更新（复活倒计时、自动复活）
   updateAltars(dt);
@@ -3515,19 +3518,7 @@ canvas.addEventListener('click', e => {
     return;
   }
 
-  // 找兵营槽位（优先检测，避免被兵挡住）
-  for (const slot of BARRACK_SLOTS) {
-    const sy = slot.y || (LANE_Y[slot.lane] + (slot.dy||0));
-    if (Math.abs(fcX-slot.x)<120 && Math.abs(fcY-sy)<120) {
-      const ex = game.barracks.find(b=>b.side==='my'&&Math.abs(b.x-slot.x)<15&&Math.abs((b.y||(LANE_Y[b.lane]+(b.dy||0)))-sy)<15);
-      if (ex) {
-        game.upgradeMenu = { barrack:ex, x:cx, y:cy, menuHits:null };
-      } else {
-        game.buildMenu = { x:cx, y:cy, slot:slot, hits:null };
-      }
-      return;
-    }
-  }
+  // 兵营系统已移除，不再检测兵营槽位
 
   // 找最近单位（点击范围扩大到100，大战场坐标）
   let nearUnit = null, nd = Infinity;
