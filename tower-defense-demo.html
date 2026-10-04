@@ -97,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.37';
+const VERSION = 'v11.38';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度（全canvas渲染）
 const CANVAS_W = 1200, CANVAS_H = 720 + HUD_H; // canvas总尺寸
@@ -2965,7 +2965,6 @@ function render() {
     ctx.fillText('⚔ 击杀敌方小兵可获得金币收益！⚔', 600, 130);
     ctx.textAlign='start';
   }
-  ctx.restore();
 
   // 开始对战按钮（未开始时显示）
   if (!game.started) {
