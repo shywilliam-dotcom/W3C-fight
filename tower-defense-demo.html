@@ -97,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.38';
+const VERSION = 'v11.39';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度（全canvas渲染）
 const CANVAS_W = 1200, CANVAS_H = 720 + HUD_H; // canvas总尺寸
@@ -456,7 +456,7 @@ function initGame() {
   game = { gold:500, time:0, speed:1, selectedType:null,
     towers:[], barracks:[], units:[], projectiles:[], gameOver:false,
     goldAcc:0, upgradeMenu:null, selectedUnit:null,
-    prepTime:3, bountyAnnounced:false, aiGold:{my:500, enemy:500}, aiBuildCD:{my:0, enemy:0},
+    prepTime:3, bountyAnnounced:false, aiGold:{my:500, enemy:500}, aiBuildCD:{my:0, enemy:0}, aiReviveCD:{my:0, enemy:0},
     altars:[], autoRevive:false, heroIdCounter:0, minionTimer:0 };
   usedNames.clear();
 
@@ -497,22 +497,25 @@ function initGame() {
   document.getElementById('game-over').style.display = 'none';
 }
 
-// AI决策：根据金币建兵营/升级
+// AI决策：根据金币解锁英雄/复活
 function aiDecide(side, dt) {
   if (game.gameOver) return;
   const aiGoldKey = side==='my' ? 'my' : 'enemy';
   game.aiGold[aiGoldKey] += 5 * (dt||0.1);
   if (game.aiBuildCD[aiGoldKey] > 0) game.aiBuildCD[aiGoldKey] -= dt;
+  if (game.aiReviveCD[aiGoldKey] > 0) game.aiReviveCD[aiGoldKey] -= dt;
   const gold = game.aiGold[aiGoldKey];
   const altars = game.altars.filter(a => a.side === side);
 
-  // 1. 优先解锁未解锁的栏位（每5秒最多解锁1个）
+  // 1. 优先解锁未解锁的栏位（每15秒最多解锁1个，只能选4种基础兵种，和玩家一致）
   if (game.aiBuildCD[aiGoldKey] <= 0) {
     for (const altar of altars) {
       for (let i = 0; i < altar.slots.length; i++) {
         const slot = altar.slots[i];
         if (!slot.unlocked) {
-          const t = ['melee','archer','mage','cannon','barbarian','paladin','fighter','musketeer','ranger','crossbow','arcane','ice','fire','rocket','tesla','siege'][Math.floor(Math.random()*16)];
+          // AI只能选4种基础兵种，和玩家一致
+          const basicTypes = ['melee','archer','mage','cannon'];
+          const t = basicTypes[Math.floor(Math.random()*basicTypes.length)];
           const cost = UNIT_TYPES[t].cost;
           if (gold >= cost) {
             game.aiGold[aiGoldKey] -= cost;
@@ -524,7 +527,7 @@ function aiDecide(side, dt) {
             slot.reviveTimer = 0;
             slot.reviveCost = getReviveCost(t, 1);
             spawnHero(altar, i);
-            game.aiBuildCD[aiGoldKey] = 5;
+            game.aiBuildCD[aiGoldKey] = 15; // 解锁CD从5秒增加到15秒
             return;
           }
         }
@@ -532,13 +535,17 @@ function aiDecide(side, dt) {
     }
   }
 
-  // 2. 复活阵亡英雄（AI自动复活）
-  for (const altar of altars) {
-    for (let i = 0; i < altar.slots.length; i++) {
-      const slot = altar.slots[i];
-      if (slot.state === 'dead' && slot.reviveTimer <= 0 && gold >= slot.reviveCost) {
-        game.aiGold[aiGoldKey] -= slot.reviveCost;
-        spawnHero(altar, i);
+  // 2. 复活阵亡英雄（每3秒最多复活1个，避免瞬间全部复活）
+  if (game.aiReviveCD[aiGoldKey] <= 0) {
+    for (const altar of altars) {
+      for (let i = 0; i < altar.slots.length; i++) {
+        const slot = altar.slots[i];
+        if (slot.state === 'dead' && slot.reviveTimer <= 0 && gold >= slot.reviveCost) {
+          game.aiGold[aiGoldKey] -= slot.reviveCost;
+          spawnHero(altar, i);
+          game.aiReviveCD[aiGoldKey] = 3; // 复活CD 3秒
+          return;
+        }
       }
     }
   }
