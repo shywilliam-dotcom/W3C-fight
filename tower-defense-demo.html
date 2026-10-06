@@ -97,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.39';
+const VERSION = 'v11.40';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度（全canvas渲染）
 const CANVAS_W = 1200, CANVAS_H = 720 + HUD_H; // canvas总尺寸
@@ -1888,22 +1888,58 @@ function updateUnits(game, dt) {
         });
       }
       if (chaseT && chaseD > u.range) {
-        // 目标在射程外，朝目标移动（基地附近可跨路移动，其他区域只移x）
+        // 目标在射程外，朝目标移动
+        // 智能追击：检测前方是否有敌方防御塔在射程内，避免追到塔下
+        const enemySide = u.side==='my'?'enemy':'my';
         const dx = chaseT.x - u.x;
-        if (nearBase2) {
-          // 基地附近：自由移动朝目标（x和y都移）
-          const dy = chaseT.y - u.y;
-          const dist = Math.hypot(dx, dy);
-          u.x += u.speed * (dx/dist) * dt;
-          u.y += u.speed * (dy/dist) * dt * 0.7;
+        const isLowHpTarget = chaseT.hp < chaseT.maxHp * 0.10; // 残血目标（<10%）
+        // 检查追击方向上是否有敌方塔会打到自己
+        let towerThreat = null;
+        game.towers.forEach(t => {
+          if (t.side !== enemySide || !t.alive || t.isBase) return;
+          const dToTower = Math.hypot(t.x - u.x, t.y - u.y);
+          // 如果塔在追击方向前方（dx同号）且在塔射程+50内，算威胁
+          if ((t.x - u.x) * dx > 0 && dToTower < t.range + 50) {
+            if (!towerThreat || dToTower < towerThreat.d) towerThreat = {t, d:dToTower};
+          }
+        });
+        // 决策：有塔威胁时，只有残血目标才追，且追一下就回撤
+        if (towerThreat && !isLowHpTarget) {
+          // 非残血目标：不追，原地待命或回撤
+          u.animState = 'idle';
+        } else if (towerThreat && isLowHpTarget) {
+          // 残血目标：追但保持在塔射程外，打一下就撤
+          if (towerThreat.d > towerThreat.t.range - 30) {
+            // 还在塔射程边缘外，可以追
+            if (nearBase2) {
+              const dy = chaseT.y - u.y;
+              const dist = Math.hypot(dx, dy);
+              u.x += u.speed * (dx/dist) * dt;
+              u.y += u.speed * (dy/dist) * dt * 0.7;
+            } else {
+              u.x += u.speed*(dx>0?1:-1)*dt;
+            }
+            u.animState = 'walk';
+          } else {
+            // 进入塔射程了，立刻回撤
+            u.x -= u.speed * u.dir * dt * 1.5;
+            u.animState = 'walk';
+          }
         } else {
-          u.x += u.speed*(dx>0?1:-1)*dt;
-          // y方向缓慢回归道路中心，避免横向抖动乱跑
-          const laneCenter = getRoadY(u.lane, u.x);
-          const dyC = laneCenter - u.y;
-          if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * u.speed * dt * 0.25;
+          // 无塔威胁：正常追击
+          if (nearBase2) {
+            const dy = chaseT.y - u.y;
+            const dist = Math.hypot(dx, dy);
+            u.x += u.speed * (dx/dist) * dt;
+            u.y += u.speed * (dy/dist) * dt * 0.7;
+          } else {
+            u.x += u.speed*(dx>0?1:-1)*dt;
+            const laneCenter = getRoadY(u.lane, u.x);
+            const dyC = laneCenter - u.y;
+            if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * u.speed * dt * 0.25;
+          }
+          u.animState = 'walk';
         }
-        u.animState = 'walk';
       } else if (chaseT && chaseD <= u.range) {
         // 目标在射程内，停下来攻击（远程单位不靠近）
         u.animState = 'idle';
@@ -2025,6 +2061,24 @@ function update(dt) {
       if (u.isHero && u.hp > 0 && u.hp < u.maxHp) {
         u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.005);
       }
+    });
+  }
+
+  // 基地附近回血光环：每秒回5%最大生命，范围=法师射程(135)
+  game.baseRegenTimer = (game.baseRegenTimer||0) + dt;
+  if (game.baseRegenTimer >= 1) {
+    game.baseRegenTimer = 0;
+    const BASE_REGEN_RANGE = 135; // 法师攻击距离
+    const BASE_REGEN_RATE = 0.05; // 5%每秒
+    [game.myBase, game.enemyBase].forEach(base => {
+      if (!base || base.hp <= 0) return;
+      game.units.forEach(u => {
+        if (u.side !== base.side || u.hp <= 0 || u.hp >= u.maxHp) return;
+        const d = Math.hypot(u.x - base.x, u.y - base.y);
+        if (d <= BASE_REGEN_RANGE) {
+          u.hp = Math.min(u.maxHp, u.hp + u.maxHp * BASE_REGEN_RATE);
+        }
+      });
     });
   }
 
@@ -2811,8 +2865,8 @@ function render() {
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
-    const pw = 540, ph = 130;
-    const px = 200, py = 590;
+    const pw = 560, ph = 145;
+    const px = 20, py = 565; // 移到左下角，避免被小地图遮挡
     ctx.fillStyle='rgba(0,0,0,0.9)';
     ctx.fillRect(px, py, pw, ph);
     ctx.strokeStyle='#666'; ctx.lineWidth=1;
@@ -2833,7 +2887,7 @@ function render() {
 
     // 右侧信息区 - 紧凑多列布局
     const tx = px + aw + 14;
-    const col1 = tx, col2 = tx+140, col3 = tx+280, col4 = tx+400;
+    const col1 = tx, col2 = tx+130, col3 = tx+260, col4 = tx+390;
     const lineH = 15;
 
     // 标题行
@@ -2942,6 +2996,28 @@ function render() {
     if (cds.length) {
       ctx.fillStyle='#9C27B0'; ctx.font='10px sans-serif';
       ctx.fillText(cds.join(' '), col1, py+102);
+    }
+
+    // 英雄经验条（仅英雄显示）
+    if (u.isHero) {
+      const expY = py+112;
+      const expBarW = pw - 30, expBarH = 8;
+      const expX = px + 15;      const curExp = u.heroExp || 0;
+      const needExp = expToLevel(u.level || 1);
+      const expPct = Math.min(1, curExp / needExp);
+      // 背景
+      ctx.fillStyle = 'rgba(50,50,80,0.8)';
+      ctx.fillRect(expX, expY, expBarW, expBarH);
+      // 经验值
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(expX, expY, expBarW * expPct, expBarH);
+      // 边框
+      ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+      ctx.strokeRect(expX, expY, expBarW, expBarH);
+      // 文字
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`EXP ${Math.floor(curExp)}/${needExp}`, expX + expBarW/2, expY + 7);
+      ctx.textAlign = 'start';
     }
 
     // 攻击目标
