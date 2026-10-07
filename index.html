@@ -38,8 +38,8 @@
   canvas {
     background: #0f0f23; border: none;
     cursor: pointer; display: block;
-    width: 100%; height: 100%;
-    object-fit: cover;
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
   }
   #control-panel { display: none; }
     border: 1px solid #0f3460;
@@ -77,7 +77,7 @@
   <div>👾 小兵Lv:<b id="minion-level">1</b></div>
 </div>
 
-<canvas id="gameCanvas"></canvas>
+<canvas id="gameCanvas" height="780"></canvas>
 
 <div id="control-panel">
   <button class="btn btn-speed" id="speed-btn">1x</button>
@@ -97,40 +97,36 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.43';
+const VERSION = 'v11.44';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-const HUD_H = 60; // 顶部HUD栏高度（全canvas渲染）
-// 自适应分辨率：canvas尺寸跟随屏幕，视口大小=canvas游戏区域大小
-let CANVAS_W = 1200, CANVAS_H = 780; // canvas总尺寸（运行时动态更新）
-let VIEW_W = 1200, VIEW_H = 720; // 视口尺寸（=canvas游戏区域，运行时动态更新）
-// ============ 大战场坐标系统（3倍放大+视口滚动） ============
-const WORLD_W = 4200, WORLD_H = 2160; // 战场实际尺寸（拉大宽度，中间更多空白地）
-const SCALE = 3; // 放大倍数
-let viewX = 0, viewY = 720; // 视口左上角在战场中的位置（初始显示我方基地，y=1080在视口中心）
+const HUD_H = 60; // 顶部HUD栏高度
+const CANVAS_H = 780; // canvas高度固定（HUD60 + 游戏区720），UI大小不变
+let CANVAS_W = 1200; // canvas宽度根据屏幕比例动态调整
+let VIEW_W = 1200, VIEW_H = 720; // 视口尺寸（高度固定，宽度动态）
+// ============ 大战场坐标系统 ============
+const WORLD_W = 4200, WORLD_H = 2160;
+const SCALE = 3;
+let viewX = 0, viewY = 720;
 // 视口边界限制
 function clampView() {
   viewX = Math.max(0, Math.min(viewX, WORLD_W - VIEW_W));
   viewY = Math.max(0, Math.min(viewY, WORLD_H - VIEW_H));
 }
-// 根据屏幕尺寸调整canvas分辨率和视口
+// 根据屏幕比例调整canvas宽度（高度固定780，宽度=780×屏幕宽高比）
 function resizeCanvas() {
   const canvas = document.getElementById('gameCanvas');
-  const dpr = window.devicePixelRatio || 1;
-  // 获取游戏容器尺寸（竖屏旋转后）
   const container = document.getElementById('game-container');
   const rect = container.getBoundingClientRect();
-  // 逻辑分辨率：以CSS像素为基准，乘以DPR
   const cssW = rect.width || window.innerWidth;
   const cssH = rect.height || window.innerHeight;
-  CANVAS_W = Math.round(cssW * dpr);
-  CANVAS_H = Math.round(cssH * dpr);
+  // 目标比例 = 容器宽高比
+  const ratio = cssW / cssH;
+  // canvas宽度 = 高度 × 比例，最小1200
+  CANVAS_W = Math.max(1200, Math.round(CANVAS_H * ratio));
   canvas.width = CANVAS_W;
   canvas.height = CANVAS_H;
   VIEW_W = CANVAS_W;
-  VIEW_H = CANVAS_H - HUD_H * dpr; // 游戏区域高度=总高-HUD
-  // 限制最小视口，避免太小
-  VIEW_W = Math.max(VIEW_W, 800);
-  VIEW_H = Math.max(VIEW_H, 500);
+  VIEW_H = CANVAS_H - HUD_H;
   clampView();
 }
 // 战场坐标→屏幕坐标
@@ -3071,14 +3067,13 @@ function render() {
 
   // 开始对战按钮（未开始时显示，居中）
   if (!game.started) {
-    const startBtnW = 300, startBtnH = 60;
-    const startBtnX = (VIEW_W - startBtnW) / 2, startBtnY = (VIEW_H - startBtnH) / 2;
+    const sbW=300, sbH=60, sbX=(VIEW_W-sbW)/2, sbY=(VIEW_H-sbH)/2;
     ctx.fillStyle='#4CAF50';
-    ctx.fillRect(startBtnX, startBtnY, startBtnW, startBtnH);
+    ctx.fillRect(sbX, sbY, sbW, sbH);
     ctx.strokeStyle='#fff'; ctx.lineWidth=3;
-    ctx.strokeRect(startBtnX, startBtnY, startBtnW, startBtnH);
+    ctx.strokeRect(sbX, sbY, sbW, sbH);
     ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
-    ctx.fillText('开始对战', startBtnX + startBtnW/2, startBtnY + 38);
+    ctx.fillText('开始对战', sbX+sbW/2, sbY+38);
     ctx.textAlign='start';
   }
   // 左下角按钮（从右下角移到左下角）
@@ -4740,7 +4735,8 @@ function loop(t) {
 }
 initGame();
 resizeCanvas();
-window.addEventListener('resize', () => { resizeCanvas(); render(); });
+window.addEventListener('resize', () => { resizeCanvas(); });
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
 requestAnimationFrame(loop);
 </script>
 </body>
