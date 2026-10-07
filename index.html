@@ -97,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.40';
+const VERSION = 'v11.41';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度（全canvas渲染）
 const CANVAS_W = 1200, CANVAS_H = 720 + HUD_H; // canvas总尺寸
@@ -1708,6 +1708,10 @@ function updateUnits(game, dt) {
     if (u.hp<=0) return;
     if (u.st.polymorphed>0||u.st.iceBlock>0||u.st.stun>0) return;
 
+    // 移动速度：基础速度不变，仅受减速debuff影响（-50%）
+    let moveSpeed = u.speed;
+    if (u.st.slow>0) moveSpeed *= 0.5;
+
     // 狂暴：血越少攻速越快（最多+60%攻速）
     let atkSpd = u.atkSpeed;
     if (u.berserk) {
@@ -1738,7 +1742,7 @@ function updateUnits(game, dt) {
       }
       if (u._retreatTimer > 0) {
         u._retreatTimer -= dt;
-        u.x -= u.speed * u.dir * dt * 0.8; // 向后撤
+        u.x -= moveSpeed * u.dir * dt * 0.8; // 向后撤
         u.dir = u.side==='my'?1:-1;
         return;
       }
@@ -1758,13 +1762,13 @@ function updateUnits(game, dt) {
           const dx = lowTarget.x - u.x;
           const dist = Math.abs(dx);
           if (dist > u.range) {
-            u.x += u.speed * (dx>0?1:-1) * dt;
+            u.x += moveSpeed * (dx>0?1:-1) * dt;
             u.animState = 'walk';
           }
           // y方向缓慢回归道路中心，避免横向抖动
           const laneCenter = getRoadY(u.lane, u.x);
           const dy = laneCenter - u.y;
-          if (Math.abs(dy) > 5) u.y += Math.sign(dy) * u.speed * dt * 0.3;
+          if (Math.abs(dy) > 5) u.y += Math.sign(dy) * moveSpeed * dt * 0.3;
           u._barbarianChasing = true;
         } else {
           u._barbarianChasing = false;
@@ -1914,15 +1918,15 @@ function updateUnits(game, dt) {
             if (nearBase2) {
               const dy = chaseT.y - u.y;
               const dist = Math.hypot(dx, dy);
-              u.x += u.speed * (dx/dist) * dt;
-              u.y += u.speed * (dy/dist) * dt * 0.7;
+              u.x += moveSpeed * (dx/dist) * dt;
+              u.y += moveSpeed * (dy/dist) * dt * 0.7;
             } else {
-              u.x += u.speed*(dx>0?1:-1)*dt;
+              u.x += moveSpeed*(dx>0?1:-1)*dt;
             }
             u.animState = 'walk';
           } else {
             // 进入塔射程了，立刻回撤
-            u.x -= u.speed * u.dir * dt * 1.5;
+            u.x -= moveSpeed * u.dir * dt * 1.5;
             u.animState = 'walk';
           }
         } else {
@@ -1930,13 +1934,13 @@ function updateUnits(game, dt) {
           if (nearBase2) {
             const dy = chaseT.y - u.y;
             const dist = Math.hypot(dx, dy);
-            u.x += u.speed * (dx/dist) * dt;
-            u.y += u.speed * (dy/dist) * dt * 0.7;
+            u.x += moveSpeed * (dx/dist) * dt;
+            u.y += moveSpeed * (dy/dist) * dt * 0.7;
           } else {
-            u.x += u.speed*(dx>0?1:-1)*dt;
+            u.x += moveSpeed*(dx>0?1:-1)*dt;
             const laneCenter = getRoadY(u.lane, u.x);
             const dyC = laneCenter - u.y;
-            if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * u.speed * dt * 0.25;
+            if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * moveSpeed * dt * 0.25;
           }
           u.animState = 'walk';
         }
@@ -1946,15 +1950,15 @@ function updateUnits(game, dt) {
         // 停战时也缓慢回正道路中心
         const laneCenter = getRoadY(u.lane, u.x);
         const dyC = laneCenter - u.y;
-        if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * u.speed * dt * 0.15;
+        if (Math.abs(dyC) > 3) u.y += Math.sign(dyC) * moveSpeed * dt * 0.15;
       } else {
         // 没有附近敌人，继续往前推进（英雄需跟随大部队）
         if (u.isHero && u._holdPosition) {
           // 英雄等待大部队，缓慢移动或原地待命
-          u.x += u.speed*u.dir*dt*0.2;
+          u.x += moveSpeed*u.dir*dt*0.2;
           u.animState = 'idle';
         } else {
-          u.x += u.speed*u.dir*dt;
+          u.x += moveSpeed*u.dir*dt;
           u.animState = 'walk';
         }
       }
@@ -2866,7 +2870,7 @@ function render() {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
     const pw = 560, ph = 145;
-    const px = 20, py = 565; // 移到左下角，避免被小地图遮挡
+    const px = 10, py = 70; // 左上角HUD下方，不遮挡任何按钮
     ctx.fillStyle='rgba(0,0,0,0.9)';
     ctx.fillRect(px, py, pw, ph);
     ctx.strokeStyle='#666'; ctx.lineWidth=1;
