@@ -38,7 +38,7 @@
   canvas {
     background: #0f0f23; border: none;
     cursor: pointer; display: block;
-    width: 100%; height: 100%;
+    height: 100%; width: auto;
   }
   #control-panel { display: none; }
     border: 1px solid #0f3460;
@@ -96,7 +96,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.45';
+const VERSION = 'v11.46';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度
 const CANVAS_H = 780; // canvas高度固定（HUD60 + 游戏区720），UI大小不变
@@ -122,9 +122,6 @@ function resizeCanvas() {
   CANVAS_W = Math.max(1200, Math.round(CANVAS_H * ratio));
   canvas.width = CANVAS_W;
   canvas.height = CANVAS_H;
-  // CSS尺寸填满容器
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
   VIEW_W = CANVAS_W;
   VIEW_H = CANVAS_H - HUD_H;
   clampView();
