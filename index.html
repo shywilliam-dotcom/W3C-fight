@@ -96,7 +96,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.51';
+const VERSION = 'v11.52';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度
 const CANVAS_W = 1200, CANVAS_H = 780; // canvas固定逻辑分辨率
@@ -3483,6 +3483,23 @@ canvas.addEventListener('click', e => {
   const fcX = cx + viewX;
   const fcY = cy + viewY;
 
+  // ===== 单位点击（优先于祭坛，避免英雄在祭坛附近时点不中）=====
+  let nearUnit = null, nd = Infinity;
+  game.units.forEach(u => {
+    if (u.hp<=0) return;
+    const d = Math.hypot(fcX-u.x, fcY-u.y);
+    const hitR = u.isHero ? 120 : 80;
+    if (d < nd && d < hitR) { nd = d; nearUnit = u; }
+  });
+  if (nearUnit) {
+    game.selectedUnit = nearUnit;
+    game.selectedTower = null;
+    game.upgradeMenu = null;
+    game.transformOpen = false;
+    render();
+    return;
+  }
+
   // ===== 祭坛点击处理 =====
   let altarClicked = false;
   game.altars.forEach((altar, ai) => {
@@ -3715,22 +3732,6 @@ canvas.addEventListener('click', e => {
 
   // 兵营系统已移除，不再检测兵营槽位
 
-  // 找最近单位（点击范围扩大到150，大战场坐标×3）
-  let nearUnit = null, nd = Infinity;
-  game.units.forEach(u => {
-    if (u.hp<=0) return;
-    const d = Math.hypot(fcX-u.x, fcY-u.y);
-    const hitR = u.isHero ? 120 : 80; // 英雄点击范围更大
-    if (d < nd && d < hitR) { nd = d; nearUnit = u; }
-  });
-  if (nearUnit) {
-    game.selectedUnit = nearUnit;
-    game.selectedTower = null;
-    game.upgradeMenu = null;
-    game.transformOpen = false;
-    render();
-    return;
-  }
   // 转职按钮点击检测（在信息栏区域）
   if (game.selectedUnit && game.selectedUnit.isHero && game.selectedUnit.side==='my') {
     // 转职展开选项点击
