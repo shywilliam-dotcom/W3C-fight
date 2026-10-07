@@ -38,8 +38,8 @@
   canvas {
     background: #0f0f23; border: none;
     cursor: pointer; display: block;
-    max-width: 100%; max-height: 100%;
-    object-fit: contain;
+    width: 100%; height: 100%;
+    object-fit: cover;
   }
   #control-panel { display: none; }
     border: 1px solid #0f3460;
@@ -97,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.41';
+const VERSION = 'v11.42';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度（全canvas渲染）
 const CANVAS_W = 1200, CANVAS_H = 720 + HUD_H; // canvas总尺寸
@@ -2328,12 +2328,6 @@ function render() {
   // 祭坛渲染（每路1个，每祭坛4个英雄栏位）
   game.altars.forEach(altar => {
     if (altar.x < viewX-200 || altar.x > viewX+1400) return;
-    // 祭坛底座
-    ctx.fillStyle = altar.side==='my' ? 'rgba(33,150,243,0.3)' : 'rgba(244,67,54,0.3)';
-    ctx.fillRect(altar.x-100, altar.y-180, 200, 360);
-    ctx.strokeStyle = altar.side==='my' ? '#2196F3' : '#F44336';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(altar.x-100, altar.y-180, 200, 360);
     // 祭坛标题
     ctx.fillStyle = altar.side==='my' ? '#4FC3F7' : '#EF5350';
     ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
