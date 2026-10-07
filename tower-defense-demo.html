@@ -38,7 +38,8 @@
   canvas {
     background: #0f0f23; border: none;
     cursor: pointer; display: block;
-    height: 100%; width: auto;
+    max-width: 100%; max-height: 100%;
+    object-fit: cover;
   }
   #control-panel { display: none; }
     border: 1px solid #0f3460;
@@ -76,7 +77,7 @@
   <div>👾 小兵Lv:<b id="minion-level">1</b></div>
 </div>
 
-<canvas id="gameCanvas" height="780"></canvas>
+<canvas id="gameCanvas" width="1200" height="780"></canvas>
 
 <div id="control-panel">
   <button class="btn btn-speed" id="speed-btn">1x</button>
@@ -96,12 +97,11 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.46';
+const VERSION = 'v11.47';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度
-const CANVAS_H = 780; // canvas高度固定（HUD60 + 游戏区720），UI大小不变
-let CANVAS_W = 1200; // canvas宽度根据屏幕比例动态调整
-let VIEW_W = 1200, VIEW_H = 720; // 视口尺寸（高度固定，宽度动态）
+const CANVAS_W = 1200, CANVAS_H = 780; // canvas固定逻辑分辨率
+const VIEW_W = 1200, VIEW_H = 720; // 视口尺寸
 // ============ 大战场坐标系统 ============
 const WORLD_W = 4200, WORLD_H = 2160;
 const SCALE = 3;
@@ -110,21 +110,6 @@ let viewX = 0, viewY = 720;
 function clampView() {
   viewX = Math.max(0, Math.min(viewX, WORLD_W - VIEW_W));
   viewY = Math.max(0, Math.min(viewY, WORLD_H - VIEW_H));
-}
-// 根据屏幕比例调整canvas宽度（高度固定780，宽度=780×屏幕宽高比）
-function resizeCanvas() {
-  const canvas = document.getElementById('gameCanvas');
-  // 竖屏旋转后，游戏区域宽=屏幕高，高=屏幕宽；横屏则直接用屏幕尺寸
-  const isPortrait = window.innerWidth < window.innerHeight;
-  const gameW = isPortrait ? window.innerHeight : window.innerWidth;
-  const gameH = isPortrait ? window.innerWidth : window.innerHeight;
-  const ratio = gameW / gameH;
-  CANVAS_W = Math.max(1200, Math.round(CANVAS_H * ratio));
-  canvas.width = CANVAS_W;
-  canvas.height = CANVAS_H;
-  VIEW_W = CANVAS_W;
-  VIEW_H = CANVAS_H - HUD_H;
-  clampView();
 }
 // 战场坐标→屏幕坐标
 function toScreenX(x) { return x - viewX; }
@@ -3062,20 +3047,19 @@ function render() {
     ctx.textAlign='start';
   }
 
-  // 开始对战按钮（未开始时显示，居中）
+  // 开始对战按钮（未开始时显示）
   if (!game.started) {
-    const sbW=300, sbH=60, sbX=(VIEW_W-sbW)/2, sbY=(VIEW_H-sbH)/2;
     ctx.fillStyle='#4CAF50';
-    ctx.fillRect(sbX, sbY, sbW, sbH);
+    ctx.fillRect(450, 300, 300, 60);
     ctx.strokeStyle='#fff'; ctx.lineWidth=3;
-    ctx.strokeRect(sbX, sbY, sbW, sbH);
+    ctx.strokeRect(450, 300, 300, 60);
     ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center';
-    ctx.fillText('开始对战', sbX+sbW/2, sbY+38);
+    ctx.fillText('开始对战', 600, 340);
     ctx.textAlign='start';
   }
   // 左下角按钮（从右下角移到左下角）
   const btnW = 70, btnH = 30;
-  const btnStartX = 10, btnStartY = VIEW_H - 100;
+  const btnStartX = 10, btnStartY = 620;
   const btns = [
     {x:0, y:0, label:game.speed+'x', color:'#607D8B'},
     {x:1, y:0, label:game.autoRevive?'AUTO✓':'AUTO', color:game.autoRevive?'#4CAF50':'#795548'},
@@ -3096,7 +3080,7 @@ function render() {
   });
 
   // 右下角小地图（220x132）
-  const mmW = 429, mmH = 258, mmX = VIEW_W-mmW, mmY = VIEW_H-mmH;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
   const mmScaleX = mmW / WORLD_W, mmScaleY = mmH / WORLD_H;
   ctx.fillStyle = 'rgba(0,0,0,0.8)';
   ctx.fillRect(mmX, mmY, mmW, mmH);
@@ -3321,25 +3305,25 @@ canvas.addEventListener('click', e => {
   if (cy < HUD_H) return;
   cy -= HUD_H; // 转换为游戏区域坐标(0-720)
   // 开始对战按钮（优先处理，不受拖拽影响）
-  if (!game.started && cx >= (VIEW_W-300)/2 && cx <= (VIEW_W+300)/2 && cy >= (VIEW_H-60)/2 && cy <= (VIEW_H+60)/2) {
+  if (!game.started && cx >= 400 && cx <= 800 && cy >= 280 && cy <= 380) {
     game.started = true; dragMoved = false; render(); return;
   }
 
   if (dragMoved || mmDragging) { dragMoved = false; mmDragging = false; return; }
 
   // 小地图点击跳转
-  const mmW = 429, mmH = 258, mmX = VIEW_W-mmW, mmY = VIEW_H-mmH;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
-    viewX = Math.max(0, Math.min(WORLD_W - VIEW_W, wx - VIEW_W/2));
-    viewY = Math.max(0, Math.min(WORLD_H - VIEW_H, wy - VIEW_H/2));
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
     render(); return;
   }
 
   // canvas左下角按钮检测（从右下角移到左下角）
   const btnW = 70, btnH = 30;
-  const btnStartX = 10, btnStartY = VIEW_H - 100;
+  const btnStartX = 10, btnStartY = 620;
   const btns = [
     {x:0, y:0, act:'speed'},
     {x:1, y:0, act:'auto'},
@@ -3664,19 +3648,19 @@ canvas.addEventListener('mousedown', e => {
   if (cy < HUD_H) return;
   cy -= HUD_H;
   // 小地图点击/拖拽
-  const mmW = 429, mmH = 258, mmX = VIEW_W-mmW, mmY = VIEW_H-mmH;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
     mmDragging = true;
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
-    viewX = Math.max(0, Math.min(WORLD_W - VIEW_W, wx - VIEW_W/2));
-    viewY = Math.max(0, Math.min(WORLD_H - VIEW_H, wy - VIEW_H/2));
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
     return;
   }
   // 判断是否点击在UI区域（UI区域不触发拖拽）
-  let inUI = (cx >= 10 && cx <= 240 && cy >= VIEW_H-105 && cy <= VIEW_H-15) || // 左下角按钮区（3列2行）
+  let inUI = (cx >= 10 && cx <= 240 && cy >= 615 && cy <= 690) || // 左下角按钮区（3列2行）
              (cx >= 200 && cy >= 600) || // 底部信息栏
-             (!game.started && cx >= (VIEW_W-300)/2 && cx <= (VIEW_W+300)/2 && cy >= (VIEW_H-60)/2 && cy <= (VIEW_H+60)/2) || // 开始按钮
+             (!game.started && cx >= 400 && cx <= 800 && cy >= 280 && cy <= 380) || // 开始按钮
              (game.altarPickMenu) || // 祭坛选英雄菜单
              (game.buildMenu) || // 建造菜单
              (game.simOpen && cx >= 10 && cx <= 290 && cy >= 480 && cy <= 610) || // 模拟菜单
@@ -3706,11 +3690,11 @@ canvas.addEventListener('mousemove', e => {
     } else {
       cx = dx / rect.width * CANVAS_W; cy = dy / rect.height * CANVAS_H; if(cy>=HUD_H)cy-=HUD_H;
     }
-    const mmW = 429, mmH = 258, mmX = VIEW_W-mmW, mmY = VIEW_H-mmH;
+    const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
-    viewX = Math.max(0, Math.min(WORLD_W - VIEW_W, wx - VIEW_W/2));
-    viewY = Math.max(0, Math.min(WORLD_H - VIEW_H, wy - VIEW_H/2));
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
     return;
   }
   if (!isDragging) return;
@@ -3749,21 +3733,21 @@ canvas.addEventListener('touchstart', e => {
   try {
   if (codexOpen || game.gameOver) return;
   const {cx, cy} = getTouchPos(e);
-  const mmW = 429, mmH = 258, mmX = VIEW_W-mmW, mmY = VIEW_H-mmH;
+  const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
   // 小地图触摸：启动滑动跟随
   if (cx >= mmX && cx <= mmX+mmW && cy >= mmY && cy <= mmY+mmH) {
     e.preventDefault();
     mmDragging = true;
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
-    viewX = Math.max(0, Math.min(WORLD_W - VIEW_W, wx - VIEW_W/2));
-    viewY = Math.max(0, Math.min(WORLD_H - VIEW_H, wy - VIEW_H/2));
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
     return;
   }
   // 判断是否点击在UI区域
-  let inUI = (cx >= 10 && cx <= 240 && cy >= VIEW_H-105 && cy <= VIEW_H-15) || // 左下角按钮
+  let inUI = (cx >= 10 && cx <= 240 && cy >= 615 && cy <= 690) || // 左下角按钮
              (cx >= 200 && cy >= 600) || // 底部信息栏
-             (!game.started && cx >= (VIEW_W-300)/2 && cx <= (VIEW_W+300)/2 && cy >= (VIEW_H-60)/2 && cy <= (VIEW_H+60)/2) || // 开始按钮
+             (!game.started && cx >= 400 && cx <= 800 && cy >= 280 && cy <= 380) || // 开始按钮
              (game.altarPickMenu) || (game.buildMenu) ||
              (game.simOpen && cx >= 10 && cx <= 290 && cy >= 480 && cy <= 610) || // 模拟菜单
              (game.settingsOpen && cx >= 900 && cx <= 1180 && cy >= 550 && cy <= 680); // 设置菜单
@@ -3787,11 +3771,11 @@ canvas.addEventListener('touchmove', e => {
   const {cx, cy} = getTouchPos(e);
   // 小地图滑动跟随
   if (mmDragging) {
-    const mmW = 429, mmH = 258, mmX = VIEW_W-mmW, mmY = VIEW_H-mmH;
+    const mmW = 429, mmH = 258, mmX = 1200-mmW, mmY = 720-mmH;
     const wx = (cx - mmX) / mmW * WORLD_W;
     const wy = (cy - mmY) / mmH * WORLD_H;
-    viewX = Math.max(0, Math.min(WORLD_W - VIEW_W, wx - VIEW_W/2));
-    viewY = Math.max(0, Math.min(WORLD_H - VIEW_H, wy - VIEW_H/2));
+    viewX = Math.max(0, Math.min(WORLD_W - 1200, wx - 600));
+    viewY = Math.max(0, Math.min(WORLD_H - 720, wy - 360));
     return;
   }
   if (!isDragging) return;
@@ -4731,9 +4715,6 @@ function loop(t) {
   requestAnimationFrame(loop);
 }
 initGame();
-resizeCanvas();
-window.addEventListener('resize', () => { resizeCanvas(); });
-window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
 requestAnimationFrame(loop);
 </script>
 </body>
