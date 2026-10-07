@@ -97,7 +97,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.48';
+const VERSION = 'v11.49';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度
 const CANVAS_W = 1200, CANVAS_H = 780; // canvas固定逻辑分辨率
@@ -2450,18 +2450,20 @@ function render() {
         ctx.restore();
         // 名字（×3）
         if (u.isHero) {
-          // 英雄：名字+等级+经验条
+          // 英雄：名字+等级+血条（不显示经验条）
           ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
           ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
           ctx.fillText(u.name, u.x, u.y - 85);
           ctx.fillStyle = '#FFD700'; ctx.font = 'bold 12px sans-serif';
           ctx.fillText('Lv.'+u.level, u.x, u.y - 68);
-          // 经验条
-          const expW = 50, expH = 4;
+          // 血条（英雄头顶始终显示）
+          const hpW = 50, hpH = 5;
           ctx.fillStyle = 'rgba(0,0,0,0.7)';
-          ctx.fillRect(u.x-expW/2, u.y-62, expW, expH);
-          ctx.fillStyle = '#9C27B0';
-          ctx.fillRect(u.x-expW/2, u.y-62, expW * Math.min(1, u.exp/u.expToNext), expH);
+          ctx.fillRect(u.x-hpW/2, u.y-60, hpW, hpH);
+          ctx.fillStyle = u.side==='my' ? '#4CAF50' : '#F44336';
+          ctx.fillRect(u.x-hpW/2, u.y-60, hpW * Math.max(0, u.hp/u.maxHp), hpH);
+          ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+          ctx.strokeRect(u.x-hpW/2, u.y-60, hpW, hpH);
         } else {
           ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
           ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
@@ -2663,15 +2665,25 @@ function render() {
       }
       ctx.restore();
     }
-    // 血条 - 按阵营色：我方绿，敌方红
+    // 血条 - 按阵营色：我方绿，敌方红（英雄始终显示，普通单位受伤时显示）
     const pct=u.hp/u.maxHp;
-    ctx.fillStyle='#333'; ctx.fillRect(u.x-10,u.y-s-8,20,4);
-    ctx.fillStyle = u.side==='my' ? '#4CAF50' : '#F44336';
-    ctx.fillRect(u.x-30,u.y-s*3-24,60*pct,12);
+    if (u.isHero || u.hp < u.maxHp) {
+      ctx.fillStyle='#333'; ctx.fillRect(u.x-30,u.y-s*3-24,60,12);
+      ctx.fillStyle = u.side==='my' ? '#4CAF50' : '#F44336';
+      ctx.fillRect(u.x-30,u.y-s*3-24,60*pct,12);
+      ctx.strokeStyle='#222'; ctx.lineWidth=1;
+      ctx.strokeRect(u.x-30,u.y-s*3-24,60,12);
+    }
     // 名字 - 按阵营色（×3）
     ctx.fillStyle = u.side==='my' ? '#4FC3F7' : '#EF5350';
     ctx.font='bold 18px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y-s*3-30); ctx.textAlign='start';
+    ctx.fillText(u.name||UNIT_TYPES[u.type].name, u.x, u.y-s*3-30);
+    // 英雄等级
+    if (u.isHero) {
+      ctx.fillStyle = '#FFD700'; ctx.font='bold 14px sans-serif';
+      ctx.fillText('Lv.'+u.level, u.x, u.y-s*3-48);
+    }
+    ctx.textAlign='start';
     // 选中框（×3）
     if (game.selectedUnit===u) {
       ctx.strokeStyle='#FFD700'; ctx.lineWidth=3;
