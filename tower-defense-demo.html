@@ -96,7 +96,7 @@
 
 <script>
 // ============ 布局 ============
-const VERSION = 'v11.52';
+const VERSION = 'v11.53';
 const UPDATE_TIME = new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const HUD_H = 60; // 顶部HUD栏高度
 const CANVAS_W = 1200, CANVAS_H = 780; // canvas固定逻辑分辨率
@@ -2918,24 +2918,24 @@ function render() {
   ctx.fillText(VERSION, 10, 700);
   ctx.fillText(new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), 10, 720);
 
-  // 统一信息栏（底部贴边）
+  // 统一信息栏背景（canvas右下角区域，竖屏后屏幕底部中间）
   ctx.fillStyle='rgba(0,0,0,0.85)';
-  ctx.fillRect(200, 600, 540, 120);
+  ctx.fillRect(630, 100, 560, 220);
   ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  ctx.strokeRect(200, 600, 540, 120);
+  ctx.strokeRect(630, 100, 560, 220);
 
   // 选中单位状态面板
   if (game.selectedTower && game.selectedTower.alive) {
     const t = game.selectedTower;
     ctx.fillStyle='#FFD700'; ctx.font='bold 14px sans-serif';
-    ctx.fillText(t.isBase?'基地':'防御塔', 220, 475);
+    ctx.fillText(t.isBase?'基地':'防御塔', 640, 125);
     ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
-    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}  攻击: ${t.atk}  射程: ${t.range}`, 350, 475);
+    ctx.fillText(`HP: ${Math.round(t.hp)}/${t.maxHp}  攻击: ${t.atk}  射程: ${t.range}`, 770, 125);
   } else if (game.selectedUnit && game.selectedUnit.hp > 0) {
     const u = game.selectedUnit;
     const def = UNIT_TYPES[u.type] || { name:u.type, color:'#999', size:10 };
     const pw = 560, ph = 200;
-    const px = 10, py = 405; // 左下角，小地图上方，按钮上方
+    const px = 630, py = 110; // canvas右下角区域，竖屏旋转后显示在屏幕底部中间
     ctx.fillStyle='rgba(0,0,0,0.9)';
     ctx.fillRect(px, py, pw, ph);
     ctx.strokeStyle='#666'; ctx.lineWidth=1;
