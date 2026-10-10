@@ -1,0 +1,155 @@
+{
+  "results": [
+    {
+      "id": "TC-301",
+      "mod": "分辨率适配",
+      "name": "手机竖屏 375x812 渲染",
+      "steps": "设置视口并开始游戏",
+      "expected": "canvas填满屏幕,无JS错误",
+      "actual": "canvas=375x812 视口=375x812 time=0.6 错误=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-301",
+      "mod": "分辨率适配",
+      "name": "手机竖屏 390x844 渲染",
+      "steps": "设置视口并开始游戏",
+      "expected": "canvas填满屏幕,无JS错误",
+      "actual": "canvas=390x844 视口=390x844 time=0.6 错误=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-301",
+      "mod": "分辨率适配",
+      "name": "手机竖屏 414x896 渲染",
+      "steps": "设置视口并开始游戏",
+      "expected": "canvas填满屏幕,无JS错误",
+      "actual": "canvas=414x896 视口=414x896 time=0.6 错误=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-301",
+      "mod": "分辨率适配",
+      "name": "手机横屏 812x375 渲染",
+      "steps": "设置视口并开始游戏",
+      "expected": "canvas填满屏幕,无JS错误",
+      "actual": "canvas=812x375 视口=812x375 time=0.6 错误=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-301",
+      "mod": "分辨率适配",
+      "name": "手机横屏 844x390 渲染",
+      "steps": "设置视口并开始游戏",
+      "expected": "canvas填满屏幕,无JS错误",
+      "actual": "canvas=844x390 视口=844x390 time=0.6 错误=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-301",
+      "mod": "分辨率适配",
+      "name": "平板竖屏 768x1024 渲染",
+      "steps": "设置视口并开始游戏",
+      "expected": "canvas填满屏幕,无JS错误",
+      "actual": "canvas=768x1024 视口=768x1024 time=0.6 错误=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-301",
+      "mod": "分辨率适配",
+      "name": "平板横屏 1024x768 渲染",
+      "steps": "设置视口并开始游戏",
+      "expected": "canvas填满屏幕,无JS错误",
+      "actual": "canvas=1024x768 视口=1024x768 time=0.6 错误=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-301",
+      "mod": "分辨率适配",
+      "name": "桌面 1280x720 渲染",
+      "steps": "设置视口并开始游戏",
+      "expected": "canvas填满屏幕,无JS错误",
+      "actual": "canvas=1280x720 视口=1280x720 time=0.6 错误=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-301",
+      "mod": "分辨率适配",
+      "name": "桌面 1920x1080 渲染",
+      "steps": "设置视口并开始游戏",
+      "expected": "canvas填满屏幕,无JS错误",
+      "actual": "canvas=1920x1080 视口=1920x1080 time=0.6 错误=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-310",
+      "mod": "主题×分辨率",
+      "name": "5主题×3分辨率组合截图",
+      "steps": "逐一切换截图",
+      "expected": "共15张,无渲染异常",
+      "actual": "已生成15张组合截图",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-320",
+      "mod": "长时间稳定性",
+      "name": "连续运行5分钟(4x)",
+      "steps": "长时间运行",
+      "expected": "无JS异常,单位数稳定(无泄漏式增长)",
+      "actual": "采样10次, 单位数范围=1~52, 最终time=1079s, gameOver=undefined, 错误=0",
+      "status": "PASS"
+    }
+  ],
+  "samples": [
+    {
+      "t": 0,
+      "units": 1,
+      "time": 0
+    },
+    {
+      "t": 30,
+      "units": 46,
+      "time": 118.12879999999844
+    },
+    {
+      "t": 60,
+      "units": 50,
+      "time": 238.19040000000575
+    },
+    {
+      "t": 90,
+      "units": 52,
+      "time": 358.2524000000297
+    },
+    {
+      "t": 120,
+      "units": 51,
+      "time": 478.31440000005625
+    },
+    {
+      "t": 150,
+      "units": 48,
+      "time": 598.4428000000801
+    },
+    {
+      "t": 180,
+      "units": 48,
+      "time": 718.5712000001075
+    },
+    {
+      "t": 210,
+      "units": 51,
+      "time": 838.699600000135
+    },
+    {
+      "t": 240,
+      "units": 49,
+      "time": 958.8284000001624
+    },
+    {
+      "t": 270,
+      "units": 48,
+      "time": 1078.956800000174
+    }
+  ]
+}

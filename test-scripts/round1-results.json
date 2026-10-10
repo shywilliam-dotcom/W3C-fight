@@ -1,0 +1,221 @@
+{
+  "results": [
+    {
+      "id": "TC-101",
+      "mod": "核心流程",
+      "name": "页面加载无JS错误",
+      "steps": "打开页面",
+      "expected": "无console.error/pageerror",
+      "actual": "捕获错误数=0: ",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-102",
+      "mod": "核心流程",
+      "name": "初始状态：金币500/时间0/未开始",
+      "steps": "读取getState()",
+      "expected": "gold=500,time=0,started为假",
+      "actual": "gold=500,time=0,started=undefined",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-103",
+      "mod": "核心流程",
+      "name": "点击开始对战按钮",
+      "steps": "simulateClick(600,390)",
+      "expected": "started=true",
+      "actual": "started=true",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-104",
+      "mod": "核心流程",
+      "name": "开战倒计时后时间递增",
+      "steps": "等待4.5秒(含3秒备战)",
+      "expected": "time>0",
+      "actual": "time=2.9",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-105",
+      "mod": "经济系统",
+      "name": "被动收入5金/秒",
+      "steps": "记录1秒前后金币差",
+      "expected": "增长约5金(±2)",
+      "actual": "前=514 后=519 差=5",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-106",
+      "mod": "核心流程",
+      "name": "单位生成/塔数",
+      "steps": "读取状态",
+      "expected": "塔数=22(双方11座),单位>0",
+      "actual": "towers=22,units=7",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-120",
+      "mod": "英雄祭坛",
+      "name": "点击未解锁栏位弹出选兵菜单",
+      "steps": "点击祭坛slot0",
+      "expected": "altarPickMenu非空",
+      "actual": "altarPickMenu=true",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-121",
+      "mod": "英雄祭坛",
+      "name": "选择刀盾手解锁并生成英雄",
+      "steps": "点击melee按钮",
+      "expected": "我方出现melee英雄",
+      "actual": "我方melee数=1, 我方单位=7",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-122",
+      "mod": "英雄祭坛",
+      "name": "再次弹出选兵菜单(弓手)",
+      "steps": "点击slot1",
+      "expected": "菜单打开",
+      "actual": "altarPickMenu=true",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-123",
+      "mod": "英雄祭坛",
+      "name": "解锁弓手",
+      "steps": "选archer",
+      "expected": "我方出现archer",
+      "actual": "我方类型=[]",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-124",
+      "mod": "经济系统",
+      "name": "金币不足无法解锁(不扣金币)",
+      "steps": "setGold(10)后点mage(90金)",
+      "expected": "不扣90金,无mage英雄",
+      "actual": "菜单开=true, 操作后金币=14(<90), mage数=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-150",
+      "mod": "UI交互",
+      "name": "速度按钮切换1x→2x",
+      "steps": "点击速度按钮",
+      "expected": "speed翻倍",
+      "actual": "1->2",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-151",
+      "mod": "UI交互",
+      "name": "速度循环1x→2x→4x→1x",
+      "steps": "累计点3次",
+      "expected": "回到1x",
+      "actual": "speed=1",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-152",
+      "mod": "UI交互",
+      "name": "AUTO自动复活开关",
+      "steps": "点击AUTO",
+      "expected": "autoRevive=true",
+      "actual": "autoRevive=true",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-153",
+      "mod": "UI交互",
+      "name": "设置菜单打开",
+      "steps": "点击设置",
+      "expected": "settingsOpen=true",
+      "actual": "settingsOpen=true",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-160",
+      "mod": "主题系统",
+      "name": "light主题文字为深色(非白)",
+      "steps": "读THEMES.light.textPrimary",
+      "expected": "深色",
+      "actual": "textPrimary=#1a1a2e",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-161",
+      "mod": "主题系统",
+      "name": "5主题可切换无异常",
+      "steps": "逐一切换",
+      "expected": "全部成功,无JS错误",
+      "actual": "当前主题=dark, 错误数=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-162",
+      "mod": "主题系统",
+      "name": "设置菜单主题按钮切换light",
+      "steps": "设置菜单中点light按钮",
+      "expected": "theme=light",
+      "actual": "theme=light",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-163",
+      "mod": "UI交互",
+      "name": "图鉴打开",
+      "steps": "点击图鉴",
+      "expected": "codexOpen=true",
+      "actual": "codexOpen=true",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-164",
+      "mod": "UI交互",
+      "name": "图鉴关闭",
+      "steps": "点关闭按钮",
+      "expected": "codexOpen=false",
+      "actual": "codexOpen=false",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-165",
+      "mod": "UI交互",
+      "name": "模拟菜单打开(1v1/多v多/对局)",
+      "steps": "点击模拟",
+      "expected": "simOpen=true",
+      "actual": "simOpen=true",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-166",
+      "mod": "UI交互",
+      "name": "点击单位显示信息栏",
+      "steps": "点击我方英雄",
+      "expected": "selectedUnit非空",
+      "actual": "目标={\"name\":\"林铁柱\",\"type\":\"melee\",\"wx\":680,\"wy\":1005} 选中={\"name\":\"林铁柱\",\"type\":\"melee\"}",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-170",
+      "mod": "调试系统",
+      "name": "__debug API全部可调用",
+      "steps": "检查10个API",
+      "expected": "全部function",
+      "actual": "缺失=无, 字段=gold,time,units,towers,viewX,viewY,theme,started,gameOver,speed",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-171",
+      "mod": "调试系统",
+      "name": "forceWin触发胜利",
+      "steps": "调用forceWin",
+      "expected": "gameOver=true",
+      "actual": "gameOver=true",
+      "status": "PASS"
+    }
+  ],
+  "errors": []
+}

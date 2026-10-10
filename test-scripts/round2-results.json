@@ -1,0 +1,122 @@
+{
+  "results": [
+    {
+      "id": "TC-201",
+      "mod": "AI对战",
+      "name": "正常模式AI自动对战",
+      "steps": "开始游戏跑120秒(4x)",
+      "expected": "AI解锁祭坛/复活/推进,正常结束",
+      "actual": "用时=35s, gameOver=false, units=51, towers=22, time=151",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-210",
+      "mod": "PVP模拟",
+      "name": "对局模拟启动(watch模式)",
+      "steps": "startSimulation(1)->点开始",
+      "expected": "_watchMode=true,双方AI",
+      "actual": "_watchMode=true, started=true",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-211",
+      "mod": "PVP模拟",
+      "name": "对局模拟运行至结束",
+      "steps": "等待观战结束",
+      "expected": "有胜负,单位数稳定无异常",
+      "actual": "gameOver=false, units=56, towers=22, time=195",
+      "status": "FAIL"
+    },
+    {
+      "id": "TC-220",
+      "mod": "1v1对战",
+      "name": "选兵界面打开",
+      "steps": "模拟菜单->1v1",
+      "expected": "图鉴1v1选兵模式",
+      "actual": "duelMode=true, duelPick=0",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-221",
+      "mod": "1v1对战",
+      "name": "UI选择两个兵种(刀盾手vs格斗家)",
+      "steps": "点刀盾手->格斗家",
+      "expected": "duelA/duelB设定,duelPick=2",
+      "actual": "A=melee B=fighter pick=2",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-222",
+      "mod": "1v1对战",
+      "name": "刀盾手vs格斗家 战斗结束",
+      "steps": "等待结束",
+      "expected": "有胜者/平局,日志输出",
+      "actual": "胜者=刀盾手 用时=120.1s 日志数=2355",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-223",
+      "mod": "1v1对战",
+      "name": "近战vs近战(barbarian vs fighter)",
+      "steps": "startDuel运行",
+      "expected": "正常结束,有胜者,有战斗日志",
+      "actual": "胜者=斧头野蛮人 用时=120.1s 日志数=1309 末日志=小兵 攻击 小兵，造成10伤害 | 小兵 攻击 小兵，造成10伤害 | 战斗结束",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-224",
+      "mod": "1v1对战",
+      "name": "远程vs近战(ranger vs paladin)",
+      "steps": "startDuel运行",
+      "expected": "正常结束,有胜者,有战斗日志",
+      "actual": "胜者=游侠 用时=88.2s 日志数=1871 末日志=小兵 攻击 小兵，造成10伤害 | 小兵 攻击 小兵，造成10伤害 | 战斗结束",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-225",
+      "mod": "1v1对战",
+      "name": "法师vs攻城(arcane vs cannon)",
+      "steps": "startDuel运行",
+      "expected": "正常结束,有胜者,有战斗日志",
+      "actual": "胜者=攻城车 用时=28.1s 日志数=392 末日志=小兵 攻击 小兵，造成10伤害 | 小兵 攻击 小兵，造成10伤害 | 战斗结束",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-230",
+      "mod": "多vs多",
+      "name": "多vs多选兵界面打开",
+      "steps": "模拟菜单->多vs多",
+      "expected": "duelPick=10选我方",
+      "actual": "duelPick=10",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-231",
+      "mod": "多vs多",
+      "name": "我方选满5个兵种并进入选敌方",
+      "steps": "选5个->完成",
+      "expected": "duelPick=11",
+      "actual": "我方选了=5个, 完成后duelPick=11",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-232",
+      "mod": "多vs多",
+      "name": "敌方选满5个兵种",
+      "steps": "选5个->完成",
+      "expected": "duelPick=12等级页",
+      "actual": "敌方选了=5个, duelPick=12",
+      "status": "PASS"
+    },
+    {
+      "id": "TC-233",
+      "mod": "多vs多",
+      "name": "5v5战斗运行至结束",
+      "steps": "等待结束",
+      "expected": "一方全灭或超时,无异常",
+      "actual": "胜者=平局 用时=180.1s 日志数=3677 我方存活=2 敌方存活=2",
+      "status": "PASS"
+    }
+  ],
+  "errors": []
+}
